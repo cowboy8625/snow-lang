@@ -1,0 +1,9 @@
+add x y = x + y
+
+sub x y = x - y
+
+-- main = println (sub 30 (add 100 20))
+
+main = do
+    println (sub 30 (add 100 20))
+    print (sub 30 (add 100 20))

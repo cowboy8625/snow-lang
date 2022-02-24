@@ -1,0 +1,6 @@
+add x y = x + y
+
+sub x y =
+    x - y
+
+main = print (add 1 2)
