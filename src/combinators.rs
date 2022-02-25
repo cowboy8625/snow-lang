@@ -1,59 +1,11 @@
 #![allow(unused)]
-
-// use crate::error::*;
 use std::fmt;
-// use std::ops::{Index, Range};
-// use std::slice::SliceIndex;
-//
-// #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-// pub struct Position {
-//     row: usize,
-//     col: usize,
-//     idx: usize,
-// }
-//
-// #[derive(Debug, Default)]
-// pub struct ParseInput<'a> {
-//     input: InputStream<'a>,
-//     pos: Position,
-// }
-//
-// impl<'a> Index<Range<usize>> for ParseInput<'a> {
-//     type Output = InputStream<'a>;
-//
-//     fn index(&self, range: Range<usize>) -> &Self::Output {
-//         &self.input[range]
-//     }
-// }
-//
-// #[test]
-// fn parse_input() {
-//     let parse_input = ParseInput {
-//         input: "Hey",
-//         pos: Position::default(),
-//     };
-//     assert_eq!(parse_input[0..1], "H");
-// }
-
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub enum ParseError {
-//     Error(String, Box<ParseError>),
-//     Null,
-// }
-//
-// impl ParseError {
-//     pub fn new(error: String) -> Self {
-//         ParseError::Error(error, Box::new(ParseError::Null))
-//     }
-// }
 
 use super::position::Spanned;
 use super::scanner::Token;
 
-// type ParseResult<'a, O, I> = Result<(Spanned<O>, &'a [Spanned<I>]), &'a [Spanned<I>]>;
 pub type ParseResult<'a, Input, Output> =
     Result<(&'a [Spanned<Input>], Output), &'a [Spanned<Input>]>;
-pub type InputStream<T> = Spanned<T>;
 
 pub trait Parser<'a, Input, Output>
 where
@@ -92,6 +44,14 @@ where
         F: Fn(Output) -> NextParser + 'a,
     {
         BoxedParser::new(and_then(self, f))
+    }
+    fn dbg(self, msg: &'a str, show_output: bool) -> BoxedParser<'a, Input, Output>
+    where
+        Self: Sized + 'a,
+        Input: fmt::Debug + 'a,
+        Output: fmt::Debug + 'a,
+    {
+        BoxedParser::new(dbg_name(self, msg, show_output))
     }
 }
 
@@ -464,3 +424,31 @@ where
 // {
 //     right(space0(), left(parser, space0()))
 // }
+pub fn dbg_name<'a, Input, P, O>(
+    parser: P,
+    msg: &'a str,
+    show_input: bool,
+) -> impl Parser<'a, Input, O>
+where
+    O: fmt::Debug + 'a,
+    Input: Clone + PartialEq + fmt::Debug + 'a,
+    P: Parser<'a, Input, O>,
+{
+    move |input| {
+        eprintln!("----START--{}----", msg);
+        let result = parser.parse(input);
+        match &result {
+            Ok((next_input, output)) => {
+                if show_input {
+                    eprintln!("next_input: {:?}", next_input);
+                }
+                eprintln!("output: {:?}", output);
+            }
+            Err(input) => {
+                eprintln!("input: {:?}", input);
+            }
+        }
+        eprintln!("----End----{}----", msg);
+        result
+    }
+}
