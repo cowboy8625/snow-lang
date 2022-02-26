@@ -112,10 +112,18 @@ impl<'a> Scanner<'a> {
     fn scan(mut self) -> Self {
         while let Some(cp) = self.stream.next() {
             match cp.chr {
-                '/' if self.peek_char() == '/' => self.line_comment(),
+                '-' if self.peek_char() == '-' => self.line_comment(),
                 '{' if self.peek_char() == '-' => self.block_comment(),
                 '\n' if self.peek_char() == ' ' => self.indent(),
                 '\n' if self.peek_char().is_ascii_alphabetic() => self.dedent(cp),
+                '\n' if self.peek_char().is_ascii_punctuation() => {
+                    println!(
+                        "{:?}:{}:{}:{} No symbols out side of a function dec",
+                        cp.chr, cp.idx, cp.row, cp.col
+                    );
+                    self.error(cp.chr);
+                }
+
                 '=' if self.peek_char() == '=' => {
                     let end = self.stream.next().unwrap();
                     self.push((Token::Op("=="), (cp, end).into()))
@@ -153,7 +161,12 @@ impl<'a> Scanner<'a> {
                 '"' => self.string(cp),
                 id if id.is_ascii_alphabetic() => self.identifier(cp),
                 num if num.is_numeric() => self.number(cp),
-                _ => self.error(cp.chr),
+                ' ' => {}
+                '\n' => {}
+                _ => {
+                    println!("{:?}:{}:{}:{}", cp.chr, cp.idx, cp.row, cp.col);
+                    self.error(cp.chr);
+                }
             }
         }
         self
@@ -305,8 +318,14 @@ fn pos_enum<'a>(loc: &str, src: &str) -> Vec<CharPos> {
 }
 
 // FIXME: This does not need to clone.
-pub fn scanner(filename: &str, src: &str) -> Vec<Spanned<Token>> {
+pub fn scanner(
+    filename: &str,
+    src: &str,
+) -> Result<Vec<Spanned<Token>>, (Vec<Spanned<Token>>, Vec<String>)> {
     let chrpos = pos_enum(filename, src);
     let scanner = Scanner::new(&chrpos).scan();
-    scanner.tokens.clone()
+    if !scanner.errors.is_empty() {
+        return Err((scanner.tokens.clone(), scanner.errors.clone()));
+    }
+    Ok(scanner.tokens.clone())
 }

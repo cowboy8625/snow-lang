@@ -25,13 +25,13 @@ pub enum BuiltIn {
 impl fmt::Display for BuiltIn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Plus => write!(f, "Plus"),
-            Self::Mins => write!(f, "Mins"),
-            Self::Mult => write!(f, "Mult"),
-            Self::Div => write!(f, "Div"),
-            Self::Eq => write!(f, "Eq"),
-            Self::NEq => write!(f, "NEq"),
-            Self::Not => write!(f, "Not"),
+            Self::Plus => write!(f, "+"),
+            Self::Mins => write!(f, "-"),
+            Self::Mult => write!(f, "*"),
+            Self::Div => write!(f, "/"),
+            Self::Eq => write!(f, "=="),
+            Self::NEq => write!(f, "!="),
+            Self::Not => write!(f, "!"),
             Self::Print => write!(f, "print"),
             Self::PrintLn => write!(f, "println"),
         }
@@ -47,19 +47,19 @@ pub enum Atom {
     Int(i32),
     Float(f32),
     String(String),
-    Keyword(KeyWord),
     Boolean(bool),
+    Keyword(KeyWord),
     BuiltIn(BuiltIn),
 }
 impl fmt::Display for Atom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Int(i) => write!(f, "Int({})", i),
-            Self::Float(i) => write!(f, "Float({})", i),
-            Self::String(i) => write!(f, "String({})", i),
-            Self::Keyword(i) => write!(f, "Keyword({})", i),
-            Self::Boolean(i) => write!(f, "Boolean({})", i),
-            Self::BuiltIn(i) => write!(f, "BuiltIn({})", i),
+            Self::Int(i) => write!(f, "{}", i),
+            Self::Float(i) => write!(f, "{}", i),
+            Self::String(i) => write!(f, "{}", i),
+            Self::Boolean(i) => write!(f, "{}", i),
+            Self::Keyword(i) => write!(f, "{}", i),
+            Self::BuiltIn(i) => write!(f, "{}", i),
         }
     }
 }
@@ -88,7 +88,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Local(name) => write!(f, "Local({})", name),
-            Self::Constant(a) => write!(f, "Const({})", a),
+            Self::Constant(a) => write!(f, "{}", a),
             Self::Application(n, a) => write!(
                 f,
                 "App({},{:?})",
@@ -192,7 +192,10 @@ fn constant<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         either(
             builtins().map(|b| (Atom::BuiltIn(b.node.clone()), b.span()).into()),
-            either(boolean(), either(keyword(), either(string(), number()))),
+            either(
+                boolean(),
+                either(keyword(), either(string().dbg("String", false), number())),
+            ),
         )
         .parse(input)
         .map(|(i, b)| (i, (Expr::Constant(b.node.clone()), b.span()).into()))
@@ -256,10 +259,6 @@ fn lambda<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
         ))
     }
 }
-
-// fn expression<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-//     either(prans(), either(app(), constant()))
-// }
 
 fn prans<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     right(
