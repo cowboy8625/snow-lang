@@ -322,7 +322,26 @@ pub fn scanner(
     filename: &str,
     src: &str,
 ) -> Result<Vec<Spanned<Token>>, (Vec<Spanned<Token>>, Vec<String>)> {
-    let chrpos = pos_enum(filename, src);
+    // NOTE: We insert a '\n' at the begening of a file
+    // do to how functions are parsed.  The `Token::DeDent`
+    // is triggered when a `\n` is followed by a 'Alphabetic` `char`.
+    //
+    // EXAMPLE: "main = print (+ 1 100)"
+    //
+    // This would created a error in the parse.
+    //
+    let src = if src
+        // Some times we dont want to add a '\n' if we are using a shell.
+        .chars()
+        .nth(0)
+        .map(|c| c.is_ascii_alphabetic())
+        .unwrap_or(false)
+    {
+        format!("\n{}", src)
+    } else {
+        src.to_string()
+    };
+    let chrpos = pos_enum(filename, &src);
     let scanner = Scanner::new(&chrpos).scan();
     if !scanner.errors.is_empty() {
         return Err((scanner.tokens.clone(), scanner.errors.clone()));
