@@ -116,14 +116,6 @@ impl<'a> Scanner<'a> {
                 '{' if self.peek_char() == '-' => self.block_comment(),
                 '\n' if self.peek_char() == ' ' => self.indent(),
                 '\n' if self.peek_char().is_ascii_alphabetic() => self.dedent(cp),
-                '\n' if self.peek_char().is_ascii_punctuation() => {
-                    println!(
-                        "{:?}:{}:{}:{} No symbols out side of a function dec",
-                        cp.chr, cp.idx, cp.row, cp.col
-                    );
-                    self.error(cp.chr);
-                }
-
                 '=' if self.peek_char() == '=' => {
                     let end = self.stream.next().unwrap();
                     self.push((Token::Op("=="), (cp, end).into()))
@@ -197,11 +189,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn line_comment(&mut self) {
-        while let Some(cp) = self.stream.next() {
-            if cp.chr == '\n' {
-                break;
-            }
-        }
+        while let Some(_) = self.stream.next_if(|cp| cp.chr != '\n') {}
     }
 
     fn block_comment(&mut self) {

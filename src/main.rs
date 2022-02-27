@@ -60,16 +60,25 @@ fn from_file(filename: &str) -> CResult<Expr> {
 }
 
 fn run(filename: &str, src: &str) -> CResult<Expr> {
-    let tokens = scanner::scanner(filename, src).unwrap();
-    let (t, funcs) = match parser::parser().parse(&tokens) {
+    let (tokens, err) = match scanner::scanner(filename, src) {
+        Ok(t) => (t, Vec::new()),
+        Err((t, e)) => (t, e),
+    };
+    let (left_over_tokens, funcs) = match parser::parser().parse(&tokens) {
         Ok((t, f)) => (t, f),
         Err(t) => (t, FunctionList::new()),
     };
 
-    if t.len() != 0 {
+    if !left_over_tokens.is_empty() || !err.is_empty() {
+        for tok in left_over_tokens.iter() {
+            println!("{}", tok);
+        }
+        for e in err.iter() {
+            println!("{}", e);
+        }
         return Err(Error::new(
             "unable to lex file",
-            (t.first(), t.last()).into(),
+            (left_over_tokens.first(), left_over_tokens.last()).into(),
             ErrorKind::LexeringFailer,
         ));
     }
