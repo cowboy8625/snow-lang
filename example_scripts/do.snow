@@ -1,4 +1,3 @@
 main = do
-    print 'c'
     print "Hello World"
     print 2134
