@@ -5,36 +5,70 @@ mod interpreter;
 mod parser;
 mod position;
 mod scanner;
+#[cfg(test)]
+mod test;
 
 use crate::combinators::Parser;
-use crate::interpreter::EvalResult;
+use crate::error::{CResult, Error, ErrorKind};
 use crate::parser::{Expr, FunctionList};
+use crate::position::{Span, Spanned};
 
-fn run(filename: &str) -> EvalResult<()> {
+fn from_file(filename: &str) -> CResult<Expr> {
     let src = args::snow_source_file(&filename)?;
-    let tokens = scanner::scanner(filename, &src).expect("Failed to Scan in run");
+    run(filename, &src)
+}
+
+fn run(filename: &str, src: &str) -> CResult<Expr> {
+    let tokens = scanner::scanner(filename, src).unwrap();
     let (t, funcs) = match parser::parser().parse(&tokens) {
         Ok((t, f)) => (t, f),
         Err(t) => (t, FunctionList::new()),
     };
 
-    assert!(t.len() == 0);
-    match &funcs.get("main").expect("Failed to get main in run").node {
-        Expr::Lambda(_, _, body) => {
-            let output = interpreter::evaluation(&body.node, &FunctionList::new(), &funcs)?;
-            println!("Return from main: {}", output);
-        }
-        _ => {
-            println!("No 'main' entry provided.");
-        }
-    };
-    Ok(())
+    if t.len() != 0 {
+        return Err(Error::new(
+            "unable to lex file",
+            (t.first(), t.last()).into(),
+            ErrorKind::LexeringFailer,
+        ));
+    }
+    match &funcs.get("main") {
+        Some(Spanned {
+            node: Expr::Lambda(_, _, body),
+            ..
+        }) => Ok(interpreter::evaluation(
+            &body.node,
+            &FunctionList::new(),
+            &funcs,
+        )?),
+        _ => Err(Error::new(
+            "you must provide a 'main' entry point",
+            Span::default(),
+            ErrorKind::NoMain,
+        )),
+    }
 }
 
-fn test_scripts() -> EvalResult<()> {
+fn check_for_missing_output(scripts: &[String], output: &[String]) {
+    if scripts.len() != output.len() {
+        let max = scripts.iter().map(|x| x.len()).max().unwrap_or(0);
+        for script in scripts.iter() {
+            let outfile = format!("{}.out", script.split(".").nth(0).unwrap_or(""));
+            let right = format!(" {}", outfile);
+            let left = format!("❌ ❄ {} is missing", script);
+            let space = left.len() + max - script.len();
+            if !output.contains(&outfile) {
+                eprintln!("{:<space$}{}", left, right);
+            }
+        }
+        std::process::exit(60);
+    }
+}
+
+fn test_scripts() -> CResult<()> {
     let full_path = "/home/cowboy/Documents/Rust/languages/snow/example_scripts";
     let files = std::fs::read_dir(full_path)?;
-    let (scripts, _output): (Vec<_>, Vec<_>) = files
+    let (scripts, output): (Vec<_>, Vec<_>) = files
         .map(|f| {
             f.unwrap()
                 .file_name()

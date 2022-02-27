@@ -58,6 +58,33 @@ impl fmt::Display for Span {
     }
 }
 
+impl From<(Option<Span>, Option<Span>)> for Span {
+    fn from((first, last): (Option<Span>, Option<Span>)) -> Self {
+        let start = first.unwrap_or_default();
+        let end = last.unwrap_or(start.clone());
+        Self {
+            start: start.start,
+            end: end.end,
+            loc: start.loc.to_string(),
+        }
+    }
+}
+
+impl<T> From<(Option<&Spanned<T>>, Option<&Spanned<T>>)> for Span
+where
+    T: fmt::Debug + PartialEq + Clone + fmt::Display,
+{
+    fn from((first, last): (Option<&Spanned<T>>, Option<&Spanned<T>>)) -> Self {
+        let start = first.map(|s| s.span()).unwrap_or_default();
+        let end = last.map(|s| s.span()).unwrap_or_default();
+        Self {
+            start: start.start,
+            end: end.end,
+            loc: start.loc.to_string(),
+        }
+    }
+}
+
 impl From<(&CharPos, &CharPos)> for Span {
     fn from((start, end): (&CharPos, &CharPos)) -> Self {
         Self {

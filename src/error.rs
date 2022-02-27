@@ -1,37 +1,51 @@
-use super::position::Span;
-use std::error::Error;
+#![allow(unused)]
+use super::position::{Span, Spanned};
 use std::fmt;
-#[derive(Debug, Clone)]
-pub struct ParserError {
-    msg: String,
-    span: Span,
-}
-impl fmt::Display for ParserError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} ParserError: {}", self.span, self.msg)
-    }
-}
 
-impl Error for ParserError {}
+pub type CResult<T> = Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Clone)]
-pub struct EvalError {
+pub struct Error {
     msg: String,
+    kind: ErrorKind,
     span: Span,
 }
 
-impl EvalError {
-    pub fn new(msg: &str, span: Span) -> Box<dyn Error> {
+impl Error {
+    pub fn new(msg: &str, span: Span, kind: ErrorKind) -> Box<dyn std::error::Error> {
         Box::new(Self {
             msg: msg.to_string(),
+            kind,
             span,
         })
     }
+
+    pub fn kind(&self) -> ErrorKind {
+        self.kind
+    }
 }
-impl fmt::Display for EvalError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} EvalError: {}", self.span, self.msg)
+        write!(f, "{} {}: {}", self.span, self.kind, self.msg)
     }
 }
 
-impl Error for EvalError {}
+impl std::error::Error for Error {}
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum ErrorKind {
+    NoMain,
+    Undefined,
+    TypeError,
+    LexeringFailer,
+}
+
+impl fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoMain => write!(f, "NoMain"),
+            Self::Undefined => write!(f, "Undefined"),
+            Self::TypeError => write!(f, "TypeError"),
+            Self::LexeringFailer => write!(f, "LexeringFailer"),
+        }
+    }
+}
