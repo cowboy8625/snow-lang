@@ -40,7 +40,7 @@ fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut Fu
         },
     };
 
-    if t.len() != 0 {
+    if !t.is_empty() {
         eprintln!("{}", ErrorKind::LexeringFailer);
         for s in t.iter() {
             eprintln!("{}", s);
@@ -138,12 +138,10 @@ fn test_scripts() -> CResult<()> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filename = std::env::args().nth(1).unwrap_or("--shell".into());
     if filename == "--test" {
-        println!("Test");
         test_scripts()?;
     } else if filename == "--shell" {
         repl::run()?;
     } else {
-        println!("Run");
         from_file(&filename)?;
     }
     Ok(())
