@@ -1,7 +1,4 @@
+use super::excute_with_env_of;
+use super::parser::FunctionList;
 mod shell;
-use crate::interpreter;
-use crate::parser;
-
-pub fn run() {
-    shell::run().expect("   Shell Failed.    ");
-}
+pub use shell::run;

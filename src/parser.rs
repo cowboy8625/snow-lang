@@ -192,17 +192,14 @@ fn constant<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         either(
             builtins().map(|b| (Atom::BuiltIn(b.node.clone()), b.span()).into()),
-            either(
-                boolean(),
-                either(keyword(), either(string().dbg("String", false), number())),
-            ),
+            either(boolean(), either(keyword(), either(string(), number()))),
         )
         .parse(input)
         .map(|(i, b)| (i, (Expr::Constant(b.node.clone()), b.span()).into()))
     }
 }
 
-fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
+pub fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         let (i, name) = either(
             local(),

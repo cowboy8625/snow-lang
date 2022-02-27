@@ -1,12 +1,10 @@
 #![allow(unused)]
-use super::error::EvalError;
+use super::error::{CResult, Error, ErrorKind};
 use super::parser::{Atom, BuiltIn, Expr, FunctionList};
 use super::position::{Span, Spanned};
 use std::fmt;
 
-pub type EvalResult<T> = Result<T, Box<dyn std::error::Error>>;
-
-pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> EvalResult<Expr> {
+pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> CResult<Expr> {
     match expr {
         Expr::Constant(contant) => Ok(expr.clone()),
         // func-name args
@@ -15,7 +13,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
             let reduced_tail = tail
                 .into_iter()
                 .map(|expr| evaluation(&expr.node, local, funcs))
-                .collect::<EvalResult<Vec<Expr>>>()?;
+                .collect::<CResult<Vec<Expr>>>()?;
             // dbg!(&tail);
             match reduced_head {
                 Expr::Constant(Atom::BuiltIn(bi)) => Ok(Expr::Constant(match bi {
@@ -23,7 +21,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
                         reduced_tail
                             .into_iter()
                             .map(get_int_from_expr)
-                            .collect::<EvalResult<Vec<i32>>>()?
+                            .collect::<CResult<Vec<i32>>>()?
                             .into_iter()
                             .sum(),
                     ),
@@ -31,7 +29,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
                         reduced_tail
                             .into_iter()
                             .map(get_float_from_expr)
-                            .collect::<EvalResult<Vec<f32>>>()?
+                            .collect::<CResult<Vec<f32>>>()?
                             .into_iter()
                             .sum(),
                     ),
@@ -39,7 +37,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
                         reduced_tail
                             .into_iter()
                             .map(get_int_from_expr)
-                            .collect::<EvalResult<Vec<i32>>>()?
+                            .collect::<CResult<Vec<i32>>>()?
                             .into_iter()
                             .product(),
                     ),
@@ -47,7 +45,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
                         reduced_tail
                             .into_iter()
                             .map(get_float_from_expr)
-                            .collect::<EvalResult<Vec<f32>>>()?
+                            .collect::<CResult<Vec<f32>>>()?
                             .into_iter()
                             .product(),
                     ),
@@ -57,7 +55,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
                             reduced_tail
                                 .into_iter()
                                 .map(get_int_from_expr)
-                                .collect::<EvalResult<Vec<i32>>>()?
+                                .collect::<CResult<Vec<i32>>>()?
                                 .into_iter()
                                 .skip(1)
                                 .fold(fe, |a, b| a - b)
@@ -71,7 +69,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
                             reduced_tail
                                 .into_iter()
                                 .map(get_float_from_expr)
-                                .collect::<EvalResult<Vec<f32>>>()?
+                                .collect::<CResult<Vec<f32>>>()?
                                 .into_iter()
                                 .skip(1)
                                 .fold(fe, |a, b| a - b)
@@ -85,7 +83,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
                             reduced_tail
                                 .into_iter()
                                 .map(get_int_from_expr)
-                                .collect::<EvalResult<Vec<i32>>>()?
+                                .collect::<CResult<Vec<i32>>>()?
                                 .into_iter()
                                 .skip(1)
                                 .fold(fe, |a, b| a / b)
@@ -99,7 +97,7 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
                             reduced_tail
                                 .into_iter()
                                 .map(get_float_from_expr)
-                                .collect::<EvalResult<Vec<f32>>>()?
+                                .collect::<CResult<Vec<f32>>>()?
                                 .into_iter()
                                 .skip(1)
                                 .fold(fe, |a, b| a / b)
@@ -182,32 +180,50 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> Ev
             .get(name)
             .map(|s| s.node.clone())
             .or_else(|| local.get(name).map(|s| s.node.clone()))
-            .ok_or_else(|| EvalError::new(&format!("'{}' not found", name), Span::default())),
+            .ok_or_else(|| {
+                Error::new(
+                    &format!("'{}' not found", name),
+                    Span::default(),
+                    ErrorKind::Undefined,
+                )
+            }),
     }
 }
 
 // TODO: should expect a span.
-fn get_int_from_expr(e: Expr) -> EvalResult<i32> {
+fn get_int_from_expr(e: Expr) -> CResult<i32> {
     if let Expr::Constant(Atom::Int(n)) = e {
         Ok(n)
     } else {
-        Err(EvalError::new("Not Int".into(), Span::default()))
+        Err(Error::new(
+            "Not Int".into(),
+            Span::default(),
+            ErrorKind::TypeError,
+        ))
     }
 }
 
-fn get_float_from_expr(e: Expr) -> EvalResult<f32> {
+fn get_float_from_expr(e: Expr) -> CResult<f32> {
     if let Expr::Constant(Atom::Float(n)) = e {
         Ok(n)
     } else {
-        Err(EvalError::new("Not Float".into(), Span::default()))
+        Err(Error::new(
+            "Not Float".into(),
+            Span::default(),
+            ErrorKind::TypeError,
+        ))
     }
 }
 
-fn get_bool_from_expr(e: Expr) -> EvalResult<bool> {
+fn get_bool_from_expr(e: Expr) -> CResult<bool> {
     if let Expr::Constant(Atom::Boolean(b)) = e {
         Ok(b)
     } else {
-        Err(EvalError::new("Not Boolean".into(), Span::default()))
+        Err(Error::new(
+            "Not Boolean".into(),
+            Span::default(),
+            ErrorKind::TypeError,
+        ))
     }
 }
 

@@ -1,8 +1,4 @@
-use super::{
-    interpreter,
-    parser::{self, Expr},
-};
-use chumsky::Parser;
+use super::{excute_with_env_of, FunctionList};
 use std::borrow::Cow::{self, Borrowed, Owned};
 
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
@@ -13,49 +9,6 @@ use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::validate::{self, MatchingBracketValidator, Validator};
 use rustyline::{Cmd, CompletionType, Config, Context, EditMode, Editor, KeyEvent};
 use rustyline_derive::Helper;
-
-// use crate::interpreter::{interpreter_expr, Environment};
-// use crate::parser::parser;
-// fn run_block<'a>(
-//     block: &str,
-//     var: &mut Vec<(&'a String, i128)>,
-//     func: &mut Vec<(&'a String, &'a [String], &'a Expr)>,
-// ) {
-//     let expr = parser::parser().parse(block);
-//     match expr {
-//         Ok(ast) => match interpreter::eval(&ast, var, func) {
-//             Ok(output) => println!("{}", output),
-//             Err(eval_err) => println!("Evaluation error: {}", eval_err),
-//         },
-//         Err(parse_errs) => parse_errs
-//             .into_iter()
-//             .for_each(|e| println!("Parse error: {:#?}", e)),
-//     }
-
-// , mut env: Environment) -> Environment {
-// if block.is_empty() {
-//     return env;
-// }
-// if cfg!(feature = "nom-parser") {
-//     match parser(block) {
-//         Ok((input, expr)) => {
-//             for ex in expr {
-//                 let (cons_vec, e) = interpreter_expr(ex, env);
-//                 env = e;
-//                 for cons in cons_vec {
-//                     println!("[OUT]: {:?}", cons);
-//                     if !input.is_empty() {
-//                         println!("[LEFTOVER]: {:?}", input);
-//                     }
-//                 }
-//             }
-//         }
-//         Err(e) => println!("[ERROR]: {:#?}", e),
-//     }
-// } else {
-// }
-// env
-// }
 
 fn shell_help() {
     println!(
@@ -173,9 +126,8 @@ pub fn run() -> rustyline::Result<()> {
     if rl.load_history("history.txt").is_err() {
         println!("No previous history.");
     }
-    // let mut env = Environment::new();
-    // let mut vars = Vec::new();
-    // let mut funcs = Vec::new();
+    let mut local = FunctionList::new();
+    let mut funcs = FunctionList::new();
     let mut count = 1;
     loop {
         let p = format!("IN [{}]: ", count);
@@ -188,21 +140,7 @@ pub fn run() -> rustyline::Result<()> {
                     ":exit" => break,
                     ":clear" => print!("\x1b[2J\x1b[0;0H"),
                     ":help" => shell_help(),
-                    _ => {
-                        match parser::parser().parse(line) {
-                            Ok(ast) => {
-                                match interpreter::eval(&ast, &mut Vec::new(), &mut Vec::new()) {
-                                    Ok(output) => println!("{}", output),
-                                    Err(eval_err) => println!("Evaluation error: {}", eval_err),
-                                }
-                            }
-                            Err(parse_errs) => parse_errs
-                                .into_iter()
-                                .for_each(|e| println!("Parse error: {:#?}", e)),
-                        }
-                        // env = run_block(line.trim(), env);
-                        // run_block(line.as_str(), &mut vars, &mut funcs);
-                    }
+                    _ => excute_with_env_of(line.as_str(), &mut local, &mut funcs),
                 }
             }
             Err(ReadlineError::Interrupted) => {

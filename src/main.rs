@@ -4,6 +4,7 @@ mod error;
 mod interpreter;
 mod parser;
 mod position;
+mod repl;
 mod scanner;
 #[cfg(test)]
 mod test;
@@ -12,6 +13,46 @@ use crate::combinators::Parser;
 use crate::error::{CResult, Error, ErrorKind};
 use crate::parser::{Expr, FunctionList};
 use crate::position::{Span, Spanned};
+
+fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
+    let tokens = scanner::scanner("shell.snow", src).unwrap_or(Vec::new());
+    // Try and parse all functions
+    let (t, expr): (Vec<_>, Option<_>) = match parser::parser().parse(&tokens) {
+        // If all was paresed look into current functions and replace old functions
+        // with new def.
+        Ok((t, f)) => {
+            for (k, v) in f.iter() {
+                // Old functions is thrown away if present.
+                let _ = funcs.insert(k.to_string(), v.clone());
+            }
+            (t.to_vec(), None)
+        }
+        // If failed to parse try and parse Atoms
+        Err(t) => match t.first().map(|s| s.node.clone()) {
+            Some(scanner::Token::DeDent) => match parser::app().parse(&t[1..]) {
+                Ok((t, expr)) => (t.to_vec(), Some(expr.node)),
+                Err(t) => (t.to_vec(), None),
+            },
+            _ => match parser::app().parse(&t) {
+                Ok((t, expr)) => (t.to_vec(), Some(expr.node)),
+                Err(t) => (t.to_vec(), None),
+            },
+        },
+    };
+
+    if t.len() != 0 {
+        eprintln!("{}", ErrorKind::LexeringFailer);
+        for s in t.iter() {
+            eprintln!("{}", s);
+        }
+    }
+    if let Some(e) = &expr {
+        match interpreter::evaluation(e, &local, &funcs) {
+            Ok(out) => eprintln!("[OUT]: {}", out),
+            Err(e) => eprintln!("{}", e),
+        }
+    }
+}
 
 fn from_file(filename: &str) -> CResult<Expr> {
     let src = args::snow_source_file(&filename)?;
@@ -76,45 +117,25 @@ fn test_scripts() -> CResult<()> {
                 .expect("Failed to unwrap OsString in Test Scripts")
         })
         .partition(|f| f.ends_with(".snow"));
-    dbg!(&scripts, _output);
-    for script in scripts.iter() {
-        run(&format!("{}/{}", full_path, script))?;
+    check_for_missing_output(&scripts, &output);
+    for (script, expected) in scripts.iter().zip(output) {
+        let right = from_file(&format!("{}/{}", full_path, script))?;
+        let left = std::fs::read_to_string(&format!("{}/{}", full_path, expected))?;
+        assert_eq!(right.to_string(), left);
     }
-
     Ok(())
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let filename = std::env::args().nth(1).unwrap();
+    let filename = std::env::args().nth(1).unwrap_or("--shell".into());
     if filename == "--test" {
         println!("Test");
         test_scripts()?;
+    } else if filename == "--shell" {
+        repl::run()?;
     } else {
         println!("Run");
-        run(&filename)?;
+        from_file(&filename)?;
     }
-    Ok(())
-}
-
-#[test]
-fn test_main() -> EvalResult<()> {
-    use crate::parser::Atom;
-    let src = "
-add x y = + x y
-
-main = print (add 1 2)
-";
-    let tokens = scanner::scanner("test.snow", src).expect("Failed to Scan in test");
-    let (tokens, funcs) = parser::parser()
-        .parse(&tokens)
-        .expect("Failed to Parse in test");
-    match &funcs.get("main").expect("Failed to get main in test").node {
-        Expr::Lambda(_, _, body) => {
-            let left = interpreter::evaluation(&body.node, &FunctionList::new(), &funcs)?;
-            assert_eq!(left, Expr::Constant(Atom::Int(3)));
-            assert_eq!(tokens, vec![]);
-        }
-        _ => assert!(false),
-    };
     Ok(())
 }
