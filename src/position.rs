@@ -69,6 +69,15 @@ impl From<(Option<Span>, Option<Span>)> for Span {
         }
     }
 }
+impl From<(Span, Span)> for Span {
+    fn from((start, end): (Span, Span)) -> Self {
+        Self {
+            start: start.start,
+            end: end.end,
+            loc: start.loc.to_string(),
+        }
+    }
+}
 
 impl<T> From<(Option<&Spanned<T>>, Option<&Spanned<T>>)> for Span
 where
@@ -138,3 +147,20 @@ where
         write!(f, "{}:{}", self.span, self.node)
     }
 }
+
+impl<T> From<(T, Span)> for Spanned<T>
+where
+    T: PartialEq + Clone,
+{
+    fn from((node, span): (T, Span)) -> Self {
+        Spanned { node, span }
+    }
+}
+// impl<T> From<(T, Span)> for Spanned<T>
+// where
+//     T: fmt::Debug + PartialEq + Clone + fmt::Display,
+// {
+//     fn from((node, span): (Vec<Spanned<T>>, Span)) -> Self {
+//         Spanned { node, span }
+//     }
+// }

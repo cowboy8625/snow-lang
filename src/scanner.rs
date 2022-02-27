@@ -73,6 +73,7 @@ pub enum Token {
     Op(&'static str),
     Ctrl(char),
 }
+
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -89,11 +90,11 @@ impl fmt::Display for Token {
     }
 }
 
-impl From<(Token, Span)> for Spanned<Token> {
-    fn from((node, span): (Token, Span)) -> Self {
-        Self { node, span }
-    }
-}
+// impl From<(Token, Span)> for Spanned<Token> {
+//     fn from((node, span): (Token, Span)) -> Self {
+//         Self { node, span }
+//     }
+// }
 
 struct Scanner<'a> {
     stream: Stream<'a, CharPos>,
@@ -203,7 +204,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn indent(&mut self) {
-        let mut count = 0;
+        let mut count = 1;
         let start = self.stream.next().unwrap();
         let mut end = start;
         while let Some(cp) = self.stream.next_if(|&cp| cp.chr == ' ') {

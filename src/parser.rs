@@ -37,11 +37,11 @@ impl fmt::Display for BuiltIn {
         }
     }
 }
-impl From<(BuiltIn, Span)> for Spanned<BuiltIn> {
-    fn from((node, span): (BuiltIn, Span)) -> Self {
-        Spanned { node, span }
-    }
-}
+// impl From<(BuiltIn, Span)> for Spanned<BuiltIn> {
+//     fn from((node, span): (BuiltIn, Span)) -> Self {
+//         Spanned { node, span }
+//     }
+// }
 #[derive(Debug, PartialEq, Clone)]
 pub enum Atom {
     Int(i32),
@@ -63,21 +63,23 @@ impl fmt::Display for Atom {
         }
     }
 }
-impl From<(Atom, Span)> for Spanned<Atom> {
-    fn from((node, span): (Atom, Span)) -> Self {
-        Spanned { node, span }
-    }
-}
+// impl From<(Atom, Span)> for Spanned<Atom> {
+//     fn from((node, span): (Atom, Span)) -> Self {
+//         Spanned { node, span }
+//     }
+// }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Constant(Atom),
     // func-name args
-    Application(Box<Expr>, Vec<Spanned<Expr>>),
+    Application(Box<Self>, Vec<Spanned<Self>>),
     // func-name prams body
-    Lambda(Spanned<String>, Vec<Spanned<String>>, Box<Spanned<Expr>>),
+    Lambda(Spanned<String>, Vec<Spanned<String>>, Box<Spanned<Self>>),
     // func name's or pram name's
     Local(String),
+    // do block
+    Do(Vec<Spanned<Self>>),
     // (if predicate do-this)
     // If(Box<Expr>, Box<Expr>),
     // // (if predicate do-this otherwise-do-this)
@@ -106,14 +108,15 @@ impl fmt::Display for Expr {
                     .collect::<Vec<String>>(),
                 b.node,
             ),
+            Self::Do(d) => write!(f, "{:?}", d),
         }
     }
 }
-impl From<(Expr, Span)> for Spanned<Expr> {
-    fn from((node, span): (Expr, Span)) -> Self {
-        Spanned { node, span }
-    }
-}
+// impl From<(Expr, Span)> for Spanned<Expr> {
+//     fn from((node, span): (Expr, Span)) -> Self {
+//         Spanned { node, span }
+//     }
+// }
 
 fn builtins<'a>() -> impl Parser<'a, Token, Spanned<BuiltIn>> {
     move |input: &'a [Spanned<Token>]| match &input.get(0) {
@@ -239,13 +242,33 @@ fn next_token<'a>(token: Token) -> impl Parser<'a, Token, Spanned<Token>> {
     }
 }
 
+fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
+    move |input: &'a [Spanned<Token>]| {
+        let (i, span_start) = next_token(Token::KeyWord(KeyWord::Do)).parse(input)?;
+        // TODO FIXME: constant expr should be in here?
+        // LOOK IT UP DUDE!
+        let (i, body) = one_or_more(right(
+            next_token(Token::InDent(4)),
+            either(app(), constant()),
+        ))
+        .dbg("oom expr line", false)
+        .parse(i)?;
+        let span: Span = (span_start.span(), body.last().unwrap().span()).into();
+        Ok((i, (Expr::Do(body), span).into()))
+    }
+}
+
 fn lambda<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         let (i, start) = next_token(Token::DeDent).parse(input)?;
         let (i, name) = parse_name().parse(i)?;
         let (i, prams) = zero_or_more(parse_name()).parse(i)?;
         let (i, _) = next_token(Token::Op("=")).parse(i)?;
-        let (i, body) = either(app(), constant()).parse(i)?;
+        let (i, body) = either(
+            do_block().dbg("DO", false),
+            either(app(), constant().dbg("const", false)),
+        )
+        .parse(i)?;
         Ok((
             i,
             (

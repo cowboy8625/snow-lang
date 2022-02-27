@@ -34,6 +34,7 @@ impl std::error::Error for Error {}
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum ErrorKind {
     NoMain,
+    EmptyReturn,
     Undefined,
     TypeError,
     LexeringFailer,
@@ -43,6 +44,7 @@ impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoMain => write!(f, "NoMain"),
+            Self::EmptyReturn => write!(f, "EmptyReturn"),
             Self::Undefined => write!(f, "Undefined"),
             Self::TypeError => write!(f, "TypeError"),
             Self::LexeringFailer => write!(f, "LexeringFailer"),

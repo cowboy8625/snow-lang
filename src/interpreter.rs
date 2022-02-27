@@ -137,7 +137,6 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> CR
                 })),
                 Expr::Lambda(_, prams, body) => {
                     use std::collections::HashMap;
-                    // if prams.len() == tail.len() {
                     let local_var = prams
                         .iter()
                         .zip(tail)
@@ -187,6 +186,17 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> CR
                     ErrorKind::Undefined,
                 )
             }),
+        Expr::Do(list_expr) => list_expr
+            .iter()
+            .map(|expr| evaluation(&expr.node, local, funcs))
+            .collect::<CResult<Vec<Expr>>>()?
+            .last()
+            .map(Clone::clone)
+            .ok_or(Error::new(
+                "nothing to return from do block",
+                Span::default(),
+                ErrorKind::EmptyReturn,
+            )),
     }
 }
 

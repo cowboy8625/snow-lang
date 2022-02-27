@@ -4,6 +4,7 @@ use std::fmt;
 use super::position::Spanned;
 use super::scanner::Token;
 
+// TODO Added custom errors to ParseResult
 pub type ParseResult<'a, Input, Output> =
     Result<(&'a [Spanned<Input>], Output), &'a [Spanned<Input>]>;
 

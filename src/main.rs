@@ -71,10 +71,13 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
 
     if !left_over_tokens.is_empty() || !err.is_empty() {
         for tok in left_over_tokens.iter() {
-            println!("{}", tok);
+            eprintln!("{}", tok);
         }
         for e in err.iter() {
-            println!("{}", e);
+            eprintln!("{}", e);
+        }
+        for (k, v) in funcs.iter() {
+            eprintln!("{}: {}", k, v);
         }
         return Err(Error::new(
             "unable to lex file",
