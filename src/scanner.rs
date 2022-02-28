@@ -213,7 +213,7 @@ impl<'a> Scanner<'a> {
     {
         let spanned = spanned.into();
         match &spanned.node {
-            Token::Ctrl('(') | Token::Ctrl('[') | Token::Ctrl('{') | Token::Ctrl(',') => {
+            Token::Ctrl('(') | Token::Ctrl('[') | Token::Ctrl('{') => {
                 self.delimiters.push(spanned.clone());
             }
             Token::Ctrl(n @ (')' | ']' | '}')) => {
@@ -224,12 +224,12 @@ impl<'a> Scanner<'a> {
                     _ => unreachable!(),
                 };
                 let open = self.delimiters.pop().unwrap_or(spanned.clone());
-                let span: Span = (open.span(), spanned.span()).into();
+                // let span: Span = (open.span(), spanned.span()).into();
                 if opsit != open.node.unwrap() {
                     let node = &open.node;
                     self.errors.push(Error::new(
                         &format!("missing {} {}", node.name(), node.unwrap()),
-                        span,
+                        open.span(),
                         ErrorKind::UnclosedDelimiter,
                     ));
                 }
@@ -350,10 +350,13 @@ fn pos_enum<'a>(loc: &str, src: &str) -> Vec<CharPos> {
             let mut last = acc.last().map(Clone::clone).unwrap_or(CharPos {
                 chr,
                 idx,
-                col: 1,
+                col: 0,
                 row: 0,
                 loc: loc.into(),
             });
+            if idx != 0 {
+                last.row += 1;
+            }
             if chr == '\n' {
                 last.row = 0;
                 last.col += 1;
@@ -362,7 +365,7 @@ fn pos_enum<'a>(loc: &str, src: &str) -> Vec<CharPos> {
                 chr,
                 idx,
                 col: last.col,
-                row: last.col,
+                row: last.row,
                 loc: loc.into(),
             });
             acc

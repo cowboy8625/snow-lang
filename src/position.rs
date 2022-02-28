@@ -1,6 +1,6 @@
 #![allow(unused)]
 use std::fmt;
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CharPos {
     pub chr: char,
     pub idx: usize,
@@ -22,7 +22,7 @@ impl Pos {
 }
 impl fmt::Display for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.col, self.row)
+        write!(f, "{}:{}:", self.col, self.row)
     }
 }
 
@@ -54,7 +54,7 @@ impl Span {
 
 impl fmt::Display for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}..{}", self.loc, self.start, self.end)
+        write!(f, "{}:{}", self.loc, self.start)
     }
 }
 
@@ -156,11 +156,3 @@ where
         Spanned { node, span }
     }
 }
-// impl<T> From<(T, Span)> for Spanned<T>
-// where
-//     T: fmt::Debug + PartialEq + Clone + fmt::Display,
-// {
-//     fn from((node, span): (Vec<Spanned<T>>, Span)) -> Self {
-//         Spanned { node, span }
-//     }
-// }
