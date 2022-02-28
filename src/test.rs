@@ -171,13 +171,15 @@ fn test_let_expr_multi_in_new_line() -> CResult<()> {
 add x y =
     let a = x
     , b = y
+    ,
+    c = y, d = x
     in
-    + a b
+    - (+ (+ a b) c) d
 
 main = add 1 2
 ";
     eprintln!("{}", src);
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(4)));
     Ok(())
 }
 

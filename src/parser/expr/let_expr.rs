@@ -28,36 +28,32 @@ fn parse_body<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     either(app(), either(local(), constant()))
 }
 
+fn binding<'a>() -> impl Parser<'a, Token, (Spanned<String>, Spanned<Expr>)> {
+    // Id Op("=") (app, constant)
+    pair(
+        right(zero_or_more(indent_token()), parse_name()),
+        right(next_token(Token::Op("=")), let_block_expr()),
+    )
+}
+fn comma<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
+    either(
+        next_token(Token::Ctrl(',')),
+        right(zero_or_more(indent_token()), next_token(Token::Ctrl(','))),
+    )
+}
+
 pub(crate) fn let_expr_app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        // Id Op("=") (app, constant)
-        let binding1 = pair(
-            parse_name(),
-            right(next_token(Token::Op("=")), let_block_expr()),
-        );
-
-        //  Ctrl(',') Id Op("=") (app, constant)
-        let comma = either(
-            next_token(Token::Ctrl(',')),
-            right(next_token(Token::InDent(4)), next_token(Token::Ctrl(','))),
-        );
-        let eq = next_token(Token::Op("="));
-        let binding2 = right(comma, pair(parse_name(), right(eq, let_block_expr())));
-
         // Let
         let (i, _start) = parse_let().parse(input)?;
-
         // bindings
-        let (i, (first, mut args)) = pair(binding1, zero_or_more(binding2)).parse(i)?;
+        let (i, (first, mut args)) =
+            pair(binding(), zero_or_more(right(comma(), binding()))).parse(i)?;
         args.insert(0, first);
-
         // In
         let (i, _) = either(
             next_token(Token::KeyWord(KeyWord::In)),
-            right(
-                next_token(Token::InDent(4)),
-                next_token(Token::KeyWord(KeyWord::In)),
-            ),
+            right(indent_token(), next_token(Token::KeyWord(KeyWord::In))),
         )
         .parse(i)?;
 
@@ -81,22 +77,10 @@ pub(crate) fn let_expr_app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
 
 pub(crate) fn let_expr_do<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        // Id Op("=") (app, constant)
-        let binding1 = pair(
-            parse_name(),
-            right(next_token(Token::Op("=")), let_block_expr()),
-        );
-
-        //  Ctrl(',') Id Op("=") (app, constant)
-        let comma = either(
-            next_token(Token::Ctrl(',')),
-            right(indent_token(), next_token(Token::Ctrl(','))),
-        );
-        let eq = next_token(Token::Op("="));
-        let binding2 = right(comma, pair(parse_name(), right(eq, let_block_expr())));
         let (i, _start) = parse_let().parse(input)?;
         // bindings
-        let (i, (first, mut args)) = pair(binding1, zero_or_more(binding2)).parse(i)?;
+        let (i, (first, mut args)) =
+            pair(binding(), zero_or_more(right(comma(), binding()))).parse(i)?;
         args.insert(0, first);
 
         // Let(String, Box<Spanned<Self>>, Box<Spanned<Self>>),
