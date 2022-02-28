@@ -42,6 +42,7 @@ fn comma<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
     )
 }
 
+// TODO: Rename this to let_expr_func
 pub(crate) fn let_expr_app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         // Let

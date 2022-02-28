@@ -46,11 +46,14 @@ main = let a = 10, b = 12 in a + b
 fn scanner_let_block_multi_lines() {
     use scanner::KeyWord::*;
     use scanner::Token::{self, *};
-    let src = "
-main =
+    let src = "main =
     let a = 10
     ,   b = 12
     in  a + b
+
+
+
+
     ";
     let tokens = match scanner::scanner(FILENAME, src) {
         Ok(t) => t,
@@ -72,17 +75,15 @@ main =
         Id("a".into()),
         Op("="),
         Int("10".into()),
-        InDent(4),
         Ctrl(','),
         Id("b".into()),
         Op("="),
         Int("12".into()),
-        InDent(4),
         KeyWord(In),
         Id("a".into()),
         Op("+"),
         Id("b".into()),
-        InDent(4),
+        DeDent,
     ];
     assert_eq!(left, right);
 }

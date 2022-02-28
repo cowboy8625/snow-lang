@@ -1,5 +1,7 @@
 use super::parser::Atom;
 use super::*;
+#[cfg(test)]
+use pretty_assertions::assert_eq;
 fn from_string(src: &str) -> CResult<Expr> {
     run("testing.snow", src)
 }
@@ -79,7 +81,6 @@ fn test_do_block_app() -> CResult<()> {
     let src = "
 add x y = + x y
 main = do
-    println 2
     println (add 1 (- 100 1))
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(100)));
@@ -91,8 +92,6 @@ fn test_do_block_const() -> CResult<()> {
     let src = "
 add x y = + x y
 main = do
-    1
-    2
     3
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));

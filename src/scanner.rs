@@ -136,6 +136,7 @@ struct Scanner<'a> {
     tokens: Vec<Spanned<Token>>,
     errors: MulitError,
     delimiters: Vec<Spanned<Token>>,
+    indent: Vec<usize>,
 }
 
 impl<'a> Scanner<'a> {
@@ -145,6 +146,7 @@ impl<'a> Scanner<'a> {
             tokens: Vec::new(),
             errors: MulitError::default(),
             delimiters: Vec::new(),
+            indent: Vec::new(),
         }
     }
     fn scan(mut self) -> Self {
@@ -204,6 +206,7 @@ impl<'a> Scanner<'a> {
                 }
             }
         }
+        self.unwrap_dedent();
         self
     }
 
@@ -275,14 +278,37 @@ impl<'a> Scanner<'a> {
             count += 1;
         }
         let span: Span = (start, end).into();
-        let token = (Token::InDent(count), span);
-        self.push(token);
+
+        if self.indent.last() > Some(&count) {
+            eprintln!("DeDent");
+            loop {
+                let last = self.indent.last();
+                if last > Some(&count) {
+                    let _ = self.indent.pop();
+                    self.push((Token::InDent(count), span.clone()));
+                }
+            }
+        } else if self.indent.last() < Some(&count) || self.indent.is_empty() {
+            eprintln!("Indent");
+            self.push((Token::InDent(count), span.clone()));
+            self.indent.push(count);
+        }
     }
 
     fn dedent(&mut self, start: &CharPos) {
         let span: Span = (start, start).into();
         let token = (Token::DeDent, span);
         self.push(token);
+    }
+
+    fn unwrap_dedent(&mut self) {
+        for _ in self.indent.clone().iter() {
+            self.push((
+                Token::DeDent,
+                self.tokens.last().map(|t| t.span()).unwrap_or_default(),
+            ));
+        }
+        self.indent.clear();
     }
 
     // fn character(&mut self) {}
