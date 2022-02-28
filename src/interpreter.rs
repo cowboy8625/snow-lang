@@ -2,9 +2,10 @@
 use super::error::{CResult, Error, ErrorKind};
 use super::parser::{Atom, BuiltIn, Expr, FunctionList};
 use super::position::{Span, Spanned};
+use std::collections::HashMap;
 use std::fmt;
 
-pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> CResult<Expr> {
+pub fn evaluation(expr: &Expr, local: &mut FunctionList, funcs: &FunctionList) -> CResult<Expr> {
     match expr {
         Expr::Constant(contant) => Ok(expr.clone()),
         // func-name args
@@ -136,35 +137,12 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> CR
                     }
                 })),
                 Expr::Lambda(_, prams, body) => {
-                    use std::collections::HashMap;
-                    let local_var = prams
+                    let mut local_var = prams
                         .iter()
                         .zip(tail)
-                        .map(|(k, v)| {
-                            (
-                                k.node.clone(),
-                                // TODO: Clean this up
-                                match &v.node {
-                                    Expr::Local(n) => funcs
-                                        .get(n)
-                                        .map(|s| s.clone())
-                                        .or_else(|| local.get(n).map(|s| s.clone()))
-                                        .unwrap(),
-                                    Expr::Constant(_) => v.clone(),
-                                    _ => (
-                                        evaluation(&v.node.clone(), local, funcs).unwrap(),
-                                        v.span(),
-                                    )
-                                        .into(),
-                                },
-                            )
-                        })
+                        .map(|(k, v)| (k.node.clone(), reduced_expr(v, local, funcs)))
                         .collect::<HashMap<String, Spanned<Expr>>>();
-                    return evaluation(&body.node, &local_var, funcs);
-                    // }
-                    // TODO: FIXME: NOTE: Make this function return a Result,
-                    // println!("Function args do not match.");
-                    // return None;
+                    return evaluation(&body.node, &mut local_var, funcs);
                 }
                 t => {
                     println!("{}", t);
@@ -197,6 +175,12 @@ pub fn evaluation(expr: &Expr, local: &FunctionList, funcs: &FunctionList) -> CR
                 Span::default(),
                 ErrorKind::EmptyReturn,
             )),
+        Expr::Let(name, expr, body) => {
+            let expr = reduced_expr(expr, local, funcs);
+            local.insert(name.to_string(), expr);
+            Ok(evaluation(&body.node, local, funcs)?)
+        }
+        _ => unimplemented!(),
     }
 }
 
@@ -206,7 +190,7 @@ fn get_int_from_expr(e: Expr) -> CResult<i32> {
         Ok(n)
     } else {
         Err(Error::new(
-            "Not Int".into(),
+            &format!("{} is not 'Int'", e),
             Span::default(),
             ErrorKind::TypeError,
         ))
@@ -218,7 +202,7 @@ fn get_float_from_expr(e: Expr) -> CResult<f32> {
         Ok(n)
     } else {
         Err(Error::new(
-            "Not Float".into(),
+            &format!("{} is not 'Float'", e),
             Span::default(),
             ErrorKind::TypeError,
         ))
@@ -230,7 +214,7 @@ fn get_bool_from_expr(e: Expr) -> CResult<bool> {
         Ok(b)
     } else {
         Err(Error::new(
-            "Not Boolean".into(),
+            &format!("{} is not 'Boolean'", e),
             Span::default(),
             ErrorKind::TypeError,
         ))
@@ -242,4 +226,25 @@ fn is_int(oe: Option<&Expr>) -> bool {
         return get_int_from_expr(v.clone()).is_ok();
     }
     false
+}
+
+fn reduced_expr(
+    spanned: &Spanned<Expr>,
+    local: &mut FunctionList,
+    funcs: &FunctionList,
+) -> Spanned<Expr> {
+    // TODO: Clean this up
+    match &spanned.node {
+        Expr::Local(n) => funcs
+            .get(n)
+            .map(Clone::clone)
+            .or_else(|| local.get(n).map(Clone::clone))
+            .unwrap(),
+        Expr::Constant(_) => spanned.clone(),
+        _ => (
+            evaluation(&spanned.node.clone(), local, funcs).unwrap(),
+            spanned.span(),
+        )
+            .into(),
+    }
 }

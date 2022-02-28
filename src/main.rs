@@ -8,6 +8,8 @@ mod repl;
 mod scanner;
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_scanner;
 
 use crate::combinators::Parser;
 use crate::error::{CResult, Error, ErrorKind};
@@ -47,7 +49,7 @@ fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut Fu
         }
     }
     if let Some(e) = &expr {
-        match interpreter::evaluation(e, &local, &funcs) {
+        match interpreter::evaluation(e, local, &funcs) {
             Ok(out) => eprintln!("[OUT]: {}", out),
             Err(e) => eprintln!("{}", e),
         }
@@ -91,7 +93,7 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
             ..
         }) => Ok(interpreter::evaluation(
             &body.node,
-            &FunctionList::new(),
+            &mut FunctionList::new(),
             &funcs,
         )?),
         _ => Err(Error::new(
