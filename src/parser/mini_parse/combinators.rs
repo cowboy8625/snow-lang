@@ -1,8 +1,7 @@
 #![allow(unused)]
 use std::fmt;
 
-use super::position::Spanned;
-use super::scanner::Token;
+use super::{Spanned, Token};
 
 // TODO Added custom errors to ParseResult
 pub type ParseResult<'a, Input, Output> =
@@ -97,7 +96,7 @@ where
     }
 }
 
-// pub(crate) fn match_literal<'a>(expected: &'static str) -> impl Parser<'a, ()> {
+// pub fn match_literal<'a>(expected: &'static str) -> impl Parser<'a, ()> {
 //     move |input: &'a str| match input.get(0..expected.len()) {
 //         Some(next) if next == expected => Ok((&input[expected.len()..], ())),
 //         _ => Err((
@@ -128,7 +127,7 @@ where
 //     );
 // }
 //
-// pub(crate) fn identifier(input: &str) -> ParseResult<String> {
+// pub fn identifier(input: &str) -> ParseResult<String> {
 //     let mut matched = String::new();
 //     let mut chars = input.chars();
 //     match chars.next() {
@@ -172,10 +171,7 @@ where
 //     );
 // }
 
-pub(crate) fn pair<'a, Input, P1, P2, R1, R2>(
-    parser1: P1,
-    parser2: P2,
-) -> impl Parser<'a, Input, (R1, R2)>
+pub fn pair<'a, Input, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, Input, (R1, R2)>
 where
     Input: Clone + PartialEq + 'a,
     P1: Parser<'a, Input, R1>,
@@ -228,10 +224,7 @@ where
     }
 }
 
-pub(crate) fn left<'a, Input, P1, P2, R1, R2>(
-    parser1: P1,
-    parser2: P2,
-) -> impl Parser<'a, Input, R1>
+pub fn left<'a, Input, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, Input, R1>
 where
     Input: Clone + PartialEq + 'a,
     P1: Parser<'a, Input, R1>,
@@ -240,10 +233,7 @@ where
     map(pair(parser1, parser2), |(left, _right)| left)
 }
 
-pub(crate) fn right<'a, Input, P1, P2, R1, R2>(
-    parser1: P1,
-    parser2: P2,
-) -> impl Parser<'a, Input, R2>
+pub fn right<'a, Input, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, Input, R2>
 where
     Input: Clone + PartialEq + 'a,
     P1: Parser<'a, Input, R1>,
@@ -269,7 +259,7 @@ where
 //     );
 // }
 
-pub(crate) fn one_or_more<'a, Input, P, A>(parser: P) -> impl Parser<'a, Input, Vec<A>>
+pub fn one_or_more<'a, Input, P, A>(parser: P) -> impl Parser<'a, Input, Vec<A>>
 where
     Input: Clone + PartialEq + 'a,
     P: Parser<'a, Input, A>,
@@ -304,7 +294,7 @@ where
 //     assert_eq!(Err(("", ParseError::new("".into()))), parser.parse(""));
 // }
 
-pub(crate) fn zero_or_more<'a, Input, P, A>(parser: P) -> impl Parser<'a, Input, Vec<A>>
+pub fn zero_or_more<'a, Input, P, A>(parser: P) -> impl Parser<'a, Input, Vec<A>>
 where
     Input: Clone + PartialEq + 'a,
     P: Parser<'a, Input, A>,
@@ -329,7 +319,7 @@ where
 //     assert_eq!(Ok(("", vec![])), parser.parse(""));
 // }
 
-// pub(crate) fn any_char(input: &str) -> ParseResult<char> {
+// pub fn any_char(input: &str) -> ParseResult<char> {
 //     match input.chars().next() {
 //         Some(next) => Ok((&input[next.len_utf8()..], next)),
 //         _ => Err(input),
@@ -363,19 +353,19 @@ where
 //     );
 // }
 
-// pub(crate) fn whitespace_char<'a>() -> impl Parser<'a, char> {
+// pub fn whitespace_char<'a>() -> impl Parser<'a, char> {
 //     pred(any_char, |c| c.is_whitespace())
 // }
 //
-// pub(crate) fn space1<'a>() -> impl Parser<'a, Vec<char>> {
+// pub fn space1<'a>() -> impl Parser<'a, Vec<char>> {
 //     one_or_more(whitespace_char())
 // }
 //
-// pub(crate) fn space0<'a>() -> impl Parser<'a, Vec<char>> {
+// pub fn space0<'a>() -> impl Parser<'a, Vec<char>> {
 //     zero_or_more(whitespace_char())
 // }
 //
-// pub(crate) fn quoted_string<'a>() -> impl Parser<'a, String> {
+// pub fn quoted_string<'a>() -> impl Parser<'a, String> {
 //     right(
 //         match_literal("\""),
 //         left(
@@ -394,7 +384,7 @@ where
 //     );
 // }
 
-pub(crate) fn either<'a, Input, P1, P2, A>(parser1: P1, parser2: P2) -> impl Parser<'a, Input, A>
+pub fn either<'a, Input, P1, P2, A>(parser1: P1, parser2: P2) -> impl Parser<'a, Input, A>
 where
     Input: Clone + PartialEq + 'a,
     P1: Parser<'a, Input, A>,
@@ -419,7 +409,7 @@ where
     }
 }
 
-// pub(crate) fn whitespace_wrap<'a, P, A>(parser: P) -> impl Parser<'a, A>
+// pub fn whitespace_wrap<'a, P, A>(parser: P) -> impl Parser<'a, A>
 // where
 //     P: Parser<'a, A>,
 // {

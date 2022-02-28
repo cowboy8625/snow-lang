@@ -1,5 +1,4 @@
 mod args;
-mod combinators;
 mod error;
 mod interpreter;
 mod parser;
@@ -11,10 +10,9 @@ mod test;
 #[cfg(test)]
 mod test_scanner;
 
-use crate::combinators::Parser;
 use crate::error::{CResult, Error, ErrorKind};
-use crate::parser::{Expr, FunctionList};
 use crate::position::{Span, Spanned};
+use parser::{Expr, FunctionList, Parser};
 
 fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
     let tokens = scanner::scanner("shell.snow", src).unwrap_or(Vec::new());

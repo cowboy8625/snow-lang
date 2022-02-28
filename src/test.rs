@@ -143,7 +143,10 @@ main = let z = 99, y = 1 in + z y
 #[test]
 fn test_let_binding_multi_line() -> CResult<()> {
     let src = "
-add x y = let a = x, b = y in + a b
+add x y =
+    let a = x
+    , b = y
+    in + a b
 
 main = add 1 2
 ";
