@@ -3,7 +3,7 @@ use std::fmt;
 
 use super::{Spanned, Token};
 
-// TODO Added custom errors to ParseResult
+// TODO Added custom error Return for ParseResult
 pub type ParseResult<'a, Input, Output> =
     Result<(&'a [Spanned<Input>], Output), &'a [Spanned<Input>]>;
 

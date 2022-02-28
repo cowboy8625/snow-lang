@@ -39,8 +39,6 @@ fn next_token<'a>(token: Token) -> impl Parser<'a, Token, Spanned<Token>> {
 fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         let (i, span_start) = next_token(Token::KeyWord(KeyWord::Do)).parse(input)?;
-        // TODO FIXME: constant expr should be in here?
-        // LOOK IT UP DUDE!
         let (i, body) = one_or_more(right(
             // TODO: Make a custom parser for indents.
             next_token(Token::InDent(4)),

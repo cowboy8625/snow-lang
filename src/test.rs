@@ -86,21 +86,6 @@ main = do
     Ok(())
 }
 
-// TODO: Update this test when custom parser errors are implemented
-// #[test]
-// fn test_do_block_empty_return() { let src = "
-// add x y = + x y
-// main = do
-//
-// ";
-//     let result = from_string(src)
-//         .err()
-//         .map(|c| c.downcast::<crate::error::Error>().ok())
-//         .flatten()
-//         .map(|e| e.kind());
-//     assert_eq!(result, Some(ErrorKind::EmptyReturn));
-// }
-
 #[test]
 fn test_do_block_const() -> CResult<()> {
     let src = "
@@ -113,22 +98,6 @@ main = do
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
     Ok(())
 }
-
-// TODO: for nested do blocks to work we need a way to
-// dynamically check indents.  Currently is set to 4.
-// #[test]
-// fn test_nested_do_block() -> CResult<()> {
-//     let src = "
-// add x y = + x y
-// main = do
-//     println 4
-//     do
-//         println 8
-//     println (add 1 (- 100 1))
-// ";
-//     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
-//     Ok(())
-// }
 
 #[test]
 fn test_let_expr_one() -> CResult<()> {

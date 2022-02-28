@@ -230,7 +230,6 @@ fn reduced_expr(
     local: &mut FunctionList,
     funcs: &FunctionList,
 ) -> Spanned<Expr> {
-    // TODO: Clean this up
     match &spanned.node {
         Expr::Local(n) => funcs
             .get(n)

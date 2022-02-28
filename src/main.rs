@@ -11,7 +11,7 @@ mod test;
 mod test_scanner;
 
 use crate::error::{CResult, Error, ErrorKind};
-use crate::position::{Span, Spanned};
+use crate::position::{Pos, Span, Spanned};
 use parser::{Expr, FunctionList, Parser};
 
 fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
@@ -61,7 +61,7 @@ fn from_file(filename: &str) -> CResult<Expr> {
 
 fn run(filename: &str, src: &str) -> CResult<Expr> {
     let tokens = scanner::scanner(filename, src)?;
-    let (_, funcs) = match parser::parser().parse(&tokens) {
+    let (t, funcs) = match parser::parser().parse(&tokens) {
         Ok((t, f)) => (t, f),
         Err(t) => (t, FunctionList::new()),
     };
@@ -75,11 +75,15 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
             &mut FunctionList::new(),
             &funcs,
         )?),
-        _ => Err(Error::new(
-            "you must provide a 'main' entry point",
-            Span::default(),
-            ErrorKind::NoMain,
-        )),
+        _ => {
+            dbg!(t);
+            dbg!(funcs);
+            Err(Error::new(
+                "you must provide a 'main' entry point",
+                Span::new(Pos::default(), Pos::default(), filename),
+                ErrorKind::NoMain,
+            ))
+        }
     }
 }
 
