@@ -1,4 +1,6 @@
 use super::scanner;
+#[cfg(test)]
+use pretty_assertions::assert_eq;
 
 const FILENAME: &str = "scan_test.snow";
 
@@ -9,35 +11,35 @@ fn scanner_let_block_one_line() {
     let src = "
 main = let a = 10, b = 12 in a + b
 ";
-    let (tokens, err) = match scanner::scanner(FILENAME, src) {
-        Ok(t) => (t, Vec::new()),
-        Err((t, e)) => (t, e),
+    let tokens = match scanner::scanner(FILENAME, src) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("{}", e);
+            Vec::new()
+        }
     };
-    let tokens = tokens
+    let left = tokens
         .iter()
         .map(|s| s.node.clone())
         .collect::<Vec<Token>>();
-    assert!(err.is_empty());
-    assert_eq!(
-        tokens,
-        vec![
-            DeDent,
-            Id("main".into()),
-            Op("="),
-            KeyWord(Let),
-            Id("a".into()),
-            Op("="),
-            Int("10".into()),
-            Ctrl(','),
-            Id("b".into()),
-            Op("="),
-            Int("12".into()),
-            KeyWord(In),
-            Id("a".into()),
-            Op("+"),
-            Id("b".into()),
-        ]
-    );
+    let right = vec![
+        DeDent,
+        Id("main".into()),
+        Op("="),
+        KeyWord(Let),
+        Id("a".into()),
+        Op("="),
+        Int("10".into()),
+        Ctrl(','),
+        Id("b".into()),
+        Op("="),
+        Int("12".into()),
+        KeyWord(In),
+        Id("a".into()),
+        Op("+"),
+        Id("b".into()),
+    ];
+    assert_eq!(left, right);
 }
 
 #[test]
@@ -49,39 +51,40 @@ main =
     let a = 10
     ,   b = 12
     in  a + b
-";
-    let (tokens, err) = match scanner::scanner(FILENAME, src) {
-        Ok(t) => (t, Vec::new()),
-        Err((t, e)) => (t, e),
+    ";
+    let tokens = match scanner::scanner(FILENAME, src) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("{}", e);
+            Vec::new()
+        }
     };
-    let tokens = tokens
+    let left = tokens
         .iter()
         .map(|s| s.node.clone())
         .collect::<Vec<Token>>();
-    assert!(err.is_empty());
-    assert_eq!(
-        tokens,
-        vec![
-            DeDent,
-            Id("main".into()),
-            Op("="),
-            InDent(4),
-            KeyWord(Let),
-            Id("a".into()),
-            Op("="),
-            Int("10".into()),
-            InDent(4),
-            Ctrl(','),
-            Id("b".into()),
-            Op("="),
-            Int("12".into()),
-            InDent(4),
-            KeyWord(In),
-            Id("a".into()),
-            Op("+"),
-            Id("b".into()),
-        ]
-    );
+    let right = vec![
+        DeDent,
+        Id("main".into()),
+        Op("="),
+        InDent(4),
+        KeyWord(Let),
+        Id("a".into()),
+        Op("="),
+        Int("10".into()),
+        InDent(4),
+        Ctrl(','),
+        Id("b".into()),
+        Op("="),
+        Int("12".into()),
+        InDent(4),
+        KeyWord(In),
+        Id("a".into()),
+        Op("+"),
+        Id("b".into()),
+        InDent(4),
+    ];
+    assert_eq!(left, right);
 }
 
 #[test]
@@ -92,9 +95,12 @@ fn scanner_let_block_single_line() {
 add x y = let a = x, b = y in + a b
 main x y = let a = x, b = y in + a b
 ";
-    let (tokens, err) = match scanner::scanner(FILENAME, src) {
-        Ok(t) => (t, Vec::new()),
-        Err((t, e)) => (t, e),
+    let tokens = match scanner::scanner(FILENAME, src) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("{}", e);
+            Vec::new()
+        }
     };
     let right = vec![
         DeDent,
@@ -136,10 +142,5 @@ main x y = let a = x, b = y in + a b
         .iter()
         .map(|s| s.node.clone())
         .collect::<Vec<Token>>();
-    assert!(err.is_empty());
-    for (l, r) in left.iter().zip(right.clone()) {
-        eprintln!("{} == {} = {}", l, r, l == &r);
-        assert!(l == &r);
-    }
     assert_eq!(left, right);
 }

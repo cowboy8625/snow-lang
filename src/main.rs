@@ -60,31 +60,12 @@ fn from_file(filename: &str) -> CResult<Expr> {
 }
 
 fn run(filename: &str, src: &str) -> CResult<Expr> {
-    let (tokens, err) = match scanner::scanner(filename, src) {
-        Ok(t) => (t, Vec::new()),
-        Err((t, e)) => (t, e),
-    };
-    let (left_over_tokens, funcs) = match parser::parser().parse(&tokens) {
+    let tokens = scanner::scanner(filename, src)?;
+    let (_, funcs) = match parser::parser().parse(&tokens) {
         Ok((t, f)) => (t, f),
         Err(t) => (t, FunctionList::new()),
     };
 
-    if !left_over_tokens.is_empty() || !err.is_empty() {
-        for tok in left_over_tokens.iter() {
-            eprintln!("{}", tok);
-        }
-        for e in err.iter() {
-            eprintln!("{}", e);
-        }
-        for (k, v) in funcs.iter() {
-            eprintln!("{}: {}", k, v);
-        }
-        return Err(Error::new(
-            "unable to lex file",
-            (left_over_tokens.first(), left_over_tokens.last()).into(),
-            ErrorKind::LexeringFailer,
-        ));
-    }
     match &funcs.get("main") {
         Some(Spanned {
             node: Expr::Lambda(_, _, body),
@@ -138,6 +119,20 @@ fn test_scripts() -> CResult<()> {
     Ok(())
 }
 
+fn run_file(filename: &str) {
+    let src = match args::snow_source_file(&filename) {
+        Ok(f) => f,
+        Err(e) => {
+            println!("{}", e);
+            std::process::exit(1);
+        }
+    };
+    match run(filename, &src) {
+        Ok(_) => {}
+        Err(e) => println!("{}", e),
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filename = std::env::args().nth(1).unwrap_or("--shell".into());
     if filename == "--test" {
@@ -145,7 +140,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else if filename == "--shell" {
         repl::run()?;
     } else if filename != "--shell" && filename != "--help" {
-        from_file(&filename)?;
+        run_file(&filename);
     } else {
         println!("snowc [version 0.0.0]");
         println!("<file>            run <file>");

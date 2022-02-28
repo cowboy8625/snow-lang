@@ -1,4 +1,7 @@
-use super::position::{CharPos, Span, Spanned};
+use super::{
+    error::{CResult, Error, ErrorKind, MulitError},
+    position::{CharPos, Span, Spanned},
+};
 use std::{fmt, iter::Peekable};
 type Stream<'a, T> = Peekable<std::slice::Iter<'a, T>>;
 
@@ -77,6 +80,41 @@ pub enum Token {
     Ctrl(char),
 }
 
+impl Token {
+    pub fn unwrap(&self) -> String {
+        match self {
+            Self::Int(i) => i.to_string(),
+            Self::Float(i) => i.to_string(),
+            Self::String(i) => i.to_string(),
+            Self::Id(i) => i.to_string(),
+            Self::KeyWord(i) => i.to_string(),
+            Self::InDent(i) => i.to_string(),
+            Self::DeDent => "DeDent".into(),
+            Self::Op(i) => i.to_string(),
+            Self::Ctrl(i) => i.to_string(),
+        }
+    }
+
+    pub fn name(&self) -> String {
+        match self {
+            Self::Int(_) => "Int".to_string(),
+            Self::Float(_) => "Float".to_string(),
+            Self::String(_) => "String".to_string(),
+            Self::Id(_) => "Id".to_string(),
+            Self::KeyWord(i) => i.to_string(),
+            Self::InDent(_) => "InDent".to_string(),
+            Self::DeDent => "DeDent".to_string(),
+            Self::Op(_) => "Operator".to_string(),
+            Self::Ctrl(i) => match i {
+                '(' | ')' => "parenthesis".to_string(),
+                '[' | ']' => "brackets".to_string(),
+                '{' | '}' => "braces".to_string(),
+                _ => "unknown".to_string(),
+            },
+        }
+    }
+}
+
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -93,16 +131,11 @@ impl fmt::Display for Token {
     }
 }
 
-// impl From<(Token, Span)> for Spanned<Token> {
-//     fn from((node, span): (Token, Span)) -> Self {
-//         Self { node, span }
-//     }
-// }
-
 struct Scanner<'a> {
     stream: Stream<'a, CharPos>,
     tokens: Vec<Spanned<Token>>,
-    errors: Vec<String>,
+    errors: MulitError,
+    delimiters: Vec<Spanned<Token>>,
 }
 
 impl<'a> Scanner<'a> {
@@ -110,7 +143,8 @@ impl<'a> Scanner<'a> {
         Self {
             stream: src.iter().peekable(),
             tokens: Vec::new(),
-            errors: Vec::new(),
+            errors: MulitError::default(),
+            delimiters: Vec::new(),
         }
     }
     fn scan(mut self) -> Self {
@@ -142,12 +176,12 @@ impl<'a> Scanner<'a> {
                 }
                 '!' => self.push((Token::Op("!"), (cp, cp).into())),
                 '=' => self.push((Token::Op("="), (cp, cp).into())),
-                '>' => self.push((Token::Op(">"), (cp, cp).into())),
-                '<' => self.push((Token::Op("<"), (cp, cp).into())),
                 '-' => self.push((Token::Op("-"), (cp, cp).into())),
                 '+' => self.push((Token::Op("+"), (cp, cp).into())),
                 '*' => self.push((Token::Op("*"), (cp, cp).into())),
                 '/' => self.push((Token::Op("/"), (cp, cp).into())),
+                '>' => self.push((Token::Op(">"), (cp, cp).into())),
+                '<' => self.push((Token::Op("<"), (cp, cp).into())),
                 '(' => self.push((Token::Ctrl('('), (cp, cp).into())),
                 ')' => self.push((Token::Ctrl(')'), (cp, cp).into())),
                 '[' => self.push((Token::Ctrl('['), (cp, cp).into())),
@@ -162,7 +196,11 @@ impl<'a> Scanner<'a> {
                 '\n' => {}
                 _ => {
                     println!("{:?}:{}:{}:{}", cp.chr, cp.idx, cp.row, cp.col);
-                    self.error(cp.chr);
+                    self.errors.push(Error::new(
+                        "",
+                        Span::new(cp.into(), cp.into(), &cp.loc),
+                        ErrorKind::UnknownChar,
+                    ));
                 }
             }
         }
@@ -173,6 +211,31 @@ impl<'a> Scanner<'a> {
     where
         T: Into<Spanned<Token>>,
     {
+        let spanned = spanned.into();
+        match &spanned.node {
+            Token::Ctrl('(') | Token::Ctrl('[') | Token::Ctrl('{') | Token::Ctrl(',') => {
+                self.delimiters.push(spanned.clone());
+            }
+            Token::Ctrl(n @ (')' | ']' | '}')) => {
+                let opsit = match n {
+                    ')' => "(",
+                    '}' => "{",
+                    ']' => "]",
+                    _ => unreachable!(),
+                };
+                let open = self.delimiters.pop().unwrap_or(spanned.clone());
+                let span: Span = (open.span(), spanned.span()).into();
+                if opsit != open.node.unwrap() {
+                    let node = &open.node;
+                    self.errors.push(Error::new(
+                        &format!("missing {} {}", node.name(), node.unwrap()),
+                        span,
+                        ErrorKind::UnclosedDelimiter,
+                    ));
+                }
+            }
+            _ => {}
+        }
         self.tokens.push(spanned.into());
     }
 
@@ -187,10 +250,6 @@ impl<'a> Scanner<'a> {
                 loc: "ERROR".into(),
             })
             .chr
-    }
-
-    fn error(&mut self, c: char) {
-        self.errors.push(c.to_string());
     }
 
     fn line_comment(&mut self) {
@@ -311,10 +370,7 @@ fn pos_enum<'a>(loc: &str, src: &str) -> Vec<CharPos> {
 }
 
 // FIXME: This does not need to clone.
-pub fn scanner(
-    filename: &str,
-    src: &str,
-) -> Result<Vec<Spanned<Token>>, (Vec<Spanned<Token>>, Vec<String>)> {
+pub fn scanner(filename: &str, src: &str) -> CResult<Vec<Spanned<Token>>> {
     // NOTE: We insert a '\n' at the begening of a file
     // do to how functions are parsed.  The `Token::DeDent`
     // is triggered when a `\n` is followed by a 'Alphabetic` `char`.
@@ -337,7 +393,7 @@ pub fn scanner(
     let chrpos = pos_enum(filename, &src);
     let scanner = Scanner::new(&chrpos).scan();
     if !scanner.errors.is_empty() {
-        return Err((scanner.tokens.clone(), scanner.errors.clone()));
+        return Err(Box::new(scanner.errors));
     }
     Ok(scanner.tokens.clone())
 }
