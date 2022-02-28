@@ -5,7 +5,7 @@ pub fn parser<'a>() -> impl Parser<'a, Token, FunctionList> {
         let mut funcs = FunctionList::new();
         for f in result.iter() {
             match &f.node {
-                Expr::Lambda(name, ..) => funcs.insert(name.node.clone(), f.clone()),
+                Expr::Function(name, ..) => funcs.insert(name.node.clone(), f.clone()),
                 x => unreachable!(x),
             };
         }

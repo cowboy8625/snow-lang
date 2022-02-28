@@ -94,7 +94,7 @@ pub(crate) fn function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
         Ok((
             i,
             (
-                Expr::Lambda(name, prams, Box::new(body.clone())),
+                Expr::Function(name, prams, Box::new(body.clone())),
                 Span::new(start.start, body.span.end, &start.loc),
             )
                 .into(),
@@ -108,7 +108,7 @@ pub enum Expr {
     // func-name args
     Application(Box<Self>, Vec<Spanned<Self>>),
     // func-name prams body
-    Lambda(Spanned<String>, Vec<Spanned<String>>, Box<Spanned<Self>>),
+    Function(Spanned<String>, Vec<Spanned<String>>, Box<Spanned<Self>>),
     // func name's or pram name's
     // TODO: Turn into Spanned<String>
     Local(String),
@@ -135,9 +135,9 @@ impl fmt::Display for Expr {
                     .map(|p| p.node.to_string())
                     .collect::<Vec<String>>(),
             ),
-            Self::Lambda(n, p, b) => write!(
+            Self::Function(n, p, b) => write!(
                 f,
-                "Lambda({},{:?}, {})",
+                "Function({},{:?}, {})",
                 n.node,
                 p.iter()
                     .map(|p| p.node.to_string())

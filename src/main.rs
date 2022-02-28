@@ -68,7 +68,7 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
 
     match &funcs.get("main") {
         Some(Spanned {
-            node: Expr::Lambda(_, _, body),
+            node: Expr::Function(_, _, body),
             ..
         }) => Ok(interpreter::evaluation(
             &body.node,

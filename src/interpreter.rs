@@ -136,7 +136,7 @@ pub fn evaluation(expr: &Expr, local: &mut FunctionList, funcs: &FunctionList) -
                         return Ok(reduced_tail[0].clone());
                     }
                 })),
-                Expr::Lambda(_, prams, body) => {
+                Expr::Function(_, prams, body) => {
                     let mut local_var = prams
                         .iter()
                         .zip(tail)
@@ -148,7 +148,7 @@ pub fn evaluation(expr: &Expr, local: &mut FunctionList, funcs: &FunctionList) -
             }
         }
         // func-name prams body
-        Expr::Lambda(name, prams, body) => unreachable!(),
+        Expr::Function(name, prams, body) => unreachable!(),
         // func name's or pram name's
         Expr::Local(name) => funcs
             .get(name)
