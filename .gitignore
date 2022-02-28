@@ -1,3 +1,4 @@
 /target
 *.lock
 *.txt
+./example_scripts/rule110.snow

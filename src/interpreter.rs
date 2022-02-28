@@ -144,10 +144,7 @@ pub fn evaluation(expr: &Expr, local: &mut FunctionList, funcs: &FunctionList) -
                         .collect::<HashMap<String, Spanned<Expr>>>();
                     return evaluation(&body.node, &mut local_var, funcs);
                 }
-                t => {
-                    println!("{}", t);
-                    Ok(t)
-                }
+                t => Ok(t),
             }
         }
         // func-name prams body

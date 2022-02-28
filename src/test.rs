@@ -131,7 +131,17 @@ main = do
 // }
 
 #[test]
-fn test_let_binding() -> CResult<()> {
+fn test_let_expr_one() -> CResult<()> {
+    let src = "
+main = let z = 99 in z
+";
+    eprintln!("{}", src);
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(99)));
+    Ok(())
+}
+
+#[test]
+fn test_let_expr_two() -> CResult<()> {
     let src = "
 main = let z = 99, y = 1 in + z y
 ";
@@ -141,12 +151,43 @@ main = let z = 99, y = 1 in + z y
 }
 
 #[test]
-fn test_let_binding_multi_line() -> CResult<()> {
+fn test_let_expr_multi_line() -> CResult<()> {
     let src = "
 add x y =
     let a = x
     , b = y
     in + a b
+
+main = add 1 2
+";
+    eprintln!("{}", src);
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
+    Ok(())
+}
+
+#[test]
+fn test_let_expr_multi_in_new_line() -> CResult<()> {
+    let src = "
+add x y =
+    let a = x
+    , b = y
+    in
+    + a b
+
+main = add 1 2
+";
+    eprintln!("{}", src);
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
+    Ok(())
+}
+
+#[test]
+fn test_let_binding_multi_do_expr() -> CResult<()> {
+    let src = "
+add x y = do
+    let a = x
+    , b = y
+    + a b
 
 main = add 1 2
 ";

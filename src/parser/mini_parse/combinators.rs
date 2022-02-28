@@ -326,7 +326,7 @@ where
 //     }
 // }
 
-fn pred<'a, Input, P, A, F>(parser: P, predicate: F) -> impl Parser<'a, Input, A>
+pub fn pred<'a, Input, P, A, F>(parser: P, predicate: F) -> impl Parser<'a, Input, A>
 where
     Input: Clone + PartialEq + 'a,
     P: Parser<'a, Input, A>,

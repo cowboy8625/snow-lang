@@ -144,8 +144,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         test_scripts()?;
     } else if filename == "--shell" {
         repl::run()?;
-    } else {
+    } else if filename != "--shell" && filename != "--help" {
         from_file(&filename)?;
+    } else {
+        println!("snowc [version 0.0.0]");
+        println!("<file>            run <file>");
+        println!("--shell           repl - default");
+        println!("--test            run custom test");
+        println!("--help            this message");
     }
     Ok(())
 }

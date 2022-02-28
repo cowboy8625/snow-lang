@@ -1,5 +1,7 @@
-use super::mini_parse::{either, left, one_or_more, pair, right, zero_or_more, Parser};
+mod let_expr;
+use super::mini_parse::{self, either, left, one_or_more, right, zero_or_more, Parser};
 use super::{boolean, builtin, keyword, number, string, Atom, KeyWord, Span, Spanned, Token};
+use let_expr::{let_expr_app, let_expr_do};
 use std::fmt;
 
 pub fn constant<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
@@ -10,25 +12,6 @@ pub fn constant<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
         )
         .parse(input)
         .map(|(i, b)| (i, (Expr::Constant(b.node.clone()), b.span()).into()))
-    }
-}
-
-pub fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    move |input: &'a [Spanned<Token>]| {
-        let (i, name) = either(
-            local(),
-            builtin().map(|s| (Expr::Constant(Atom::BuiltIn(s.node.clone())), s.span()).into()),
-        )
-        .parse(input)?;
-        let (i, args) = zero_or_more(either(local(), either(prans(), constant()))).parse(i)?;
-        Ok((
-            i,
-            (
-                Expr::Application(Box::new(name.node.clone()), args),
-                name.span(),
-            )
-                .into(),
-        ))
     }
 }
 
@@ -53,69 +36,6 @@ fn next_token<'a>(token: Token) -> impl Parser<'a, Token, Spanned<Token>> {
     }
 }
 
-fn let_block_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    either(local(), either(app(), constant()))
-}
-fn let_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    move |input: &'a [Spanned<Token>]| {
-        let let_parser = next_token(Token::KeyWord(KeyWord::Let));
-
-        let ident_let_parser = right(
-            next_token(Token::InDent(4)),
-            next_token(Token::KeyWord(KeyWord::Let)),
-        );
-
-        // let x = 10, y = 12 in x + y
-        // Let("x", 10, Let(y, 12, x + y))
-        // Id Op("=") (app, constant)
-        let binding1 = pair(
-            parse_name(),
-            right(next_token(Token::Op("=")), let_block_expr()),
-        );
-
-        //  Ctrl(',') Id Op("=") (app, constant)
-        let comma = either(
-            next_token(Token::Ctrl(',')),
-            right(next_token(Token::InDent(4)), next_token(Token::Ctrl(','))),
-        );
-        let eq = next_token(Token::Op("="));
-        let binding2 = right(comma, pair(parse_name(), right(eq, let_block_expr())));
-
-        // Let
-        let (i, _start) = either(let_parser, ident_let_parser).parse(input)?;
-
-        // bindings
-        let (i, (first, mut args)) = pair(binding1, zero_or_more(binding2)).parse(i)?;
-        args.insert(0, first);
-
-        // In
-        let (i, _) = either(
-            next_token(Token::KeyWord(KeyWord::In)),
-            right(
-                next_token(Token::InDent(4)),
-                next_token(Token::KeyWord(KeyWord::In)),
-            ),
-        )
-        .parse(i)?;
-
-        // Let(String, Box<Spanned<Self>>, Box<Spanned<Self>>),
-        // Return/Body?
-        let (i, body) = either(app(), either(local(), constant())).parse(i)?;
-        let r#let = args.iter().rev().fold(body, |acc, (name, expr)| {
-            (
-                Expr::Let(
-                    name.node.clone(),
-                    Box::new(expr.clone()),
-                    Box::new(acc.clone()),
-                ),
-                (name.span(), expr.span()).into(),
-            )
-                .into()
-        });
-        Ok((i, r#let))
-    }
-}
-
 fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         let (i, span_start) = next_token(Token::KeyWord(KeyWord::Do)).parse(input)?;
@@ -124,7 +44,7 @@ fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
         let (i, body) = one_or_more(right(
             // TODO: Make a custom parser for indents.
             next_token(Token::InDent(4)),
-            either(let_block(), either(app(), constant())),
+            either(let_expr_do(), either(app(), constant())),
         ))
         .parse(i)?;
         let span: Span = (span_start.span(), body.last().unwrap().span()).into();
@@ -132,9 +52,41 @@ fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     }
 }
 
+fn prans<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
+    right(
+        next_token(Token::Ctrl('(')),
+        left(
+            either(app(), either(local(), constant())),
+            next_token(Token::Ctrl(')')),
+        ),
+    )
+}
+
+pub fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
+    move |input: &'a [Spanned<Token>]| {
+        let (i, name) = either(
+            local(),
+            builtin().map(|s| (Expr::Constant(Atom::BuiltIn(s.node.clone())), s.span()).into()),
+        )
+        .parse(input)?;
+        let (i, args) = zero_or_more(either(local(), either(prans(), constant()))).parse(i)?;
+        Ok((
+            i,
+            (
+                Expr::Application(Box::new(name.node.clone()), args),
+                name.span(),
+            )
+                .into(),
+        ))
+    }
+}
+
 pub(crate) fn lambda<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        let expr = either(let_block(), either(do_block(), either(app(), constant())));
+        let expr = either(
+            let_expr_app(),
+            either(do_block(), either(app(), constant())),
+        );
         let (i, start) = next_token(Token::DeDent).parse(input)?;
         let (i, name) = parse_name().parse(i)?;
         let (i, prams) = zero_or_more(parse_name()).parse(i)?;
@@ -149,16 +101,6 @@ pub(crate) fn lambda<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
                 .into(),
         ))
     }
-}
-
-fn prans<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    right(
-        next_token(Token::Ctrl('(')),
-        left(
-            either(app(), either(local(), constant())),
-            next_token(Token::Ctrl(')')),
-        ),
-    )
 }
 
 #[derive(Debug, PartialEq, Clone)]
