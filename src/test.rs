@@ -157,11 +157,29 @@ fn test_let_binding_multi_do_expr() -> CResult<()> {
 add x y = do
     let a = x
     , b = y
-    + a b
+    , z = 1
+    + a b z
 
 main = add 1 2
 ";
     eprintln!("{}", src);
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(4)));
+    Ok(())
+}
+
+#[test]
+fn test_do_do() -> CResult<()> {
+    let src = "
+add x y = do
+            do
+                + x y
+
+main = add 1 3
+";
+    eprintln!("{}", src);
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(4)));
+    Ok(())
+}
+
     Ok(())
 }

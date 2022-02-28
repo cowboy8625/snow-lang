@@ -74,7 +74,7 @@ pub enum Token {
     String(String),
     Id(String),
     KeyWord(KeyWord),
-    InDent(usize),
+    InDent,
     DeDent,
     Op(&'static str),
     Ctrl(char),
@@ -88,7 +88,7 @@ impl Token {
             Self::String(i) => i.to_string(),
             Self::Id(i) => i.to_string(),
             Self::KeyWord(i) => i.to_string(),
-            Self::InDent(i) => i.to_string(),
+            Self::InDent => "InDent".into(),
             Self::DeDent => "DeDent".into(),
             Self::Op(i) => i.to_string(),
             Self::Ctrl(i) => i.to_string(),
@@ -102,7 +102,7 @@ impl Token {
             Self::String(_) => "String".to_string(),
             Self::Id(_) => "Id".to_string(),
             Self::KeyWord(i) => i.to_string(),
-            Self::InDent(_) => "InDent".to_string(),
+            Self::InDent => "InDent".to_string(),
             Self::DeDent => "DeDent".to_string(),
             Self::Op(_) => "Operator".to_string(),
             Self::Ctrl(i) => match i {
@@ -123,7 +123,7 @@ impl fmt::Display for Token {
             Self::String(i) => write!(f, "String({})", i),
             Self::Id(i) => write!(f, "Id({})", i),
             Self::KeyWord(i) => write!(f, "KeyWord({})", i),
-            Self::InDent(i) => write!(f, "InDent({})", i),
+            Self::InDent => write!(f, "InDent"),
             Self::DeDent => write!(f, "DeDent"),
             Self::Op(i) => write!(f, "Op({})", i),
             Self::Ctrl(i) => write!(f, "Ctrl({})", i),
@@ -285,12 +285,12 @@ impl<'a> Scanner<'a> {
                 let last = self.indent.last();
                 if last > Some(&count) {
                     let _ = self.indent.pop();
-                    self.push((Token::InDent(count), span.clone()));
+                    self.push((Token::InDent, span.clone()));
                 }
             }
         } else if self.indent.last() < Some(&count) || self.indent.is_empty() {
             eprintln!("Indent");
-            self.push((Token::InDent(count), span.clone()));
+            self.push((Token::InDent, span.clone()));
             self.indent.push(count);
         }
     }

@@ -70,7 +70,7 @@ fn scanner_let_block_multi_lines() {
         DeDent,
         Id("main".into()),
         Op("="),
-        InDent(4),
+        InDent,
         KeyWord(Let),
         Id("a".into()),
         Op("="),

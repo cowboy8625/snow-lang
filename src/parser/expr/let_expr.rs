@@ -10,11 +10,11 @@ fn let_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
 }
 
 fn indent_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
-    next_token(Token::InDent(4))
+    next_token(Token::InDent)
 }
 
 fn ident_let_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
-    right(next_token(Token::InDent(4)), let_token())
+    right(next_token(Token::InDent), let_token())
 }
 
 fn parse_let<'a>() -> impl Parser<'a, Token, Span> {
@@ -38,7 +38,7 @@ fn binding<'a>() -> impl Parser<'a, Token, (Spanned<String>, Spanned<Expr>)> {
 fn comma<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
     either(
         next_token(Token::Ctrl(',')),
-        right(zero_or_more(indent_token()), next_token(Token::Ctrl(','))),
+        right(indent_token(), next_token(Token::Ctrl(','))),
     )
 }
 

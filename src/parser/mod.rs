@@ -19,5 +19,5 @@ pub use atoms::Atom;
 use atoms::{boolean, keyword, number, string};
 use builtins::builtin;
 pub use builtins::BuiltIn;
-use expr::lambda;
+use expr::function;
 pub use expr::{app, Expr};

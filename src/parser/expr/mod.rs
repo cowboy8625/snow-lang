@@ -40,8 +40,7 @@ fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         let (i, span_start) = next_token(Token::KeyWord(KeyWord::Do)).parse(input)?;
         let (i, body) = one_or_more(right(
-            // TODO: Make a custom parser for indents.
-            next_token(Token::InDent(4)),
+            next_token(Token::InDent),
             either(let_expr_do(), either(app(), constant())),
         ))
         .parse(i)?;
@@ -79,13 +78,15 @@ pub fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     }
 }
 
-pub(crate) fn lambda<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
+pub(crate) fn function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         let expr = either(
             let_expr_app(),
             either(do_block(), either(app(), constant())),
         );
-        let (i, start) = next_token(Token::DeDent).parse(input)?;
+        let (i, start) = one_or_more(next_token(Token::DeDent))
+            .map(|r| r.first().unwrap().span())
+            .parse(input)?;
         let (i, name) = parse_name().parse(i)?;
         let (i, prams) = zero_or_more(parse_name()).parse(i)?;
         let (i, _) = next_token(Token::Op("=")).parse(i)?;
@@ -94,7 +95,7 @@ pub(crate) fn lambda<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
             i,
             (
                 Expr::Lambda(name, prams, Box::new(body.clone())),
-                Span::new(start.span.start, body.span.end, &start.span.loc),
+                Span::new(start.start, body.span.end, &start.loc),
             )
                 .into(),
         ))
