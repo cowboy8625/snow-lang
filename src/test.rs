@@ -7,6 +7,13 @@ fn from_string(src: &str) -> CResult<Expr> {
 }
 
 #[test]
+fn test_simple_main() -> CResult<()> {
+    let src = "main = let x y = + 1 y in x 1";
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(2)));
+    Ok(())
+}
+
+#[test]
 fn test_no_main() {
     let src = "add x y = + x y";
     let result = from_string(src)
@@ -16,6 +23,7 @@ fn test_no_main() {
         .map(|e| e.kind());
     assert_eq!(result, Some(ErrorKind::NoMain));
 }
+
 #[test]
 fn test_add_function() -> CResult<()> {
     let src = "
@@ -111,7 +119,7 @@ main = let z = 99 in z
 #[test]
 fn test_let_expr_two() -> CResult<()> {
     let src = "
-main = let z = 99, y = 1 in + z y
+main = let z = 99, y = 1 in + (z) (y)
 ";
     eprintln!("{}", src);
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(100)));
@@ -121,15 +129,12 @@ main = let z = 99, y = 1 in + z y
 #[test]
 fn test_let_expr_multi_line() -> CResult<()> {
     let src = "
-add x y =
-    let a = x
-    , b = y
-    in + a b
+add x y = let a = 1, b = 1 in + (a) (b)
 
 main = add 1 2
 ";
     eprintln!("{}", src);
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(2)));
     Ok(())
 }
 
@@ -137,17 +142,17 @@ main = add 1 2
 fn test_let_expr_multi_in_new_line() -> CResult<()> {
     let src = "
 add x y =
-    let a = x
-    , b = y
-    ,
-    c = y, d = x
+    let a = 4
+    , b = 3
+    , c = 2
+    , d = 1
     in
-    - (+ (+ a b) c) d
+    - (+ (+ (a) (b)) (c)) (d)
 
 main = add 1 2
 ";
     eprintln!("{}", src);
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(4)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(8)));
     Ok(())
 }
 
@@ -155,15 +160,16 @@ main = add 1 2
 fn test_let_binding_multi_do_expr() -> CResult<()> {
     let src = "
 add x y = do
-    let a = x
-    , b = y
+    let a = 1
+    , b = 3
     , z = 1
-    + a b z
+    in
+    + (+ (a) (b)) (z)
 
 main = add 1 2
 ";
     eprintln!("{}", src);
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(4)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(5)));
     Ok(())
 }
 
@@ -178,8 +184,5 @@ main = add 1 3
 ";
     eprintln!("{}", src);
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(4)));
-    Ok(())
-}
-
     Ok(())
 }

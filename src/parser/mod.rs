@@ -16,7 +16,7 @@ pub use parser::parser;
 pub type FunctionList = HashMap<String, Spanned<Expr>>;
 
 pub use atoms::Atom;
-use atoms::{boolean, keyword, number, string};
+use atoms::{boolean, number, string};
 use builtins::builtin;
 pub use builtins::BuiltIn;
 use expr::function;

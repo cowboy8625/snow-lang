@@ -1,20 +1,22 @@
-#![allow(unused)]
 use super::error::{CResult, Error, ErrorKind};
 use super::parser::{Atom, BuiltIn, Expr, FunctionList};
-use super::position::{Span, Spanned};
+use super::position::Spanned;
 use std::collections::HashMap;
-use std::fmt;
 
-pub fn evaluation(expr: &Expr, local: &mut FunctionList, funcs: &FunctionList) -> CResult<Expr> {
+pub fn evaluation(
+    expr: &Expr,
+    args: &[Spanned<Expr>],
+    local: &mut FunctionList,
+    funcs: &FunctionList,
+) -> CResult<Expr> {
     match expr {
-        Expr::Constant(contant) => Ok(expr.clone()),
-        // func-name args
+        Expr::Constant(_) => Ok(expr.clone()),
         Expr::Application(head, tail) => {
-            let reduced_head = evaluation(head, local, funcs)?;
+            let reduced_head = evaluation(head, &[], local, funcs)?;
             let reduced_tail = tail
                 .into_iter()
-                .map(|expr| evaluation(&expr.node, local, funcs))
-                .collect::<CResult<Vec<Expr>>>()?;
+                .map(|expr| Ok((evaluation(&expr.node, &[], local, funcs)?, expr.span()).into()))
+                .collect::<CResult<Vec<Spanned<Expr>>>>()?;
             // dbg!(&tail);
             match reduced_head {
                 Expr::Constant(Atom::BuiltIn(bi)) => Ok(Expr::Constant(match bi {
@@ -128,97 +130,99 @@ pub fn evaluation(expr: &Expr, local: &mut FunctionList, funcs: &FunctionList) -
                         }
                     }
                     BuiltIn::Print => {
-                        print!("{}", reduced_tail[0]);
-                        return Ok(reduced_tail[0].clone());
+                        print!("{}", reduced_tail[0].node);
+                        return Ok(reduced_tail[0].node.clone());
                     }
                     BuiltIn::PrintLn => {
-                        println!("{}", reduced_tail[0]);
-                        return Ok(reduced_tail[0].clone());
+                        println!("{}", reduced_tail[0].node);
+                        return Ok(reduced_tail[0].node.clone());
                     }
                 })),
-                Expr::Function(_, prams, body) => {
-                    let mut local_var = prams
-                        .iter()
-                        .zip(tail)
-                        .map(|(k, v)| (k.node.clone(), reduced_expr(v, local, funcs)))
-                        .collect::<HashMap<String, Spanned<Expr>>>();
-                    return evaluation(&body.node, &mut local_var, funcs);
-                }
-                t => Ok(t),
+                t => evaluation(&t, &tail, local, funcs),
             }
         }
-        // func-name prams body
-        Expr::Function(name, prams, body) => unreachable!(),
-        // func name's or pram name's
+        Expr::Function(_, prams, body) => {
+            let mut local_var = prams
+                .iter()
+                .zip(args)
+                .map(|(k, v)| (k.node.clone(), reduced_expr(v, local, funcs)))
+                .collect::<HashMap<String, Spanned<Expr>>>();
+            dbg!(&body);
+            return evaluation(&body.node, &[], &mut local_var, funcs);
+        }
         Expr::Local(name) => funcs
-            .get(name)
+            .get(&name.node)
             .map(|s| s.node.clone())
-            .or_else(|| local.get(name).map(|s| s.node.clone()))
+            .or_else(|| local.get(&name.node).map(|s| s.node.clone()))
             .ok_or_else(|| {
                 Error::new(
                     &format!("'{}' not found", name),
-                    Span::default(),
+                    name.span(),
                     ErrorKind::Undefined,
                 )
             }),
         Expr::Do(list_expr) => list_expr
+            .clone()
             .iter()
-            .map(|expr| evaluation(&expr.node, local, funcs))
+            .map(|expr| evaluation(&expr.node, &[], local, funcs))
             .collect::<CResult<Vec<Expr>>>()?
             .last()
             .map(Clone::clone)
             .ok_or(Error::new(
                 "nothing to return from do block",
-                Span::default(),
+                (list_expr.first(), list_expr.last()).into(),
                 ErrorKind::EmptyReturn,
             )),
-        Expr::Let(name, expr, body) => {
-            let expr = reduced_expr(expr, local, funcs);
-            local.insert(name.to_string(), expr);
-            Ok(evaluation(&body.node, local, funcs)?)
-        }
-        _ => unimplemented!(),
+        Expr::Let(expr, body) => {
+            for func in expr.iter() {
+                match &func.node {
+                    Expr::Function(name, ..) => local.insert(name.node.clone(), func.clone()),
+                    x => unreachable!(x),
+                };
+            }
+            Ok(evaluation(&body.node, &[], local, funcs)?)
+        } // _ => unimplemented!(),
     }
 }
 
 // TODO: should expect a span.
-fn get_int_from_expr(e: Expr) -> CResult<i32> {
-    if let Expr::Constant(Atom::Int(n)) = e {
+fn get_int_from_expr(e: Spanned<Expr>) -> CResult<i32> {
+    if let Expr::Constant(Atom::Int(n)) = e.node {
         Ok(n)
     } else {
         Err(Error::new(
             &format!("{} is not 'Int'", e),
-            Span::default(),
+            e.span(),
             ErrorKind::TypeError,
         ))
     }
 }
 
-fn get_float_from_expr(e: Expr) -> CResult<f32> {
-    if let Expr::Constant(Atom::Float(n)) = e {
+fn get_float_from_expr(e: Spanned<Expr>) -> CResult<f32> {
+    if let Expr::Constant(Atom::Float(n)) = e.node {
         Ok(n)
     } else {
         Err(Error::new(
             &format!("{} is not 'Float'", e),
-            Span::default(),
+            e.span(),
             ErrorKind::TypeError,
         ))
     }
 }
 
-fn get_bool_from_expr(e: Expr) -> CResult<bool> {
-    if let Expr::Constant(Atom::Boolean(b)) = e {
+fn get_bool_from_expr(e: Spanned<Expr>) -> CResult<bool> {
+    if let Expr::Constant(Atom::Boolean(b)) = e.node {
         Ok(b)
     } else {
         Err(Error::new(
             &format!("{} is not 'Boolean'", e),
-            Span::default(),
+            e.span(),
             ErrorKind::TypeError,
         ))
     }
 }
 
-fn is_int(oe: Option<&Expr>) -> bool {
+fn is_int(oe: Option<&Spanned<Expr>>) -> bool {
     if let Some(v) = oe {
         return get_int_from_expr(v.clone()).is_ok();
     }
@@ -231,14 +235,14 @@ fn reduced_expr(
     funcs: &FunctionList,
 ) -> Spanned<Expr> {
     match &spanned.node {
-        Expr::Local(n) => funcs
-            .get(n)
+        Expr::Local(name) => funcs
+            .get(&name.node)
             .map(Clone::clone)
-            .or_else(|| local.get(n).map(Clone::clone))
-            .unwrap(),
+            .or_else(|| local.get(&name.node).map(Clone::clone))
+            .unwrap_or(spanned.clone()),
         Expr::Constant(_) => spanned.clone(),
         _ => (
-            evaluation(&spanned.node.clone(), local, funcs).unwrap(),
+            evaluation(&spanned.node.clone(), &[], local, funcs).unwrap_or(spanned.node.clone()),
             spanned.span(),
         )
             .into(),

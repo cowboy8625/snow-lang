@@ -30,15 +30,15 @@ pub(crate) fn string<'a>() -> impl Parser<'a, Token, Spanned<Atom>> {
     }
 }
 
-pub(crate) fn keyword<'a>() -> impl Parser<'a, Token, Spanned<Atom>> {
-    move |input: &'a [Spanned<Token>]| match &input.get(0) {
-        Some(node) => match node.node {
-            Token::KeyWord(kw) => Ok((&input[1..], (Atom::Keyword(kw), input[0].span()).into())),
-            _ => Err(input),
-        },
-        _ => Err(input),
-    }
-}
+// pub(crate) fn _keyword<'a>() -> impl Parser<'a, Token, Spanned<Atom>> {
+//     move |input: &'a [Spanned<Token>]| match &input.get(0) {
+//         Some(node) => match node.node {
+//             Token::KeyWord(kw) => Ok((&input[1..], (Atom::Keyword(kw), input[0].span()).into())),
+//             _ => Err(input),
+//         },
+//         _ => Err(input),
+//     }
+// }
 
 pub(crate) fn boolean<'a>() -> impl Parser<'a, Token, Spanned<Atom>> {
     move |input: &'a [Spanned<Token>]| match &input.get(0) {
@@ -61,7 +61,7 @@ pub enum Atom {
     Float(f32),
     String(String),
     Boolean(bool),
-    Keyword(KeyWord),
+    // Keyword(KeyWord),
     BuiltIn(BuiltIn),
 }
 
@@ -72,7 +72,7 @@ impl fmt::Display for Atom {
             Self::Float(i) => write!(f, "{}", i),
             Self::String(i) => write!(f, "{}", i),
             Self::Boolean(i) => write!(f, "{}", i),
-            Self::Keyword(i) => write!(f, "{}", i),
+            // Self::Keyword(i) => write!(f, "{}", i),
             Self::BuiltIn(i) => write!(f, "{}", i),
         }
     }

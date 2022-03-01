@@ -47,7 +47,7 @@ fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut Fu
         }
     }
     if let Some(e) = &expr {
-        match interpreter::evaluation(e, local, &funcs) {
+        match interpreter::evaluation(e, &[], local, &funcs) {
             Ok(out) => eprintln!("[OUT]: {}", out),
             Err(e) => eprintln!("{}", e),
         }
@@ -68,10 +68,11 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
 
     match &funcs.get("main") {
         Some(Spanned {
-            node: Expr::Function(_, _, body),
+            node: Expr::Function(_, _prams, body),
             ..
         }) => Ok(interpreter::evaluation(
             &body.node,
+            &[],
             &mut FunctionList::new(),
             &funcs,
         )?),

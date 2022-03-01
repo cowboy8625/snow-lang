@@ -280,7 +280,6 @@ impl<'a> Scanner<'a> {
         let span: Span = (start, end).into();
 
         if self.indent.last() > Some(&count) {
-            eprintln!("DeDent");
             loop {
                 let last = self.indent.last();
                 if last > Some(&count) {
@@ -289,7 +288,6 @@ impl<'a> Scanner<'a> {
                 }
             }
         } else if self.indent.last() < Some(&count) || self.indent.is_empty() {
-            eprintln!("Indent");
             self.push((Token::InDent, span.clone()));
             self.indent.push(count);
         }

@@ -1,14 +1,14 @@
 mod let_expr;
 use super::mini_parse::{self, either, left, one_or_more, right, zero_or_more, Parser};
-use super::{boolean, builtin, keyword, number, string, Atom, KeyWord, Span, Spanned, Token};
-use let_expr::{let_expr_app, let_expr_do};
+use super::{boolean, builtin, number, string, Atom, KeyWord, Span, Spanned, Token};
+use let_expr::let_expr;
 use std::fmt;
 
 pub fn constant<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         either(
             builtin().map(|b| (Atom::BuiltIn(b.node.clone()), b.span()).into()),
-            either(boolean(), either(keyword(), either(string(), number()))),
+            either(boolean(), either(string(), number())),
         )
         .parse(input)
         .map(|(i, b)| (i, (Expr::Constant(b.node.clone()), b.span()).into()))
@@ -26,7 +26,7 @@ fn parse_name<'a>() -> impl Parser<'a, Token, Spanned<String>> {
 }
 
 fn local<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    parse_name().map(|s| (Expr::Local(s.node.clone()), s.span()).into())
+    parse_name().map(|s| (Expr::Local(s.clone()), s.span()).into())
 }
 
 fn next_token<'a>(token: Token) -> impl Parser<'a, Token, Spanned<Token>> {
@@ -38,11 +38,17 @@ fn next_token<'a>(token: Token) -> impl Parser<'a, Token, Spanned<Token>> {
 
 fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        let (i, span_start) = next_token(Token::KeyWord(KeyWord::Do)).parse(input)?;
-        let (i, body) = one_or_more(right(
-            next_token(Token::InDent),
-            either(let_expr_do(), either(app(), constant())),
+        let (i, span_start) = left(
+            next_token(Token::KeyWord(KeyWord::Do)),
+            zero_or_more(next_token(Token::InDent)),
+        )
+        .parse(input)?;
+
+        let (i, body) = one_or_more(either(
+            do_block(),
+            either(let_expr(), either(app(), constant())),
         ))
+        .dbg("Do", false)
         .parse(i)?;
         let span: Span = (span_start.span(), body.last().unwrap().span()).into();
         Ok((i, (Expr::Do(body), span).into()))
@@ -80,10 +86,7 @@ pub fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
 
 pub(crate) fn function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        let expr = either(
-            let_expr_app(),
-            either(do_block(), either(app(), constant())),
-        );
+        let expr = either(let_expr(), either(do_block(), either(app(), constant())));
         let (i, start) = one_or_more(next_token(Token::DeDent))
             .map(|r| r.first().unwrap().span())
             .parse(input)?;
@@ -111,11 +114,11 @@ pub enum Expr {
     Function(Spanned<String>, Vec<Spanned<String>>, Box<Spanned<Self>>),
     // func name's or pram name's
     // TODO: Turn into Spanned<String>
-    Local(String),
+    Local(Spanned<String>),
     // do block
     Do(Vec<Spanned<Self>>),
-    //   name       bindings            body
-    Let(String, Box<Spanned<Self>>, Box<Spanned<Self>>),
+    //   expr           body
+    Let(Vec<Spanned<Self>>, Box<Spanned<Self>>),
     // (if predicate do-this)
     // If(Box<Expr>, Box<Expr>),
     // // (if predicate do-this otherwise-do-this)
@@ -125,7 +128,7 @@ pub enum Expr {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Local(name) => write!(f, "Local({})", name),
+            Self::Local(name) => write!(f, "Local({})", name.node),
             Self::Constant(a) => write!(f, "{}", a),
             Self::Application(n, a) => write!(
                 f,
@@ -145,7 +148,7 @@ impl fmt::Display for Expr {
                 b.node,
             ),
             Self::Do(d) => write!(f, "{:?}", d),
-            Self::Let(n, e, b) => write!(f, "Let({}, {}, {})", n, e.node, b.node,),
+            Self::Let(e, b) => write!(f, "Let({:?}, {})", e, b.node,),
         }
     }
 }
