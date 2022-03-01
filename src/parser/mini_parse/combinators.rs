@@ -294,6 +294,23 @@ where
 //     assert_eq!(Err(("", ParseError::new("".into()))), parser.parse(""));
 // }
 
+pub fn zero_or_one<'a, Input, P, A>(parser: P) -> impl Parser<'a, Input, Option<A>>
+where
+    Input: Clone + PartialEq + 'a,
+    P: Parser<'a, Input, A>,
+{
+    move |mut input| {
+        let mut result: Option<A> = None;
+
+        if let Ok((next_input, item)) = parser.parse(input) {
+            input = next_input;
+            result = Some(item);
+        }
+
+        Ok((input, result))
+    }
+}
+
 pub fn zero_or_more<'a, Input, P, A>(parser: P) -> impl Parser<'a, Input, Vec<A>>
 where
     Input: Clone + PartialEq + 'a,

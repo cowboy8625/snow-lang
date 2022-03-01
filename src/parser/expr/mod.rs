@@ -1,6 +1,8 @@
+mod conditionals;
 mod let_expr;
 use super::mini_parse::{self, either, left, one_or_more, right, zero_or_more, Parser};
 use super::{boolean, builtin, number, string, Atom, KeyWord, Span, Spanned, Token};
+use conditionals::conditional;
 use let_expr::let_expr;
 use std::fmt;
 
@@ -38,18 +40,14 @@ fn next_token<'a>(token: Token) -> impl Parser<'a, Token, Spanned<Token>> {
 
 fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
+        // FIXME: Leaving InDent may be useful.
         let (i, span_start) = left(
             next_token(Token::KeyWord(KeyWord::Do)),
             zero_or_more(next_token(Token::InDent)),
         )
         .parse(input)?;
 
-        let (i, body) = one_or_more(either(
-            do_block(),
-            either(let_expr(), either(app(), constant())),
-        ))
-        .dbg("Do", false)
-        .parse(i)?;
+        let (i, body) = one_or_more(func_expr()).parse(i)?;
         let span: Span = (span_start.span(), body.last().unwrap().span()).into();
         Ok((i, (Expr::Do(body), span).into()))
     }
@@ -84,16 +82,25 @@ pub fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     }
 }
 
+pub fn func_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
+    either(
+        let_expr(),
+        either(do_block(), either(conditional(), either(app(), constant()))),
+    )
+}
+
 pub(crate) fn function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        let expr = either(let_expr(), either(do_block(), either(app(), constant())));
+        // Check looks for DeDent Token to start a new Function Dec.
         let (i, start) = one_or_more(next_token(Token::DeDent))
             .map(|r| r.first().unwrap().span())
             .parse(input)?;
+        // Gets name of Function
         let (i, name) = parse_name().parse(i)?;
+        // Gets name of Parameters
         let (i, prams) = zero_or_more(parse_name()).parse(i)?;
         let (i, _) = next_token(Token::Op("=")).parse(i)?;
-        let (i, body) = expr.parse(i)?;
+        let (i, body) = func_expr().parse(i)?;
         Ok((
             i,
             (
@@ -113,16 +120,15 @@ pub enum Expr {
     // func-name prams body
     Function(Spanned<String>, Vec<Spanned<String>>, Box<Spanned<Self>>),
     // func name's or pram name's
-    // TODO: Turn into Spanned<String>
     Local(Spanned<String>),
     // do block
     Do(Vec<Spanned<Self>>),
     //   expr           body
     Let(Vec<Spanned<Self>>, Box<Spanned<Self>>),
     // (if predicate do-this)
-    // If(Box<Expr>, Box<Expr>),
+    If(Box<Spanned<Expr>>, Box<Spanned<Expr>>),
     // // (if predicate do-this otherwise-do-this)
-    // IfElse(Box<Expr>, Box<Expr>, Box<Expr>),
+    IfElse(Box<Spanned<Expr>>, Box<Spanned<Expr>>, Box<Spanned<Expr>>),
 }
 
 impl fmt::Display for Expr {
@@ -149,6 +155,8 @@ impl fmt::Display for Expr {
             ),
             Self::Do(d) => write!(f, "{:?}", d),
             Self::Let(e, b) => write!(f, "Let({:?}, {})", e, b.node,),
+            Self::If(c, e) => write!(f, "If({}, {})", c, e),
+            Self::IfElse(c, e, o) => write!(f, "If({}, {}, {})", c, e, o),
         }
     }
 }

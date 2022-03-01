@@ -354,7 +354,7 @@ impl<'a> Scanner<'a> {
         self.push((
             Token::String(
                 string
-                    // TODO: There are more to cover
+                    // NOTE: There are more to cover
                     // This image shows a few more.
                     // https://image.slidesharecdn.com/cbasics-100427070048-phpapp01/95/c-basics-9-728.jpg?cb=1272351721
                     .replace("\\r", "\r")

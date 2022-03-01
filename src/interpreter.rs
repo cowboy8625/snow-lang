@@ -108,18 +108,66 @@ pub fn evaluation(
                             Default::default()
                         })
                     }
-                    BuiltIn::Eq => Atom::Boolean(
-                        reduced_tail
-                            .iter()
-                            .zip(reduced_tail.iter().skip(1))
-                            .all(|(a, b)| a == b),
-                    ),
-                    BuiltIn::NEq => Atom::Boolean(
-                        reduced_tail
-                            .iter()
-                            .zip(reduced_tail.iter().skip(1))
-                            .all(|(a, b)| a != b),
-                    ),
+                    BuiltIn::Eq if is_int(reduced_tail.first().clone()) => {
+                        Atom::Boolean(if let Some(first_elem) = reduced_tail.first().cloned() {
+                            let fe = get_int_from_expr(first_elem)?;
+                            reduced_tail
+                                .into_iter()
+                                .map(get_int_from_expr)
+                                .collect::<CResult<Vec<i32>>>()?
+                                .into_iter()
+                                .skip(1)
+                                .fold((fe, true), |(a, c), b| (b, c && a == b))
+                                .1
+                        } else {
+                            Default::default()
+                        })
+                    }
+                    BuiltIn::Eq => {
+                        Atom::Boolean(if let Some(first_elem) = reduced_tail.first().cloned() {
+                            let fe = get_float_from_expr(first_elem)?;
+                            reduced_tail
+                                .into_iter()
+                                .map(get_float_from_expr)
+                                .collect::<CResult<Vec<f32>>>()?
+                                .into_iter()
+                                .skip(1)
+                                .fold((fe, true), |(a, c), b| (b, c && a == b))
+                                .1
+                        } else {
+                            Default::default()
+                        })
+                    }
+                    BuiltIn::NEq if is_int(reduced_tail.first().clone()) => {
+                        Atom::Boolean(if let Some(first_elem) = reduced_tail.first().cloned() {
+                            let fe = get_int_from_expr(first_elem)?;
+                            reduced_tail
+                                .into_iter()
+                                .map(get_int_from_expr)
+                                .collect::<CResult<Vec<i32>>>()?
+                                .into_iter()
+                                .skip(1)
+                                .fold((fe, true), |(a, c), b| (b, c && a != b))
+                                .1
+                        } else {
+                            Default::default()
+                        })
+                    }
+                    BuiltIn::NEq => {
+                        Atom::Boolean(if let Some(first_elem) = reduced_tail.first().cloned() {
+                            let fe = get_float_from_expr(first_elem)?;
+                            reduced_tail
+                                .into_iter()
+                                .map(get_float_from_expr)
+                                .collect::<CResult<Vec<f32>>>()?
+                                .into_iter()
+                                .skip(1)
+                                .fold((fe, true), |(a, c), b| (b, c && a != b))
+                                .1
+                        } else {
+                            Default::default()
+                        })
+                    }
                     BuiltIn::Not => {
                         if reduced_tail.len() != 1 {
                             return Err("Nothing on Rhs.".into());
@@ -147,7 +195,6 @@ pub fn evaluation(
                 .zip(args)
                 .map(|(k, v)| (k.node.clone(), reduced_expr(v, local, funcs)))
                 .collect::<HashMap<String, Spanned<Expr>>>();
-            dbg!(&body);
             return evaluation(&body.node, &[], &mut local_var, funcs);
         }
         Expr::Local(name) => funcs
@@ -181,11 +228,31 @@ pub fn evaluation(
                 };
             }
             Ok(evaluation(&body.node, &[], local, funcs)?)
+        }
+        Expr::If(condition, body) => {
+            let reduced_condition = evaluation(&condition.node, &[], local, funcs)?;
+            let cond = get_bool_from_expr((reduced_condition, condition.span()).into())?;
+            if cond {
+                return evaluation(&body.node, &[], local, funcs);
+            }
+            Err(Error::new(
+                "conditional may need a else statement",
+                condition.span(),
+                ErrorKind::EmptyReturn,
+            ))
+        }
+        Expr::IfElse(condition, body, r#else) => {
+            let reduced_condition = evaluation(&condition.node, &[], local, funcs)?;
+            let cond = get_bool_from_expr((reduced_condition, condition.span()).into())?;
+            if cond {
+                return evaluation(&body.node, &[], local, funcs);
+            } else {
+                return evaluation(&r#else.node, &[], local, funcs);
+            }
         } // _ => unimplemented!(),
     }
 }
 
-// TODO: should expect a span.
 fn get_int_from_expr(e: Spanned<Expr>) -> CResult<i32> {
     if let Expr::Constant(Atom::Int(n)) = e.node {
         Ok(n)
