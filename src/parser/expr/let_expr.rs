@@ -46,7 +46,6 @@ pub(crate) fn let_function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     }
 }
 
-// TODO: Rename this to let_expr_func
 pub(crate) fn let_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         // Let
@@ -82,6 +81,7 @@ pub(crate) fn let_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     }
 }
 
+// TODO bring back the do in let
 // pub(crate) fn let_expr_do<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
 //     move |input: &'a [Spanned<Token>]| {
 //         let (i, _start) = parse_let().parse(input)?;
