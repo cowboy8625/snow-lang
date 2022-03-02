@@ -242,6 +242,21 @@ where
     map(pair(parser1, parser2), |(_left, right)| right)
 }
 
+pub fn surround<'a, Input, P1, P2, P3, R1, R2, R3>(
+    parser1: P1,
+    parser2: P2,
+    parser3: P3,
+) -> impl Parser<'a, Input, R2>
+where
+    Input: Clone + PartialEq + 'a,
+    P1: Parser<'a, Input, R1>,
+    P2: Parser<'a, Input, R2>,
+    P3: Parser<'a, Input, R3>,
+{
+    // map(pair(parser1, parser2), |(_left, right)| right)
+    right(parser1, left(parser2, parser3))
+}
+
 // #[test]
 // fn right_combinator() {
 //     let tag_opener = right(match_literal("<"), identifier);

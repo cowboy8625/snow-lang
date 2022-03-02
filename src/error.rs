@@ -70,18 +70,22 @@ pub enum ErrorKind {
 
     UnknownChar,
     UnclosedDelimiter,
+    InvalidIndentation,
+    ReserverdWord,
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NoMain => write!(f, "no main"),
-            Self::EmptyReturn => write!(f, "empty return"),
-            Self::Undefined => write!(f, "undefined"),
-            Self::TypeError => write!(f, "type error"),
-            Self::LexeringFailer => write!(f, "lexering failer"),
-            Self::UnknownChar => write!(f, "unknown char"),
-            Self::UnclosedDelimiter => write!(f, "unclosed delimiter"),
+            Self::NoMain => write!(f, "NoMain"),
+            Self::EmptyReturn => write!(f, "EmptyReturn"),
+            Self::Undefined => write!(f, "Undefined"),
+            Self::TypeError => write!(f, "TypeError"),
+            Self::LexeringFailer => write!(f, "LexeringFailer"),
+            Self::UnknownChar => write!(f, "UnknownChar"),
+            Self::UnclosedDelimiter => write!(f, "UnclosedDelimiter"),
+            Self::InvalidIndentation => write!(f, "InvalidIndentation"),
+            Self::ReserverdWord => write!(f, "ReserverdWord"),
         }
     }
 }

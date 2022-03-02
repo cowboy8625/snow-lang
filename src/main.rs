@@ -12,7 +12,7 @@ mod test_scanner;
 
 use crate::error::{CResult, Error, ErrorKind};
 use crate::position::{Pos, Span, Spanned};
-use parser::{Expr, FunctionList, Parser};
+use parser::{Atom, Expr, FunctionList, Parser};
 
 fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
     let tokens = scanner::scanner("shell.snow", src).unwrap_or(Vec::new());
@@ -66,16 +66,40 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
         Err(t) => (t, FunctionList::new()),
     };
 
+    let f: Spanned<Expr> = (
+        Expr::Constant(Atom::String(filename.into())),
+        Span::default(),
+    )
+        .into();
+    let mut a = if let Some(idx) = std::env::args().into_iter().position(|x| x == filename) {
+        std::env::args()
+            .into_iter()
+            .enumerate()
+            .rev()
+            .take_while(|(i, _)| i > &idx)
+            .map(|(_, i)| (Expr::Constant(Atom::String(i.into())), Span::default()).into())
+            .collect::<Vec<Spanned<Expr>>>()
+    } else {
+        Vec::new()
+    };
+    a.insert(0, f);
     match &funcs.get("main") {
         Some(Spanned {
-            node: Expr::Function(_, _prams, body),
+            node: Expr::Function(_, prams, body),
             ..
-        }) => Ok(interpreter::evaluation(
-            &body.node,
-            &[],
-            &mut FunctionList::new(),
-            &funcs,
-        )?),
+        }) => {
+            let mut local_var = prams
+                .iter()
+                .zip(&a)
+                .map(|(k, v)| (k.node.clone(), v.clone()))
+                .collect::<std::collections::HashMap<String, Spanned<Expr>>>();
+            Ok(interpreter::evaluation(
+                &body.node,
+                &[],
+                &mut local_var,
+                &funcs,
+            )?)
+        }
         _ => {
             dbg!(t);
             dbg!(funcs);

@@ -1,5 +1,7 @@
-use super::mini_parse::{either, pair, right, zero_or_more, zero_or_one, Parser};
-use super::{app, constant, left, next_token, Expr, KeyWord, Spanned, Token};
+use super::mini_parse::{either, pair, right, surround, zero_or_more, zero_or_one, Parser};
+use super::{
+    app, constant, dedent_token, indent_token, left, next_token, Expr, KeyWord, Spanned, Token,
+};
 
 // DeDent,
 // Id("main".into()),
@@ -87,7 +89,10 @@ pub fn condition<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
 }
 
 fn expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    either(app(), constant())
+    either(
+        surround(indent_token(), either(app(), constant()), dedent_token()),
+        either(app(), constant()),
+    )
 }
 
 fn if_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {

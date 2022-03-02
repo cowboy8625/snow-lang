@@ -1,23 +1,11 @@
-use super::mini_parse::{either, pair, right, zero_or_more, Parser};
-use super::{app, constant, local, next_token, parse_name, Expr, KeyWord, Span, Spanned, Token};
+use super::mini_parse::{either, left, pair, right, zero_or_more, zero_or_one, Parser};
+use super::{
+    app, constant, dedent_token, indent_token, local, next_token, parse_name, Expr, KeyWord, Span,
+    Spanned, Token,
+};
 
 fn let_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
     next_token(Token::KeyWord(KeyWord::Let))
-}
-
-fn indent_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
-    next_token(Token::InDent)
-}
-
-fn ident_let_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
-    right(next_token(Token::InDent), let_token())
-}
-
-fn parse_let<'a>() -> impl Parser<'a, Token, Span> {
-    move |input: &'a [Spanned<Token>]| {
-        let (i, t) = either(let_token(), ident_let_token()).parse(input)?;
-        Ok((i, t.span()))
-    }
 }
 
 fn parse_body<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
@@ -46,58 +34,32 @@ pub(crate) fn let_function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     }
 }
 
+pub(crate) fn let_binding<'a>() -> impl Parser<'a, Token, (Spanned<Expr>, Vec<Spanned<Expr>>)> {
+    left(
+        pair(let_function(), zero_or_more(right(comma(), let_function()))),
+        zero_or_one(comma()),
+    )
+}
+
 pub(crate) fn let_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         // Let
-        let (i, start) = parse_let().parse(input)?;
+        let (i, start) = let_token().parse(input)?;
         // expr
-        let (i, (first, mut args)) = right(
-            zero_or_more(next_token(Token::DeDent)),
-            pair(let_function(), zero_or_more(right(comma(), let_function()))),
+        let (i, (first, mut args)) = either(
+            right(indent_token(), left(let_binding(), dedent_token())),
+            let_binding(),
         )
         .parse(i)?;
         args.insert(0, first);
         // In
-        let (i, _) = right(
-            zero_or_more(next_token(Token::DeDent)),
-            next_token(Token::KeyWord(KeyWord::In)),
-        )
-        .parse(i)?;
+        let (i, _) = next_token(Token::KeyWord(KeyWord::In)).parse(i)?;
 
         // Let(String, Box<Spanned<Self>>, Box<Spanned<Self>>),
         // Return/Body?
-        let (i, body) = right(zero_or_more(indent_token()), parse_body()).parse(i)?;
+        let (i, body) = parse_body().parse(i)?;
         let r#let = Expr::Let(args, Box::new(body.clone()));
-        let span = (start, body.span()).into();
+        let span = (start.span(), body.span()).into();
         Ok((i, (r#let, span).into()))
-        // let r#let = args.iter().rev().fold(body, |acc, expr| {
-        //     (
-        //         Expr::Let(Box::new(expr.clone()), Box::new(acc.clone())),
-        //         (expr.span(), acc.span()).into(),
-        //     )
-        //         .into()
-        // });
-        // Ok((i, r#let))
     }
 }
-
-// TODO bring back the do in let
-// pub(crate) fn let_expr_do<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-//     move |input: &'a [Spanned<Token>]| {
-//         let (i, _start) = parse_let().parse(input)?;
-//         // expr
-//         let (i, (first, mut args)) =
-//             pair(let_function(), zero_or_more(right(comma(), let_function()))).parse(i)?;
-//         args.insert(0, first);
-//
-//         let (i, body) = right(zero_or_more(indent_token()), parse_body()).parse(i)?;
-//         let r#let = args.iter().rev().fold(body, |acc, expr| {
-//             (
-//                 Expr::Let(Box::new(expr.clone()), Box::new(acc.clone())),
-//                 (expr.span(), acc.span()).into(),
-//             )
-//                 .into()
-//         });
-//         Ok((i, r#let))
-//     }
-// }

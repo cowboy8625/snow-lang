@@ -2,6 +2,7 @@ use super::error::{CResult, Error, ErrorKind};
 use super::parser::{Atom, BuiltIn, Expr, FunctionList};
 use super::position::Spanned;
 use std::collections::HashMap;
+use std::io::Write;
 
 pub fn evaluation(
     expr: &Expr,
@@ -178,11 +179,16 @@ pub fn evaluation(
                         }
                     }
                     BuiltIn::Print => {
-                        print!("{}", reduced_tail[0].node);
+                        for i in reduced_tail.iter() {
+                            print!("{}", reduced_expr(&i, local, funcs).node);
+                        }
+                        std::io::stdout().flush()?;
                         return Ok(reduced_tail[0].node.clone());
                     }
                     BuiltIn::PrintLn => {
-                        println!("{}", reduced_tail[0].node);
+                        for i in reduced_tail.iter() {
+                            println!("{}", reduced_expr(&i, local, funcs).node);
+                        }
                         return Ok(reduced_tail[0].node.clone());
                     }
                 })),
