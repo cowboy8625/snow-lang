@@ -6,6 +6,27 @@ use conditionals::conditional;
 use let_expr::let_expr;
 use std::fmt;
 
+fn _print_input(input: &[Spanned<Token>], msg: &str) {
+    eprintln!("--Start--{}-----", msg);
+    for i in input.iter() {
+        eprintln!("{}", i);
+    }
+    eprintln!("--End--{}-----", msg);
+}
+
+pub fn indent_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
+    next_token(Token::InDent)
+}
+pub fn equal_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
+    next_token(Token::Op("="))
+}
+pub fn do_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
+    next_token(Token::KeyWord(KeyWord::Do))
+}
+pub fn dedent_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
+    next_token(Token::DeDent)
+}
+
 pub fn constant<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         either(
@@ -38,17 +59,12 @@ fn next_token<'a>(token: Token) -> impl Parser<'a, Token, Spanned<Token>> {
     }
 }
 
-fn do_block<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
+fn do_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        // FIXME: Leaving InDent may be useful.
-        let (i, span_start) = left(
-            next_token(Token::KeyWord(KeyWord::Do)),
-            zero_or_more(next_token(Token::InDent)),
-        )
-        .parse(input)?;
-
+        let (i, span_start) = left(do_token(), indent_token()).parse(input)?;
         let (i, body) = one_or_more(func_expr()).parse(i)?;
-        let span: Span = (span_start.span(), body.last().unwrap().span()).into();
+        let (i, end) = dedent_token().parse(i)?;
+        let span: Span = (span_start.span(), end.span()).into();
         Ok((i, (Expr::Do(body), span).into()))
     }
 }
@@ -85,27 +101,33 @@ pub fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
 pub fn func_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     either(
         let_expr(),
-        either(do_block(), either(conditional(), either(app(), constant()))),
+        either(do_expr(), either(conditional(), either(app(), constant()))),
     )
+}
+
+fn fn_token<'a>() -> impl Parser<'a, Token, Spanned<String>> {
+    move |input: &'a [Spanned<Token>]| match input.get(0) {
+        Some(node) => match &node.node {
+            Token::Fn(name) => Ok((&input[1..], Spanned::new(name.to_string(), input[0].span()))),
+            _ => Err(input),
+        },
+        _ => Err(input),
+    }
 }
 
 pub(crate) fn function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        // Check looks for DeDent Token to start a new Function Dec.
-        let (i, start) = one_or_more(next_token(Token::DeDent))
-            .map(|r| r.first().unwrap().span())
-            .parse(input)?;
         // Gets name of Function
-        let (i, name) = parse_name().parse(i)?;
-        // Gets name of Parameters
+        let (i, name) = fn_token().parse(input)?;
+        // Gets Parameters
         let (i, prams) = zero_or_more(parse_name()).parse(i)?;
-        let (i, _) = next_token(Token::Op("=")).parse(i)?;
-        let (i, body) = func_expr().parse(i)?;
+        let (i, _) = either(left(equal_token(), indent_token()), equal_token()).parse(i)?;
+        let (i, body) = either(left(func_expr(), dedent_token()), func_expr()).parse(i)?;
         Ok((
             i,
             (
-                Expr::Function(name, prams, Box::new(body.clone())),
-                Span::new(start.start, body.span.end, &start.loc),
+                Expr::Function(name.clone(), prams, Box::new(body.clone())),
+                (name.span(), body.span()).into(),
             )
                 .into(),
         ))

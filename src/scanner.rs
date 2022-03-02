@@ -73,6 +73,7 @@ pub enum Token {
     Float(String),
     String(String),
     Id(String),
+    Fn(String),
     KeyWord(KeyWord),
     InDent,
     DeDent,
@@ -87,6 +88,7 @@ impl Token {
             Self::Float(i) => i.to_string(),
             Self::String(i) => i.to_string(),
             Self::Id(i) => i.to_string(),
+            Self::Fn(i) => i.to_string(),
             Self::KeyWord(i) => i.to_string(),
             Self::InDent => "InDent".into(),
             Self::DeDent => "DeDent".into(),
@@ -101,6 +103,7 @@ impl Token {
             Self::Float(_) => "Float".to_string(),
             Self::String(_) => "String".to_string(),
             Self::Id(_) => "Id".to_string(),
+            Self::Fn(i) => i.to_string(),
             Self::KeyWord(i) => i.to_string(),
             Self::InDent => "InDent".to_string(),
             Self::DeDent => "DeDent".to_string(),
@@ -122,6 +125,7 @@ impl fmt::Display for Token {
             Self::Float(i) => write!(f, "Float({})", i),
             Self::String(i) => write!(f, "String({})", i),
             Self::Id(i) => write!(f, "Id({})", i),
+            Self::Fn(i) => write!(f, "Fn({})", i),
             Self::KeyWord(i) => write!(f, "KeyWord({})", i),
             Self::InDent => write!(f, "InDent"),
             Self::DeDent => write!(f, "DeDent"),
@@ -137,6 +141,8 @@ struct Scanner<'a> {
     errors: MulitError,
     delimiters: Vec<Spanned<Token>>,
     indent: Vec<usize>,
+    current: Option<&'a CharPos>,
+    previous: char,
 }
 
 impl<'a> Scanner<'a> {
@@ -147,33 +153,69 @@ impl<'a> Scanner<'a> {
             errors: MulitError::default(),
             delimiters: Vec::new(),
             indent: Vec::new(),
+            current: None,
+            previous: '\n',
         }
     }
+
+    fn next(&mut self) -> Option<&'a CharPos> {
+        if let Some(cp) = self.current {
+            self.previous = cp.chr;
+        }
+        self.current = self.stream.next();
+        self.current
+    }
+
+    fn next_if(&mut self, func: impl FnOnce(&&CharPos) -> bool) -> Option<&'a CharPos> {
+        match (self.current, self.stream.next_if(func)) {
+            (Some(current), next @ Some(_)) => {
+                self.previous = current.chr;
+                self.current = next;
+            }
+            (_, next @ Some(_)) => self.current = next,
+            _ => return None,
+        }
+        self.current
+    }
+
+    fn peek_char(&mut self) -> char {
+        self.stream
+            .peek()
+            .unwrap_or(&&CharPos {
+                chr: '\0',
+                idx: 0,
+                row: 0,
+                col: 0,
+                loc: "ERROR".into(),
+            })
+            .chr
+    }
+
     fn scan(mut self) -> Self {
-        while let Some(cp) = self.stream.next() {
+        while let Some(cp) = self.next() {
             match cp.chr {
                 '-' if self.peek_char() == '-' => self.line_comment(),
                 '{' if self.peek_char() == '-' => self.block_comment(),
-                '\n' if self.peek_char() == ' ' => self.indent(),
-                '\n' if self.peek_char().is_ascii_alphabetic() => self.dedent(cp),
+                '\n' => self.indent(),
+                // '\n' if self.peek_char().is_ascii_alphabetic() => self.dedent(cp),
                 '=' if self.peek_char() == '=' => {
-                    let end = self.stream.next().unwrap();
+                    let end = self.next().unwrap();
                     self.push((Token::Op("=="), (cp, end).into()))
                 }
                 '!' if self.peek_char() == '=' => {
-                    let end = self.stream.next().unwrap();
+                    let end = self.next().unwrap();
                     self.push((Token::Op("!="), (cp, end).into()))
                 }
                 '>' if self.peek_char() == '=' => {
-                    let end = self.stream.next().unwrap();
+                    let end = self.next().unwrap();
                     self.push((Token::Op(">="), (cp, end).into()))
                 }
                 '<' if self.peek_char() == '=' => {
-                    let end = self.stream.next().unwrap();
+                    let end = self.next().unwrap();
                     self.push((Token::Op("<="), (cp, end).into()))
                 }
                 ':' if self.peek_char() == ':' => {
-                    let end = self.stream.next().unwrap();
+                    let end = self.next().unwrap();
                     self.push((Token::Op("::"), (cp, end).into()))
                 }
                 '!' => self.push((Token::Op("!"), (cp, cp).into())),
@@ -192,10 +234,10 @@ impl<'a> Scanner<'a> {
                 '}' => self.push((Token::Ctrl('}'), (cp, cp).into())),
                 ',' => self.push((Token::Ctrl(','), (cp, cp).into())),
                 '"' => self.string(cp),
+                id if id.is_ascii_alphabetic() && self.previous == '\n' => self.func(cp),
                 id if id.is_ascii_alphabetic() => self.identifier(cp),
                 num if num.is_numeric() => self.number(cp),
                 ' ' => {}
-                '\n' => {}
                 _ => {
                     println!("{:?}:{}:{}:{}", cp.chr, cp.idx, cp.row, cp.col);
                     self.errors.push(Error::new(
@@ -207,6 +249,11 @@ impl<'a> Scanner<'a> {
             }
         }
         self.unwrap_dedent();
+        if let Some(item) = self.tokens.last().map(Clone::clone) {
+            if item.node != Token::DeDent {
+                self.push((Token::DeDent, item.span()));
+            }
+        }
         self
     }
 
@@ -242,26 +289,13 @@ impl<'a> Scanner<'a> {
         self.tokens.push(spanned.into());
     }
 
-    fn peek_char(&mut self) -> char {
-        self.stream
-            .peek()
-            .unwrap_or(&&CharPos {
-                chr: '\0',
-                idx: 0,
-                row: 0,
-                col: 0,
-                loc: "ERROR".into(),
-            })
-            .chr
-    }
-
     fn line_comment(&mut self) {
-        while let Some(_) = self.stream.next_if(|cp| cp.chr != '\n') {}
+        while let Some(_) = self.next_if(|cp| cp.chr != '\n') {}
     }
 
     fn block_comment(&mut self) {
         let mut last = '\0';
-        while let Some(cp) = self.stream.next() {
+        while let Some(cp) = self.next() {
             if last == '-' && cp.chr == '}' {
                 break;
             }
@@ -270,34 +304,48 @@ impl<'a> Scanner<'a> {
     }
 
     fn indent(&mut self) {
-        let mut count = 1;
-        let start = self.stream.next().unwrap();
-        let mut end = start;
-        while let Some(cp) = self.stream.next_if(|&cp| cp.chr == ' ') {
-            end = cp;
+        let mut count = 0;
+        // let start = self.next().unwrap();
+        let mut start: Option<&'a CharPos> = None;
+        let mut span: Option<Span> = None;
+        while let Some(cp) = self.next_if(|&cp| cp.chr == ' ') {
+            if start.is_none() {
+                start = Some(cp);
+            }
             count += 1;
+            span = Some((start.unwrap(), cp).into());
         }
-        let span: Span = (start, end).into();
 
-        if self.indent.last() > Some(&count) {
-            loop {
-                let last = self.indent.last();
-                if last > Some(&count) {
+        // Code Donated to by MizardX 😃
+        match count.cmp(&self.indent.last().unwrap_or(&0)) {
+            std::cmp::Ordering::Greater => {
+                self.indent.push(count);
+                self.push((Token::InDent, span.unwrap_or_default()));
+            }
+            std::cmp::Ordering::Less => {
+                self.indent.pop();
+                self.push((Token::DeDent, span.clone().unwrap_or_default()));
+                while count < *self.indent.last().unwrap_or(&0) {
                     let _ = self.indent.pop();
-                    self.push((Token::InDent, span.clone()));
+                    self.push((Token::DeDent, span.clone().unwrap_or_default()));
+                }
+                if count > *self.indent.last().unwrap_or(&0) {
+                    self.errors.push(Error::new(
+                        "",
+                        span.unwrap_or_default(),
+                        ErrorKind::InvalidIndentation,
+                    ));
                 }
             }
-        } else if self.indent.last() < Some(&count) || self.indent.is_empty() {
-            self.push((Token::InDent, span.clone()));
-            self.indent.push(count);
+            _ => (),
         }
     }
 
-    fn dedent(&mut self, start: &CharPos) {
-        let span: Span = (start, start).into();
-        let token = (Token::DeDent, span);
-        self.push(token);
-    }
+    // fn dedent(&mut self, start: &CharPos) {
+    //     let span: Span = (start, start).into();
+    //     let token = (Token::DeDent, span);
+    //     self.push(token);
+    // }
 
     fn unwrap_dedent(&mut self) {
         for _ in self.indent.clone().iter() {
@@ -330,10 +378,29 @@ impl<'a> Scanner<'a> {
         self.push(token);
     }
 
+    fn func(&mut self, start: &CharPos) {
+        let mut idt = start.chr.to_string();
+        let mut end = start;
+        while let Some(cp) = self.next_if(|&cp| cp.chr.is_ascii_alphanumeric()) {
+            end = cp;
+            idt.push(cp.chr);
+        }
+        let span: Span = (start, end).into();
+        if KeyWord::lookup(&idt).is_some() {
+            self.errors.push(Error::new(
+                &format!("can not use a '{}' as a function name", idt),
+                span.clone(),
+                ErrorKind::ReserverdWord,
+            ));
+        }
+
+        self.push((Token::Fn(idt), span));
+    }
+
     fn identifier(&mut self, start: &CharPos) {
         let mut idt = start.chr.to_string();
         let mut end = start;
-        while let Some(cp) = self.stream.next_if(|&cp| cp.chr.is_ascii_alphanumeric()) {
+        while let Some(cp) = self.next_if(|&cp| cp.chr.is_ascii_alphanumeric()) {
             end = cp;
             idt.push(cp.chr);
         }
@@ -346,10 +413,10 @@ impl<'a> Scanner<'a> {
 
     fn string(&mut self, start: &CharPos) {
         let mut string = String::new();
-        while let Some(cp) = self.stream.next_if(|cp| cp.chr != '"') {
+        while let Some(cp) = self.next_if(|cp| cp.chr != '"') {
             string.push(cp.chr);
         }
-        let end = self.stream.next().unwrap();
+        let end = self.next().unwrap();
         let span: Span = (start, end).into();
         self.push((
             Token::String(
@@ -398,26 +465,7 @@ fn pos_enum<'a>(loc: &str, src: &str) -> Vec<CharPos> {
 
 // FIXME: This does not need to clone.
 pub fn scanner(filename: &str, src: &str) -> CResult<Vec<Spanned<Token>>> {
-    // NOTE: We insert a '\n' at the begening of a file
-    // do to how functions are parsed.  The `Token::DeDent`
-    // is triggered when a `\n` is followed by a 'Alphabetic` `char`.
-    //
-    // EXAMPLE: "main = print (+ 1 100)"
-    //
-    // This would created a error in the parse.
-    //
-    let src = if src
-        // Some times we dont want to add a '\n' if we are using a shell.
-        .chars()
-        .nth(0)
-        .map(|c| c.is_ascii_alphabetic())
-        .unwrap_or(false)
-    {
-        format!("\n{}", src)
-    } else {
-        src.to_string()
-    };
-    let chrpos = pos_enum(filename, &src);
+    let chrpos = pos_enum(filename, src);
     let scanner = Scanner::new(&chrpos).scan();
     if !scanner.errors.is_empty() {
         return Err(Box::new(scanner.errors));

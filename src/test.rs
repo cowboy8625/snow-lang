@@ -189,9 +189,10 @@ main = println (apply (println (- 20 10)) (println (+ 1 9)) add)
 fn test_do_block_app() -> CResult<()> {
     let src = "
 add x y = + x y
-main = do
-    println (add 1 (- 100 1))
-    ";
+main =
+    do
+        println (add 1 (- 100 1))
+";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(100)));
     Ok(())
 }
@@ -200,8 +201,9 @@ main = do
 fn test_do_block_const() -> CResult<()> {
     let src = "
 add x y = + x y
-main = do
-    3
+main =
+    do
+        3
     ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
     Ok(())
@@ -243,10 +245,11 @@ main = add 1 2
 fn test_let_expr_multi_in_new_line() -> CResult<()> {
     let src = "
 add x y =
-    let a = 4
-    , b = 3
-    , c = 2
-    , d = 1
+    let
+        a = 4,
+        b = 3,
+        c = 2,
+        d = 1,
     in
     - (+ (+ (a) (b)) (c)) (d)
 
@@ -260,12 +263,13 @@ main = add 1 2
 #[test]
 fn test_let_binding_multi_do_expr() -> CResult<()> {
     let src = "
-add x y = do
-    let a = 1
-    , b = 3
-    , z = 1
-    in
-    + (+ (a) (b)) (z)
+add x y =
+    do
+        let a = 1
+        , b = 3
+        , z = 1
+        in
+        + (+ (a) (b)) (z)
 
 main = add 1 2
 ";
@@ -277,9 +281,10 @@ main = add 1 2
 #[test]
 fn test_do_do() -> CResult<()> {
     let src = "
-add x y = do
-            do
-                + x y
+add x y =
+    do
+        do
+            + x y
 
 main = add 1 3
 ";
@@ -291,14 +296,16 @@ main = add 1 3
 #[test]
 fn test_do_if() -> CResult<()> {
     let src = r#"
-main = do
-    if True then
-        println "If"
-    else if False then
-        println "Else If"
-    else
-        println "Else"
-            "#;
+main =
+    do
+        if True then
+            println "If"
+        else if False then
+            println "Else If"
+        else
+            println "Else"
+
+"#;
     eprintln!("{}", src);
     assert_eq!(from_string(src)?, Expr::Constant(Atom::String("If".into())));
     Ok(())
@@ -307,7 +314,7 @@ main = do
 #[test]
 fn test_if_expr() -> CResult<()> {
     let src = "
-        main = if True then 100
+main = if True then 100
         ";
     eprintln!("{}", src);
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(100)));
