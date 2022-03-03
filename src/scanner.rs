@@ -441,15 +441,15 @@ fn pos_enum<'a>(loc: &str, src: &str) -> Vec<CharPos> {
             let mut last = acc.last().map(Clone::clone).unwrap_or(CharPos {
                 chr,
                 idx,
-                col: 0,
-                row: 0,
+                col: 1,
+                row: 1,
                 loc: loc.into(),
             });
-            if idx != 0 {
+            if idx != 1 {
                 last.row += 1;
             }
             if chr == '\n' {
-                last.row = 0;
+                last.row = 1;
                 last.col += 1;
             }
             acc.push(CharPos {

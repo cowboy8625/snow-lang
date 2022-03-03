@@ -109,7 +109,7 @@ fn test_not() -> CResult<()> {
 
 #[test]
 fn test_simple_main() -> CResult<()> {
-    let src = "main = let x y = + 1 y in x 1";
+    let src = "main = 2";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(2)));
     Ok(())
 }
@@ -151,9 +151,9 @@ fn test_passing_app_and_func_as_arg() -> CResult<()> {
     let src = "
 add x y = + x y
 apply a b c = c a b
-main = println (apply (println (- 20 10)) (println (+ 1 9)) add)
+main = apply 10 9 +
 ";
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(20)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(19)));
     Ok(())
 }
 
@@ -164,7 +164,7 @@ fn test_line_comment_before_and_after_func_dec() -> CResult<()> {
 add x y = + x y
 -- line comment after func dec check
 apply a b c = c a b
-main = println (apply (println (- 20 10)) (println (+ 1 9)) add)
+main = apply 10 1 +
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(20)));
     Ok(())
@@ -179,9 +179,9 @@ add x y = + x y
 {- line comment after func dec check
 -}
 apply a b c = c a b
-main = println (apply (println (- 20 10)) (println (+ 1 9)) add)
+main = apply 2 9 -
     ";
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(20)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(-9)));
     Ok(())
 }
 
@@ -330,4 +330,17 @@ fn test_no_return() {
         .flatten()
         .map(|e| e.kind());
     assert_eq!(result, Some(ErrorKind::EmptyReturn));
+}
+
+#[test]
+fn test_curry() -> CResult<()> {
+    let src = "
+f x y z = + x (+ y z)
+a = f 1
+b = a 2
+main = b 3
+";
+    eprintln!("{}", src);
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(6)));
+    Ok(())
 }

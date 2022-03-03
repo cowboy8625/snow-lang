@@ -285,3 +285,31 @@ main = if True then 100
     ];
     assert_eq!(left, right);
 }
+
+#[test]
+fn scanner_curry_app() {
+    use scanner::Token::{self, *};
+    let src = "main = (+ 1) 2";
+    let tokens = match scanner::scanner(FILENAME, src) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("{}", e);
+            Vec::new()
+        }
+    };
+    let left = tokens
+        .iter()
+        .map(|s| s.node.clone())
+        .collect::<Vec<Token>>();
+    let right = vec![
+        Fn("main".into()),
+        Op("="),
+        Ctrl('('),
+        Op("+"),
+        Int("1".into()),
+        Ctrl(')'),
+        Int("2".into()),
+        DeDent,
+    ];
+    assert_eq!(left, right);
+}

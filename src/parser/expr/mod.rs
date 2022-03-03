@@ -1,17 +1,22 @@
 mod conditionals;
 mod let_expr;
-use super::mini_parse::{self, either, left, one_or_more, right, zero_or_more, Parser};
+use super::mini_parse::{self, either, left, one_or_more, surround, zero_or_more, Parser};
 use super::{boolean, builtin, number, string, Atom, KeyWord, Span, Spanned, Token};
+use crate::one_of;
 use conditionals::conditional;
 use let_expr::let_expr;
 use std::fmt;
 
-fn _print_input(input: &[Spanned<Token>], msg: &str) {
-    eprintln!("--Start--{}-----", msg);
+fn _print_input<T>(input: &[Spanned<Token>], result: &T, msg: &str)
+where
+    T: fmt::Display,
+{
+    eprintln!("--Start--{}------", msg);
+    eprintln!("--Result--{}-----", result);
     for i in input.iter() {
         eprintln!("{}", i);
     }
-    eprintln!("--End--{}-----", msg);
+    eprintln!("--End--{}------", msg);
 }
 
 pub fn indent_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
@@ -29,9 +34,11 @@ pub fn dedent_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
 
 pub fn constant<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        either(
+        one_of!(
             builtin().map(|b| (Atom::BuiltIn(b.node.clone()), b.span()).into()),
-            either(boolean(), either(string(), number())),
+            boolean(),
+            string(),
+            number()
         )
         .parse(input)
         .map(|(i, b)| (i, (Expr::Constant(b.node.clone()), b.span()).into()))
@@ -69,39 +76,49 @@ fn do_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     }
 }
 
+// TODO: This will not work with "+ ((1)) 1"
+fn expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
+    one_of!(app(), local(), constant())
+}
 fn prans<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    right(
+    surround(
         next_token(Token::Ctrl('(')),
-        left(
-            either(app(), either(local(), constant())),
-            next_token(Token::Ctrl(')')),
-        ),
+        expr(),
+        next_token(Token::Ctrl(')')),
     )
 }
 
+// + 1 2 3 4 5
+// (+ 1) + 2 -> (+ (2 (1))
+// (+ 1) + 2 -> (+ [1]) 1
+// (+ 1) + -> +
+// (+ 1) +
 pub fn app<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
-        let (i, name) = either(
+        let (i, name) = one_of!(
+            prans(),
             local(),
             builtin().map(|s| (Expr::Constant(Atom::BuiltIn(s.node.clone())), s.span()).into()),
         )
         .parse(input)?;
-        let (i, args) = zero_or_more(either(local(), either(prans(), constant()))).parse(i)?;
+        // _print_input(i, &name.node, "App name");
+        let (i, args) = zero_or_more(one_of!(local(), prans(), constant())).parse(i)?;
+        // _print_input(i, &"", "Args");
         Ok((
             i,
-            (
-                Expr::Application(Box::new(name.node.clone()), args),
-                name.span(),
-            )
-                .into(),
+            (Expr::Application(Box::new(name.clone()), args), name.span()).into(),
         ))
     }
 }
 
 pub fn func_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    either(
+    one_of!(
+        prans(),
         let_expr(),
-        either(do_expr(), either(conditional(), either(app(), constant()))),
+        do_expr(),
+        conditional(),
+        app(),
+        constant()
     )
 }
 
@@ -138,7 +155,13 @@ pub(crate) fn function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
 pub enum Expr {
     Constant(Atom),
     // func-name args
-    Application(Box<Self>, Vec<Spanned<Self>>),
+    // + 1 2   -> + [1 2]
+    // (+ 1) 2 -> (+ 1) [2]
+    // ((+ 1 2) 3) -> (+ [1, 2]) [3]
+    // (((+ 1) 2) 3) -> ((+ [1]) [2]) [3]
+    //
+    // + 1 2   -> + [1 2]
+    Application(Box<Spanned<Self>>, Vec<Spanned<Self>>),
     // func-name prams body
     Function(Spanned<String>, Vec<Spanned<String>>, Box<Spanned<Self>>),
     // func name's or pram name's

@@ -8,6 +8,8 @@ mod scanner;
 #[cfg(test)]
 mod test;
 #[cfg(test)]
+mod test_parser;
+#[cfg(test)]
 mod test_scanner;
 
 use crate::error::{CResult, Error, ErrorKind};
@@ -61,7 +63,7 @@ fn from_file(filename: &str) -> CResult<Expr> {
 
 fn run(filename: &str, src: &str) -> CResult<Expr> {
     let tokens = scanner::scanner(filename, src)?;
-    let (t, funcs) = match parser::parser().parse(&tokens) {
+    let (t, mut funcs) = match parser::parser().parse(&tokens) {
         Ok((t, f)) => (t, f),
         Err(t) => (t, FunctionList::new()),
     };
@@ -71,7 +73,7 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
         Span::default(),
     )
         .into();
-    let mut a = if let Some(idx) = std::env::args().into_iter().position(|x| x == filename) {
+    let mut args = if let Some(idx) = std::env::args().into_iter().position(|x| x == filename) {
         std::env::args()
             .into_iter()
             .enumerate()
@@ -82,21 +84,23 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
     } else {
         Vec::new()
     };
-    a.insert(0, f);
-    match &funcs.get("main") {
-        Some(Spanned {
-            node: Expr::Function(_, prams, body),
-            ..
-        }) => {
-            let mut local_var = prams
-                .iter()
-                .zip(&a)
-                .map(|(k, v)| (k.node.clone(), v.clone()))
-                .collect::<std::collections::HashMap<String, Spanned<Expr>>>();
+    args.insert(0, f);
+    let mut local = FunctionList::new();
+    match funcs.get_mut("main") {
+        Some(func) => {
+            let mut idx = 0;
+            for (i, arg) in args.iter().enumerate() {
+                if func.bind_arg(arg.node.clone()) {
+                    break;
+                }
+                idx = i;
+            }
+            let left_of_args = args[idx..].to_vec();
+            func.local(&mut local);
             Ok(interpreter::evaluation(
-                &body.node,
-                &[],
-                &mut local_var,
+                &func.body(),
+                &left_of_args,
+                &mut local,
                 &funcs,
             )?)
         }

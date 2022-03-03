@@ -37,15 +37,15 @@ pub enum BuiltIn {
 impl fmt::Display for BuiltIn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Plus => write!(f, "+"),
-            Self::Mins => write!(f, "-"),
-            Self::Mult => write!(f, "*"),
-            Self::Div => write!(f, "/"),
-            Self::Eq => write!(f, "=="),
-            Self::NEq => write!(f, "!="),
-            Self::Not => write!(f, "!"),
-            Self::Print => write!(f, "print"),
-            Self::PrintLn => write!(f, "println"),
+            Self::Plus => write!(f, "<+>"),
+            Self::Mins => write!(f, "<->"),
+            Self::Mult => write!(f, "<*>"),
+            Self::Div => write!(f, "</>"),
+            Self::Eq => write!(f, "<==>"),
+            Self::NEq => write!(f, "<!=>"),
+            Self::Not => write!(f, "<!>"),
+            Self::Print => write!(f, "<Print>"),
+            Self::PrintLn => write!(f, "<Println>"),
         }
     }
 }

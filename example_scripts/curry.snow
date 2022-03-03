@@ -1,0 +1,39 @@
+-- TRUE x y = x -- not found
+-- FALSE x y = y -- not found
+-- AND p q = p q p
+-- OR p q = p p q
+-- NOT p = p FALSE TRUE
+-- IFTHENELSE p a b = p a b
+
+--
+-- main = println ((foo) 1)
+-- main = println ((AND TRUE FALSE) "TRUE")
+-- main = println (((TRUE FALSE) TRUE) "L" "R")
+
+-- App(f, [1])
+-- App(a [2])
+-- App(b, [3])
+
+-- f x y z = + x (+ y z) -- 1 2 3
+-- a = f 1 -- 2 3
+--
+-- b = a 2 -- 3
+--
+-- main = print (b 3)
+
+-- captured x = let f y = + x y in f; main = captured 1 2
+-- add x y = + x y
+-- main = add 1 2
+
+{-
+-}
+
+apply a b c = c a b
+
+add x y = + x y
+
+main = println (apply 2 9 add)
+
+
+
+

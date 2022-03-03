@@ -1,24 +1,27 @@
 use super::error::{CResult, Error, ErrorKind};
-use super::parser::{Atom, BuiltIn, Expr, FunctionList};
+use super::parser::{Atom, BuiltIn, Expr, Function, FunctionList};
 use super::position::Spanned;
-use std::collections::HashMap;
 use std::io::Write;
 
 pub fn evaluation(
     expr: &Expr,
     args: &[Spanned<Expr>],
     local: &mut FunctionList,
-    funcs: &FunctionList,
+    global: &FunctionList,
 ) -> CResult<Expr> {
     match expr {
         Expr::Constant(_) => Ok(expr.clone()),
         Expr::Application(head, tail) => {
-            let reduced_head = evaluation(head, &[], local, funcs)?;
+            let mut reduced_tail = Vec::with_capacity(tail.len());
+            for i in tail.iter() {
+                let t = reduced_expr(i, args, local, global)?;
+                reduced_tail.push(t);
+            }
+            let reduced_head = evaluation(&head.node, &tail, local, global)?;
             let reduced_tail = tail
                 .into_iter()
-                .map(|expr| Ok((evaluation(&expr.node, &[], local, funcs)?, expr.span()).into()))
+                .map(|expr| Ok((evaluation(&expr.node, args, local, global)?, expr.span()).into()))
                 .collect::<CResult<Vec<Spanned<Expr>>>>()?;
-            // dbg!(&tail);
             match reduced_head {
                 Expr::Constant(Atom::BuiltIn(bi)) => Ok(Expr::Constant(match bi {
                     BuiltIn::Plus if is_int(reduced_tail.first().clone()) => Atom::Int(
@@ -180,44 +183,51 @@ pub fn evaluation(
                     }
                     BuiltIn::Print => {
                         for i in reduced_tail.iter() {
-                            print!("{}", reduced_expr(&i, local, funcs).node);
+                            print!("{}", i.node); // evaluation(&i.node, tail, local, global)?);
                         }
                         std::io::stdout().flush()?;
                         return Ok(reduced_tail[0].node.clone());
                     }
                     BuiltIn::PrintLn => {
                         for i in reduced_tail.iter() {
-                            println!("{}", reduced_expr(&i, local, funcs).node);
+                            println!("{}", i.node); // evaluation(&i.node, &[], local, global)?);
                         }
                         return Ok(reduced_tail[0].node.clone());
                     }
                 })),
-                t => evaluation(&t, &tail, local, funcs),
+                t => evaluation(&t, &reduced_tail, local, global),
             }
         }
-        Expr::Function(_, prams, body) => {
-            let mut local_var = prams
+        Expr::Local(name) => {
+            let mut func = global
+                .get(&name.node)
+                .cloned()
+                .or_else(|| local.get(&name.node).cloned())
+                .ok_or_else(|| {
+                    Error::new(
+                        &format!("'{}' not found", name),
+                        name.span(),
+                        ErrorKind::Undefined,
+                    )
+                })?;
+            let mut idx = 0;
+            for _ in args
                 .iter()
-                .zip(args)
-                .map(|(k, v)| (k.node.clone(), reduced_expr(v, local, funcs)))
-                .collect::<HashMap<String, Spanned<Expr>>>();
-            return evaluation(&body.node, &[], &mut local_var, funcs);
+                .rev()
+                .take_while(|a| func.bind_arg(a.node.clone()))
+            {
+                idx += 1;
+            }
+            let left_of_args = args[idx..].to_vec();
+            func.local(local);
+            let app = func.into_app(&left_of_args);
+            // evaluation(&dbg!(app), &[], dbg!(local), dbg!(global))
+            evaluation(&app, &[], dbg!(local), global)
         }
-        Expr::Local(name) => funcs
-            .get(&name.node)
-            .map(|s| s.node.clone())
-            .or_else(|| local.get(&name.node).map(|s| s.node.clone()))
-            .ok_or_else(|| {
-                Error::new(
-                    &format!("'{}' not found", name),
-                    name.span(),
-                    ErrorKind::Undefined,
-                )
-            }),
         Expr::Do(list_expr) => list_expr
             .clone()
             .iter()
-            .map(|expr| evaluation(&expr.node, &[], local, funcs))
+            .map(|expr| evaluation(&expr.node, &[], local, global))
             .collect::<CResult<Vec<Expr>>>()?
             .last()
             .map(Clone::clone)
@@ -229,17 +239,25 @@ pub fn evaluation(
         Expr::Let(expr, body) => {
             for func in expr.iter() {
                 match &func.node {
-                    Expr::Function(name, ..) => local.insert(name.node.clone(), func.clone()),
+                    Expr::Function(name, prams, body) => local.insert(
+                        name.node.clone(),
+                        Function::new(
+                            &name.node,
+                            prams,
+                            body.node.clone(),
+                            (name.span(), body.span()).into(),
+                        ),
+                    ),
                     x => unreachable!(x),
                 };
             }
-            Ok(evaluation(&body.node, &[], local, funcs)?)
+            Ok(evaluation(&body.node, &[], local, global)?)
         }
         Expr::If(condition, body) => {
-            let reduced_condition = evaluation(&condition.node, &[], local, funcs)?;
+            let reduced_condition = evaluation(&condition.node, &[], local, global)?;
             let cond = get_bool_from_expr((reduced_condition, condition.span()).into())?;
             if cond {
-                return evaluation(&body.node, &[], local, funcs);
+                return evaluation(&body.node, &[], local, global);
             }
             Err(Error::new(
                 "conditional may need a else statement",
@@ -248,14 +266,15 @@ pub fn evaluation(
             ))
         }
         Expr::IfElse(condition, body, r#else) => {
-            let reduced_condition = evaluation(&condition.node, &[], local, funcs)?;
+            let reduced_condition = evaluation(&condition.node, &[], local, global)?;
             let cond = get_bool_from_expr((reduced_condition, condition.span()).into())?;
             if cond {
-                return evaluation(&body.node, &[], local, funcs);
+                return evaluation(&body.node, &[], local, global);
             } else {
-                return evaluation(&r#else.node, &[], local, funcs);
+                return evaluation(&r#else.node, &[], local, global);
             }
-        } // _ => unimplemented!(),
+        }
+        _ => unreachable!(),
     }
 }
 
@@ -264,7 +283,7 @@ fn get_int_from_expr(e: Spanned<Expr>) -> CResult<i32> {
         Ok(n)
     } else {
         Err(Error::new(
-            &format!("{} is not 'Int'", e),
+            &format!("{} is not 'Int'", e.node),
             e.span(),
             ErrorKind::TypeError,
         ))
@@ -276,7 +295,7 @@ fn get_float_from_expr(e: Spanned<Expr>) -> CResult<f32> {
         Ok(n)
     } else {
         Err(Error::new(
-            &format!("{} is not 'Float'", e),
+            &format!("{} is not 'Float'", e.node),
             e.span(),
             ErrorKind::TypeError,
         ))
@@ -288,7 +307,7 @@ fn get_bool_from_expr(e: Spanned<Expr>) -> CResult<bool> {
         Ok(b)
     } else {
         Err(Error::new(
-            &format!("{} is not 'Boolean'", e),
+            &format!("{} is not 'Boolean'", e.node),
             e.span(),
             ErrorKind::TypeError,
         ))
@@ -304,20 +323,59 @@ fn is_int(oe: Option<&Spanned<Expr>>) -> bool {
 
 fn reduced_expr(
     spanned: &Spanned<Expr>,
+    args: &[Spanned<Expr>],
     local: &mut FunctionList,
-    funcs: &FunctionList,
-) -> Spanned<Expr> {
+    global: &FunctionList,
+) -> CResult<Spanned<Expr>> {
     match &spanned.node {
-        Expr::Local(name) => funcs
-            .get(&name.node)
-            .map(Clone::clone)
-            .or_else(|| local.get(&name.node).map(Clone::clone))
-            .unwrap_or(spanned.clone()),
-        Expr::Constant(_) => spanned.clone(),
-        _ => (
-            evaluation(&spanned.node.clone(), &[], local, funcs).unwrap_or(spanned.node.clone()),
+        Expr::Local(name) => {
+            let mut func = global
+                .get(&name.node)
+                .cloned()
+                .or_else(|| local.get(&name.node).cloned())
+                .ok_or_else(|| {
+                    Error::new(
+                        &format!("'{}' not found", name),
+                        name.span(),
+                        ErrorKind::Undefined,
+                    )
+                })?;
+            let mut idx = 0;
+            for _ in args
+                .iter()
+                .rev()
+                .take_while(|a| func.bind_arg(a.node.clone()))
+            {
+                idx += 1;
+            }
+            let left_of_args = args[idx..].to_vec();
+            func.local(local);
+            Ok((func.into_app(&left_of_args), spanned.span()).into())
+            // global
+            //     .get(&name.node)
+            //     .cloned()
+            //     .or_else(|| local.get(&name.node).cloned())
+            //     .unwrap_or(spanned.clone());
+        }
+        Expr::Constant(_) => Ok(spanned.clone()),
+        _ => Ok((
+            evaluation(&spanned.node.clone(), &[], local, global).unwrap_or(spanned.node.clone()),
             spanned.span(),
         )
-            .into(),
+            .into()),
     }
 }
+
+// fn get_curried_args<'a>(
+//     spanned: &Spanned<Expr>,
+//     args: &[Spanned<Expr>],
+// ) -> (Spanned<Expr>, Vec<Spanned<Expr>>) {
+//     match spanned.node.clone() {
+//         Expr::Application(lhs, mut rhs) => {
+//             rhs.extend_from_slice(args);
+//             let (n, a) = get_curried_args(&lhs, &rhs);
+//             (n, a)
+//         }
+//         _ => (spanned.clone(), args.to_vec()),
+//     }
+// }
