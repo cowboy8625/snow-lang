@@ -14,7 +14,7 @@ mod test_scanner;
 
 use crate::error::{CResult, Error, ErrorKind};
 use crate::position::{Pos, Span, Spanned};
-use parser::{Atom, Expr, FunctionList, Parser};
+use parser::{Expr, FunctionList, Parser};
 
 fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
     let tokens = scanner::scanner("shell.snow", src).unwrap_or(Vec::new());
@@ -68,23 +68,24 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
         Err(t) => (t, FunctionList::new()),
     };
 
-    let f: Spanned<Expr> = (
-        Expr::Constant(Atom::String(filename.into())),
-        Span::default(),
-    )
-        .into();
-    let mut args = if let Some(idx) = std::env::args().into_iter().position(|x| x == filename) {
-        std::env::args()
-            .into_iter()
-            .enumerate()
-            .rev()
-            .take_while(|(i, _)| i > &idx)
-            .map(|(_, i)| (Expr::Constant(Atom::String(i.into())), Span::default()).into())
-            .collect::<Vec<Spanned<Expr>>>()
-    } else {
-        Vec::new()
-    };
-    args.insert(0, f);
+    // let f: Spanned<Expr> = (
+    //     Expr::Constant(Atom::String(filename.into())),
+    //     Span::default(),
+    // )
+    //     .into();
+    let args: Vec<Spanned<Expr>> = Vec::new();
+    // let mut args = if let Some(idx) = std::env::args().into_iter().position(|x| x == filename) {
+    //     std::env::args()
+    //         .into_iter()
+    //         .enumerate()
+    //         .rev()
+    //         .take_while(|(i, _)| i > &idx)
+    //         .map(|(_, i)| (Expr::Constant(Atom::String(i.into())), Span::default()).into())
+    //         .collect::<Vec<Spanned<Expr>>>()
+    // } else {
+    //     Vec::new()
+    // };
+    // args.insert(0, f);
     let mut local = FunctionList::new();
     match funcs.get_mut("main") {
         Some(func) => {

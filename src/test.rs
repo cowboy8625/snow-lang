@@ -140,7 +140,7 @@ fn test_passing_function_as_arg() -> CResult<()> {
     let src = "
 add x y = + x y
 apply a b c = c a b
-main = print (apply 1 2 add)
+main = println (apply 1 2 add)
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
     Ok(())
@@ -164,7 +164,7 @@ fn test_line_comment_before_and_after_func_dec() -> CResult<()> {
 add x y = + x y
 -- line comment after func dec check
 apply a b c = c a b
-main = apply 10 1 +
+main = apply 11 9 +
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(20)));
     Ok(())
@@ -181,7 +181,7 @@ add x y = + x y
 apply a b c = c a b
 main = apply 2 9 -
     ";
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(-9)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(-7)));
     Ok(())
 }
 

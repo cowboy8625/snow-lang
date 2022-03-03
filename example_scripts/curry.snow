@@ -1,39 +1,29 @@
--- TRUE x y = x -- not found
--- FALSE x y = y -- not found
--- AND p q = p q p
--- OR p q = p p q
--- NOT p = p FALSE TRUE
--- IFTHENELSE p a b = p a b
+TRUE x y = x
+FALSE x y = y
+AND p q = p q p
+OR p q = p p q
+NOT p = p FALSE TRUE
+IFTHENELSE p a b = p a b
+sur x y z = (FALSE x (TRUE y z ))
 
+-- main = println (sur 1 2 3)
+-- main = println (FALSE "Left" "Right")
+-- main = println ((sur 1 2 3) 
+-- main = println (AND TRUE FALSE)
+main = println (((TRUE FALSE) TRUE) "L" "R")
+
+-- f0 a b c d e f = + a b c d e f
 --
--- main = println ((foo) 1)
--- main = println ((AND TRUE FALSE) "TRUE")
--- main = println (((TRUE FALSE) TRUE) "L" "R")
-
--- App(f, [1])
--- App(a [2])
--- App(b, [3])
-
--- f x y z = + x (+ y z) -- 1 2 3
--- a = f 1 -- 2 3
+-- f1 = f0 1
+-- f2 = f1 1
+-- f3 = f2 1
+-- f4 = f3 1
+-- f5 = f4 1
 --
--- b = a 2 -- 3
---
--- main = print (b 3)
+-- main = print (f5 1)
 
--- captured x = let f y = + x y in f; main = captured 1 2
+-- captured x = let f y = + x y in f
+-- main = captured 1 2
 -- add x y = + x y
--- main = add 1 2
-
-{-
--}
-
-apply a b c = c a b
-
-add x y = + x y
-
-main = println (apply 2 9 add)
-
-
-
-
+-- apply a b c = c a b
+-- main = println (apply 1 2 add)

@@ -12,11 +12,6 @@ pub fn evaluation(
     match expr {
         Expr::Constant(_) => Ok(expr.clone()),
         Expr::Application(head, tail) => {
-            let mut reduced_tail = Vec::with_capacity(tail.len());
-            for i in tail.iter() {
-                let t = reduced_expr(i, args, local, global)?;
-                reduced_tail.push(t);
-            }
             let reduced_head = evaluation(&head.node, &tail, local, global)?;
             let reduced_tail = tail
                 .into_iter()
@@ -222,7 +217,8 @@ pub fn evaluation(
             func.local(local);
             let app = func.into_app(&left_of_args);
             // evaluation(&dbg!(app), &[], dbg!(local), dbg!(global))
-            evaluation(&app, &[], dbg!(local), global)
+            // evaluation(&app, &[], dbg!(local), global)
+            evaluation(&app, &[], local, global)
         }
         Expr::Do(list_expr) => list_expr
             .clone()
@@ -237,6 +233,7 @@ pub fn evaluation(
                 ErrorKind::EmptyReturn,
             )),
         Expr::Let(expr, body) => {
+            // Let funcs not able to return
             for func in expr.iter() {
                 match &func.node {
                     Expr::Function(name, prams, body) => local.insert(
@@ -321,50 +318,50 @@ fn is_int(oe: Option<&Spanned<Expr>>) -> bool {
     false
 }
 
-fn reduced_expr(
-    spanned: &Spanned<Expr>,
-    args: &[Spanned<Expr>],
-    local: &mut FunctionList,
-    global: &FunctionList,
-) -> CResult<Spanned<Expr>> {
-    match &spanned.node {
-        Expr::Local(name) => {
-            let mut func = global
-                .get(&name.node)
-                .cloned()
-                .or_else(|| local.get(&name.node).cloned())
-                .ok_or_else(|| {
-                    Error::new(
-                        &format!("'{}' not found", name),
-                        name.span(),
-                        ErrorKind::Undefined,
-                    )
-                })?;
-            let mut idx = 0;
-            for _ in args
-                .iter()
-                .rev()
-                .take_while(|a| func.bind_arg(a.node.clone()))
-            {
-                idx += 1;
-            }
-            let left_of_args = args[idx..].to_vec();
-            func.local(local);
-            Ok((func.into_app(&left_of_args), spanned.span()).into())
-            // global
-            //     .get(&name.node)
-            //     .cloned()
-            //     .or_else(|| local.get(&name.node).cloned())
-            //     .unwrap_or(spanned.clone());
-        }
-        Expr::Constant(_) => Ok(spanned.clone()),
-        _ => Ok((
-            evaluation(&spanned.node.clone(), &[], local, global).unwrap_or(spanned.node.clone()),
-            spanned.span(),
-        )
-            .into()),
-    }
-}
+// fn reduced_expr(
+//     spanned: &Spanned<Expr>,
+//     args: &[Spanned<Expr>],
+//     local: &mut FunctionList,
+//     global: &FunctionList,
+// ) -> CResult<Spanned<Expr>> {
+//     match &spanned.node {
+//         Expr::Local(name) => {
+//             let mut func = global
+//                 .get(&name.node)
+//                 .cloned()
+//                 .or_else(|| local.get(&name.node).cloned())
+//                 .ok_or_else(|| {
+//                     Error::new(
+//                         &format!("'{}' not found", name),
+//                         name.span(),
+//                         ErrorKind::Undefined,
+//                     )
+//                 })?;
+//             let mut idx = 0;
+//             for _ in args
+//                 .iter()
+//                 .rev()
+//                 .take_while(|a| func.bind_arg(a.node.clone()))
+//             {
+//                 idx += 1;
+//             }
+//             let left_of_args = args[idx..].to_vec();
+//             func.local(local);
+//             Ok((func.into_app(&left_of_args), spanned.span()).into())
+//             // global
+//             //     .get(&name.node)
+//             //     .cloned()
+//             //     .or_else(|| local.get(&name.node).cloned())
+//             //     .unwrap_or(spanned.clone());
+//         }
+//         Expr::Constant(_) => Ok(spanned.clone()),
+//         _ => Ok((
+//             evaluation(&spanned.node.clone(), &[], local, global).unwrap_or(spanned.node.clone()),
+//             spanned.span(),
+//         )
+//             .into()),
+//     }
+// }
 
 // fn get_curried_args<'a>(
 //     spanned: &Spanned<Expr>,
