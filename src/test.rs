@@ -137,9 +137,13 @@ main = print (add 1 2)
 
 #[test]
 fn test_passing_builtins_as_arg() -> CResult<()> {
+
+
     let src = "
 apply a b c = c a b
+
 main = apply 1 2 +
+
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
     Ok(())

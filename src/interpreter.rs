@@ -25,16 +25,20 @@ impl Function {
     }
 
     pub fn bind_arg(&mut self, mut arg: Expr, local: &mut FunctionList) -> bool {
+
         eprintln!("{:?}", local);
         if let Some(bind) = self.prams.first() {
+
             if let Expr::Local(name) = &arg {
                 if let Some(func) = local.get(&name.node) {
                     arg = func.body();
                 }
             }
+
             eprintln!("BIND: {}<-{}", &bind.node, get_type_str(&arg));
             self.bound_args.push((bind.clone(), arg));
             self.prams.remove(0);
+
             return true;
         }
         false
@@ -291,6 +295,8 @@ pub fn evaluation(
             let mut idx = 0;
             for _ in args
                 .iter()
+
+
                 .take_while(|a| func.bind_arg(a.node.clone(), local))
             {
                 idx += 1;
