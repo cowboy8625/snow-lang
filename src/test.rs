@@ -136,13 +136,44 @@ main = print (add 1 2)
 }
 
 #[test]
+fn test_passing_builtins_as_arg() -> CResult<()> {
+    let src = "
+apply a b c = c a b
+main = apply 1 2 +
+";
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
+    Ok(())
+}
+
+#[test]
 fn test_passing_function_as_arg() -> CResult<()> {
     let src = "
 add x y = + x y
 apply a b c = c a b
-main = println (apply 1 2 add)
+main = apply 1 2 add
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
+    Ok(())
+}
+
+#[test]
+fn test_let_closure() -> CResult<()> {
+    let src = r#"
+captured x = let f y = + x y in f
+main = captured 1 2
+"#;
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(12)));
+    Ok(())
+}
+
+#[test]
+fn test_passing_by_value() -> CResult<()> {
+    let src = r#"
+add x y = + x y
+addOne y = add y 1
+main = addOne 11
+"#;
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(12)));
     Ok(())
 }
 
@@ -163,8 +194,7 @@ fn test_line_comment_before_and_after_func_dec() -> CResult<()> {
 -- line comment before func dec check
 add x y = + x y
 -- line comment after func dec check
-apply a b c = c a b
-main = apply 11 9 +
+main = + 11 9
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(20)));
     Ok(())
@@ -178,9 +208,8 @@ fn test_block_comment_before_and_after_func_dec() -> CResult<()> {
 add x y = + x y
 {- line comment after func dec check
 -}
-apply a b c = c a b
-main = apply 2 9 -
-    ";
+main = - 2 9
+";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(-7)));
     Ok(())
 }
@@ -192,7 +221,7 @@ add x y = + x y
 main =
     do
         println (add 1 (- 100 1))
-";
+        ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(100)));
     Ok(())
 }
@@ -305,7 +334,7 @@ main =
         else
             println "Else"
 
-"#;
+                "#;
     eprintln!("{}", src);
     assert_eq!(from_string(src)?, Expr::Constant(Atom::String("If".into())));
     Ok(())
