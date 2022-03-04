@@ -1,10 +1,10 @@
-captured x = let f y = + x y in f
-main = captured 1 2
+-- captured x = let f y = + x y in f
+-- main = println (captured 1 2)
 
 
--- add x y = + x y
--- apply a b c = c a b
--- main = println (apply 1 2 add)
+add x y = + x y
+apply a b c = c a b
+main = println (apply 1 2 add)
 
 
 
