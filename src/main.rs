@@ -13,8 +13,9 @@ mod test_parser;
 mod test_scanner;
 
 use crate::error::{CResult, Error, ErrorKind};
+use crate::interpreter::FunctionList;
 use crate::position::{Pos, Span, Spanned};
-use parser::{Expr, FunctionList, Parser};
+use parser::{Expr, Parser};
 
 fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
     let tokens = scanner::scanner("shell.snow", src).unwrap_or(Vec::new());
@@ -91,7 +92,7 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
         Some(func) => {
             let mut idx = 0;
             for (i, arg) in args.iter().enumerate() {
-                if func.bind_arg(arg.node.clone()) {
+                if func.bind_arg(arg.node.clone(), &mut local) {
                     break;
                 }
                 idx = i;

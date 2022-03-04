@@ -1,7 +1,75 @@
 use super::error::{CResult, Error, ErrorKind};
-use super::parser::{Atom, BuiltIn, Expr, Function, FunctionList};
-use super::position::Spanned;
-use std::io::Write;
+use super::parser::{Atom, BuiltIn, Expr};
+use super::position::{Span, Spanned};
+use std::{collections::HashMap, io::Write};
+
+pub type FunctionList = HashMap<String, Function>;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Function {
+    name: String,
+    prams: Vec<Spanned<String>>,
+    bound_args: Vec<(Spanned<String>, Expr)>,
+    body: Expr,
+    span: Span,
+}
+
+impl Function {
+    pub fn new(name: &str, prams: &[Spanned<String>], body: Expr, span: Span) -> Self {
+        Self {
+            name: name.into(),
+            prams: prams.to_vec(),
+            bound_args: Vec::new(),
+            body,
+            span,
+        }
+    }
+
+    pub fn bind_arg(&mut self, mut arg: Expr, local: &mut FunctionList) -> bool {
+        if let Some(bind) = self.prams.pop() {
+            if let Expr::Local(name) = &arg {
+                if let Some(func) = local.get(&name.node) {
+                    arg = func.body();
+                }
+            }
+            eprintln!("BIND: {}<-{}", &bind, get_type_str(&arg));
+            self.bound_args.push((bind, arg));
+            return true;
+        }
+        false
+    }
+
+    pub fn local(&self, var: &mut FunctionList) {
+        for (p, a) in self.bound_args.iter() {
+            let span = p.span();
+            let func = Self::new(&p.node, &self.prams, a.clone(), span);
+            // var.insert(format!("{}.{}", self.name, p.node.clone()), func);
+            var.insert(p.node.clone(), func);
+        }
+    }
+
+    pub fn body(&self) -> Expr {
+        self.body.clone()
+    }
+
+    pub fn reduce<'a>(&mut self, args: &[Spanned<Expr>]) -> Vec<Spanned<Expr>> {
+        match self.body.clone() {
+            Expr::Application(lhs, mut rhs) => {
+                rhs.extend_from_slice(args);
+                self.body = lhs.node.clone();
+                self.reduce(&rhs.to_vec())
+            }
+            _ => args.to_vec(),
+        }
+    }
+
+    pub fn into_app(&mut self, args: &[Spanned<Expr>]) -> Expr {
+        let args = self.reduce(args);
+        Expr::Application(
+            Box::new((self.body.clone(), self.span.clone()).into()),
+            args.into(),
+        )
+    }
+}
 
 pub fn evaluation(
     expr: &Expr,
@@ -12,11 +80,34 @@ pub fn evaluation(
     match expr {
         Expr::Constant(_) => Ok(expr.clone()),
         Expr::Application(head, tail) => {
+            // dbg!(&local);
             let reduced_head = evaluation(&head.node, &tail, local, global)?;
+            // eprintln!("-------------------------------------");
+            // dbg!(&reduced_head);
+            // dbg!(&tail);
+            // let mut reduced_tail: Vec<Spanned<Expr>> = Vec::new();
+            // for arg in tail.iter() {
+            //     if let Expr::Local(name) = &arg.node {
+            //         let func = lookup_local(name, local, global)?;
+            //         eprintln!("LOOKUP: {}<-{}", name.node, get_type_str(func.body()));
+            //         reduced_tail.push((func.body(), func.span).into());
+            //     } else if let Expr::Application(head, tail) = &arg.node {
+            //         eprintln!("RUN: {}", get_type_str(head.node.clone()));
+            //         let new = evaluation(&head.node, tail, local, global)?;
+            //         reduced_tail.push((new, arg.span()).into());
+            //     } else {
+            //         eprintln!("FAILED: {}", get_type_str(arg.node.clone()));
+            //         reduced_tail.push(arg.clone());
+            //     }
+            // }
+            // dbg!(&reduced_tail);
             let reduced_tail = tail
                 .into_iter()
                 .map(|expr| Ok((evaluation(&expr.node, args, local, global)?, expr.span()).into()))
                 .collect::<CResult<Vec<Spanned<Expr>>>>()?;
+            // dbg!(&reduced_tail);
+            // dbg!(&reduced_head);
+            // std::process::exit(1);
             match reduced_head {
                 Expr::Constant(Atom::BuiltIn(bi)) => Ok(Expr::Constant(match bi {
                     BuiltIn::Plus if is_int(reduced_tail.first().clone()) => Atom::Int(
@@ -178,14 +269,14 @@ pub fn evaluation(
                     }
                     BuiltIn::Print => {
                         for i in reduced_tail.iter() {
-                            print!("{}", i.node); // evaluation(&i.node, tail, local, global)?);
+                            print!("{}", i.node);
                         }
                         std::io::stdout().flush()?;
                         return Ok(reduced_tail[0].node.clone());
                     }
                     BuiltIn::PrintLn => {
                         for i in reduced_tail.iter() {
-                            println!("{}", i.node); // evaluation(&i.node, &[], local, global)?);
+                            println!("{}", i.node);
                         }
                         return Ok(reduced_tail[0].node.clone());
                     }
@@ -194,30 +285,18 @@ pub fn evaluation(
             }
         }
         Expr::Local(name) => {
-            let mut func = global
-                .get(&name.node)
-                .cloned()
-                .or_else(|| local.get(&name.node).cloned())
-                .ok_or_else(|| {
-                    Error::new(
-                        &format!("'{}' not found", name),
-                        name.span(),
-                        ErrorKind::Undefined,
-                    )
-                })?;
+            let mut func = lookup_local(name, local, global)?;
             let mut idx = 0;
             for _ in args
                 .iter()
                 .rev()
-                .take_while(|a| func.bind_arg(a.node.clone()))
+                .take_while(|a| func.bind_arg(a.node.clone(), local))
             {
                 idx += 1;
             }
             let left_of_args = args[idx..].to_vec();
             func.local(local);
             let app = func.into_app(&left_of_args);
-            // evaluation(&dbg!(app), &[], dbg!(local), dbg!(global))
-            // evaluation(&app, &[], dbg!(local), global)
             evaluation(&app, &[], local, global)
         }
         Expr::Do(list_expr) => list_expr
@@ -318,61 +397,34 @@ fn is_int(oe: Option<&Spanned<Expr>>) -> bool {
     false
 }
 
-// fn reduced_expr(
-//     spanned: &Spanned<Expr>,
-//     args: &[Spanned<Expr>],
-//     local: &mut FunctionList,
-//     global: &FunctionList,
-// ) -> CResult<Spanned<Expr>> {
-//     match &spanned.node {
-//         Expr::Local(name) => {
-//             let mut func = global
-//                 .get(&name.node)
-//                 .cloned()
-//                 .or_else(|| local.get(&name.node).cloned())
-//                 .ok_or_else(|| {
-//                     Error::new(
-//                         &format!("'{}' not found", name),
-//                         name.span(),
-//                         ErrorKind::Undefined,
-//                     )
-//                 })?;
-//             let mut idx = 0;
-//             for _ in args
-//                 .iter()
-//                 .rev()
-//                 .take_while(|a| func.bind_arg(a.node.clone()))
-//             {
-//                 idx += 1;
-//             }
-//             let left_of_args = args[idx..].to_vec();
-//             func.local(local);
-//             Ok((func.into_app(&left_of_args), spanned.span()).into())
-//             // global
-//             //     .get(&name.node)
-//             //     .cloned()
-//             //     .or_else(|| local.get(&name.node).cloned())
-//             //     .unwrap_or(spanned.clone());
-//         }
-//         Expr::Constant(_) => Ok(spanned.clone()),
-//         _ => Ok((
-//             evaluation(&spanned.node.clone(), &[], local, global).unwrap_or(spanned.node.clone()),
-//             spanned.span(),
-//         )
-//             .into()),
-//     }
-// }
+fn lookup_local(
+    name: &Spanned<String>,
+    local: &mut FunctionList,
+    global: &FunctionList,
+) -> CResult<Function> {
+    Ok(global
+        .get(name.node.as_str())
+        .cloned()
+        .or_else(|| local.get(&name.node).cloned())
+        .ok_or_else(|| {
+            Error::new(
+                &format!("'{}' not found", name.node),
+                name.span(),
+                ErrorKind::Undefined,
+            )
+        })?)
+}
 
-// fn get_curried_args<'a>(
-//     spanned: &Spanned<Expr>,
-//     args: &[Spanned<Expr>],
-// ) -> (Spanned<Expr>, Vec<Spanned<Expr>>) {
-//     match spanned.node.clone() {
-//         Expr::Application(lhs, mut rhs) => {
-//             rhs.extend_from_slice(args);
-//             let (n, a) = get_curried_args(&lhs, &rhs);
-//             (n, a)
-//         }
-//         _ => (spanned.clone(), args.to_vec()),
-//     }
-// }
+#[allow(warnings)]
+fn get_type_str(expr: &Expr) -> String {
+    match expr {
+        Expr::Constant(a) => format!("Constant: {}", a),
+        Expr::Local(l) => format!("LOCAL: {}", l.node),
+        Expr::Do(_) => format!("DO"),
+        Expr::Let(_, _) => format!("Let"),
+        Expr::Function(_, _, _) => "Func".into(),
+        Expr::Application(name, _) => format!("App {}", name.node),
+        Expr::If(_, _) => format!("IF"),
+        Expr::IfElse(_, _, _) => format!("IF Else"),
+    }
+}
