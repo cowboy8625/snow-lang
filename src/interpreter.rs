@@ -25,14 +25,20 @@ impl Function {
     }
 
     pub fn bind_arg(&mut self, mut arg: Expr, local: &mut FunctionList) -> bool {
-        if let Some(bind) = self.prams.pop() {
+
+        eprintln!("{:?}", local);
+        if let Some(bind) = self.prams.first() {
+
             if let Expr::Local(name) = &arg {
                 if let Some(func) = local.get(&name.node) {
                     arg = func.body();
                 }
             }
-            eprintln!("BIND: {}<-{}", &bind, get_type_str(&arg));
-            self.bound_args.push((bind, arg));
+
+            eprintln!("BIND: {}<-{}", &bind.node, get_type_str(&arg));
+            self.bound_args.push((bind.clone(), arg));
+            self.prams.remove(0);
+
             return true;
         }
         false
@@ -289,12 +295,13 @@ pub fn evaluation(
             let mut idx = 0;
             for _ in args
                 .iter()
-                .rev()
+
+
                 .take_while(|a| func.bind_arg(a.node.clone(), local))
             {
                 idx += 1;
             }
-            let left_of_args = args[idx..].to_vec();
+            let left_of_args = dbg!(args[idx..].to_vec());
             func.local(local);
             let app = func.into_app(&left_of_args);
             evaluation(&app, &[], local, global)
@@ -313,21 +320,34 @@ pub fn evaluation(
             )),
         Expr::Let(expr, body) => {
             // Let funcs not able to return
+            let mut left_of_args = args.to_vec();
             for func in expr.iter() {
                 match &func.node {
-                    Expr::Function(name, prams, body) => local.insert(
-                        name.node.clone(),
-                        Function::new(
+                    Expr::Function(name, prams, body) => {
+                        let mut func = Function::new(
                             &name.node,
                             prams,
                             body.node.clone(),
                             (name.span(), body.span()).into(),
-                        ),
-                    ),
+                        );
+                        let mut idx = 0;
+                        for _ in left_of_args
+                            .iter()
+                            .take_while(|a| func.bind_arg(a.node.clone(), local))
+                        {
+                            idx += 1;
+                        }
+                        left_of_args = args[idx..].to_vec();
+                        func.local(local);
+
+                        local.insert(name.node.clone(), func);
+                        dbg!(&local);
+                    }
                     x => unreachable!(x),
                 };
             }
-            Ok(evaluation(&body.node, &[], local, global)?)
+            dbg!(args);
+            Ok(evaluation(&body.node, &left_of_args, local, global)?)
         }
         Expr::If(condition, body) => {
             let reduced_condition = evaluation(&condition.node, &[], local, global)?;

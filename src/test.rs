@@ -137,9 +137,13 @@ main = print (add 1 2)
 
 #[test]
 fn test_passing_builtins_as_arg() -> CResult<()> {
+
+
     let src = "
 apply a b c = c a b
+
 main = apply 1 2 +
+
 ";
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
     Ok(())
@@ -162,7 +166,7 @@ fn test_let_closure() -> CResult<()> {
 captured x = let f y = + x y in f
 main = captured 1 2
 "#;
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(12)));
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(3)));
     Ok(())
 }
 
@@ -174,17 +178,6 @@ addOne y = add y 1
 main = addOne 11
 "#;
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(12)));
-    Ok(())
-}
-
-#[test]
-fn test_passing_app_and_func_as_arg() -> CResult<()> {
-    let src = "
-add x y = + x y
-apply a b c = c a b
-main = apply 10 9 +
-";
-    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(19)));
     Ok(())
 }
 

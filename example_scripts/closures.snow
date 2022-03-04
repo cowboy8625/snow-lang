@@ -1,26 +1,2 @@
 captured x = let f y = + x y in f
-main = captured 1 2
-
-
--- add x y = + x y
--- apply a b c = c a b
--- main = println (apply 1 2 add)
-
-
-
-
--- TRUE x y = x
--- FALSE x y = y
--- AND p q = p q p
--- OR p q = p p q
--- NOT p = p FALSE TRUE
--- IFTHENELSE p a b = p a b
--- sur x y z = (FALSE x (TRUE y z ))
-
--- main = println (sur 1 2 3)
--- main = println (FALSE "Left" "Right")
--- main = println ((sur 1 2 3) 
--- main = println (AND TRUE FALSE)
--- main = println (((TRUE FALSE) TRUE) "L" "R")
-
-
+main = println (captured 1 2)
