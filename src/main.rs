@@ -1,23 +1,60 @@
 mod args;
+mod code_gen;
 mod error;
+mod function;
 mod interpreter;
 mod parser;
 mod position;
-mod repl;
 mod scanner;
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_error;
 #[cfg(test)]
 mod test_parser;
 #[cfg(test)]
 mod test_scanner;
 
+use std::fs::OpenOptions;
+use std::io::Write;
+
 use crate::error::{CResult, Error, ErrorKind};
-use crate::interpreter::FunctionList;
+use crate::function::FunctionList;
 use crate::position::{Pos, Span, Spanned};
+use clap::{crate_description, crate_name, crate_version, Arg, Command};
 use parser::{Expr, Parser};
 
-fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
+fn pop_extesion<'a>(filename: &'a str) -> &'a str {
+    filename.split('.').collect::<Vec<&'a str>>()[0]
+}
+
+fn haskell_code_gen(filename: &str, show_tokens: bool, show_ast: bool) -> CResult<()> {
+    println!("{}", filename);
+    let src = args::snow_source_file(filename)?;
+    let tokens = scanner::scanner(filename, &src)?;
+    if show_tokens {
+        dbg!(&tokens);
+    }
+    let (_t, funcs) = match parser::parser().parse(&tokens) {
+        Ok((t, f)) => (t, f),
+        Err(t) => (t, FunctionList::new()),
+    };
+
+    if show_ast {
+        dbg!(&funcs);
+    }
+
+    let hcode = code_gen::haskell_code_gen(funcs, filename);
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(format!("{}.hs", pop_extesion(filename)))?;
+    file.write_all(hcode.as_bytes())?;
+    Ok(())
+}
+
+fn _excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
     let tokens = scanner::scanner("shell.snow", src).unwrap_or(Vec::new());
     // Try and parse all functions
     let (t, expr): (Vec<_>, Option<_>) = match parser::parser().parse(&tokens) {
@@ -57,36 +94,19 @@ fn excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut Fu
     }
 }
 
-fn from_file(filename: &str) -> CResult<Expr> {
+fn _from_file(filename: &str) -> CResult<Expr> {
     let src = args::snow_source_file(&filename)?;
     run(filename, &src)
 }
 
 fn run(filename: &str, src: &str) -> CResult<Expr> {
     let tokens = scanner::scanner(filename, src)?;
-    let (t, mut funcs) = match parser::parser().parse(&tokens) {
+    let (_, mut funcs) = match parser::parser().parse(&tokens) {
         Ok((t, f)) => (t, f),
         Err(t) => (t, FunctionList::new()),
     };
 
-    // let f: Spanned<Expr> = (
-    //     Expr::Constant(Atom::String(filename.into())),
-    //     Span::default(),
-    // )
-    //     .into();
     let args: Vec<Spanned<Expr>> = Vec::new();
-    // let mut args = if let Some(idx) = std::env::args().into_iter().position(|x| x == filename) {
-    //     std::env::args()
-    //         .into_iter()
-    //         .enumerate()
-    //         .rev()
-    //         .take_while(|(i, _)| i > &idx)
-    //         .map(|(_, i)| (Expr::Constant(Atom::String(i.into())), Span::default()).into())
-    //         .collect::<Vec<Spanned<Expr>>>()
-    // } else {
-    //     Vec::new()
-    // };
-    // args.insert(0, f);
     let mut local = FunctionList::new();
     match funcs.get_mut("main") {
         Some(func) => {
@@ -106,52 +126,12 @@ fn run(filename: &str, src: &str) -> CResult<Expr> {
                 &funcs,
             )?)
         }
-        _ => {
-            dbg!(t);
-            dbg!(funcs);
-            Err(Error::new(
-                "you must provide a 'main' entry point",
-                Span::new(Pos::default(), Pos::default(), filename),
-                ErrorKind::NoMain,
-            ))
-        }
+        _ => Err(Error::new(
+            "you must provide a 'main' entry point",
+            Span::new(Pos::default(), Pos::default(), filename),
+            ErrorKind::NoMain,
+        )),
     }
-}
-
-fn check_for_missing_output(scripts: &[String], output: &[String]) {
-    if scripts.len() != output.len() {
-        let max = scripts.iter().map(|x| x.len()).max().unwrap_or(0);
-        for script in scripts.iter() {
-            let outfile = format!("{}.out", script.split(".").nth(0).unwrap_or(""));
-            let right = format!(" {}", outfile);
-            let left = format!("❌ ❄ {} is missing", script);
-            let space = left.len() + max - script.len();
-            if !output.contains(&outfile) {
-                eprintln!("{:<space$}{}", left, right);
-            }
-        }
-        std::process::exit(60);
-    }
-}
-
-fn test_scripts() -> CResult<()> {
-    let full_path = "/home/cowboy/Documents/Rust/languages/snow/example_scripts";
-    let files = std::fs::read_dir(full_path)?;
-    let (scripts, output): (Vec<_>, Vec<_>) = files
-        .map(|f| {
-            f.unwrap()
-                .file_name()
-                .into_string()
-                .expect("Failed to unwrap OsString in Test Scripts")
-        })
-        .partition(|f| f.ends_with(".snow"));
-    check_for_missing_output(&scripts, &output);
-    for (script, expected) in scripts.iter().zip(output) {
-        let right = from_file(&format!("{}/{}", full_path, script))?;
-        let left = std::fs::read_to_string(&format!("{}/{}", full_path, expected))?;
-        assert_eq!(right.to_string(), left);
-    }
-    Ok(())
 }
 
 fn run_file(filename: &str) {
@@ -168,20 +148,84 @@ fn run_file(filename: &str) {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct UserSettings {
+    pub filenames: Vec<String>,
+    pub tokens: bool,
+    pub ast: bool,
+    pub shell: bool,
+}
+
+// Command Line Arguments
+pub fn cargs() -> UserSettings {
+    let matches = Command::new(crate_name!())
+        .version(crate_version!())
+        .author("cowboy8625")
+        .about(crate_description!())
+        .arg(
+            Arg::new("tokens")
+                .short('t')
+                .long("tokens")
+                .help("Display tokens generated by compiler")
+                .action(clap::ArgAction::SetTrue)
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("ast")
+                .short('a')
+                .long("ast")
+                .help("Display ast tree generated by compiler")
+                .action(clap::ArgAction::SetTrue)
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("shell")
+                .short('s')
+                .long("shell")
+                .help("run file in interpreter")
+                .action(clap::ArgAction::SetTrue)
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("files")
+                .multiple_occurrences(true)
+                .value_name("FILES"),
+        )
+        .get_matches();
+
+    let tokens = matches
+        .get_one::<bool>("tokens")
+        .expect("filed to convert flag token into bool");
+    let ast = matches
+        .get_one::<bool>("ast")
+        .expect("failed to convert flag ast into bool");
+    let shell = matches
+        .get_one::<bool>("shell")
+        .expect("failed to convert flag shell into bool");
+    let filenames: Vec<String> = matches
+        .get_many("files")
+        .expect("files are expected")
+        .cloned()
+        .collect();
+
+    UserSettings {
+        filenames,
+        tokens: *tokens,
+        ast: *ast,
+        shell: *shell,
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let filename = std::env::args().nth(1).unwrap_or("--shell".into());
-    if filename == "--test" {
-        test_scripts()?;
-    } else if filename == "--shell" {
-        repl::run()?;
-    } else if filename != "--shell" && filename != "--help" {
-        run_file(&filename);
-    } else {
-        println!("snowc [version 0.0.0]");
-        println!("<file>            run <file>");
-        println!("--shell           repl - default");
-        println!("--test            run custom test");
-        println!("--help            this message");
+    let settings = cargs();
+    if settings.shell {
+        for filename in settings.filenames.iter() {
+            run_file(filename);
+        }
+        std::process::exit(0);
+    }
+    for filename in settings.filenames.iter() {
+        haskell_code_gen(filename, settings.tokens, settings.ast)?;
     }
     Ok(())
 }

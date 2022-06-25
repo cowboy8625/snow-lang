@@ -13,6 +13,7 @@ pub(crate) fn builtin<'a>() -> impl Parser<'a, Token, Spanned<BuiltIn>> {
             Token::KeyWord(kw) => match kw {
                 KeyWord::Print => Ok((&input[1..], (BuiltIn::Print, input[0].span()).into())),
                 KeyWord::PrintLn => Ok((&input[1..], (BuiltIn::PrintLn, input[0].span()).into())),
+                KeyWord::DbgInt => Ok((&input[1..], (BuiltIn::DbgInt, input[0].span()).into())),
                 _ => Err(input),
             },
             _ => Err(input),
@@ -32,6 +33,24 @@ pub enum BuiltIn {
     Not,
     Print,
     PrintLn,
+    DbgInt,
+}
+
+impl BuiltIn {
+    pub fn display(&self) -> String {
+        match self {
+            Self::Plus => "+".into(),
+            Self::Mins => "-".into(),
+            Self::Mult => "*".into(),
+            Self::Div => "/".into(),
+            Self::Eq => "==".into(),
+            Self::NEq => "/=".into(),
+            Self::Not => "not".into(),
+            Self::Print => "putStr".into(),
+            Self::PrintLn => "putStr".into(),
+            Self::DbgInt => "putStr".into(),
+        }
+    }
 }
 
 impl fmt::Display for BuiltIn {
@@ -46,6 +65,7 @@ impl fmt::Display for BuiltIn {
             Self::Not => write!(f, "<!>"),
             Self::Print => write!(f, "<Print>"),
             Self::PrintLn => write!(f, "<Println>"),
+            Self::DbgInt => write!(f, "<DbgInt>"),
         }
     }
 }

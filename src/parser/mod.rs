@@ -1,5 +1,5 @@
 use super::{
-    interpreter::{Function, FunctionList},
+    function::{Function, FunctionList},
     position::{Span, Spanned},
     scanner::{KeyWord, Token},
 };

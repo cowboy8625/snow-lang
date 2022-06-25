@@ -115,17 +115,6 @@ fn test_simple_main() -> CResult<()> {
 }
 
 #[test]
-fn test_no_main() {
-    let src = "add x y = + x y";
-    let result = from_string(src)
-        .err()
-        .map(|c| c.downcast::<crate::error::Error>().ok())
-        .flatten()
-        .map(|e| e.kind());
-    assert_eq!(result, Some(ErrorKind::NoMain));
-}
-
-#[test]
 fn test_add_function() -> CResult<()> {
     let src = "
 add x y = + x y
@@ -137,8 +126,6 @@ main = print (add 1 2)
 
 #[test]
 fn test_passing_builtins_as_arg() -> CResult<()> {
-
-
     let src = "
 apply a b c = c a b
 
@@ -334,6 +321,25 @@ main =
 }
 
 #[test]
+fn test_do_if_app() -> CResult<()> {
+    let src = r#"
+add x y = + x y
+main =
+    do
+        if True then
+            println (add 0 1)
+        else if False then
+            println (add 1 1)
+        else
+            println (add 321 123)
+
+                "#;
+    eprintln!("{}", src);
+    assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(1)));
+    Ok(())
+}
+
+#[test]
 fn test_if_expr() -> CResult<()> {
     let src = "
 main = if True then 100
@@ -341,17 +347,6 @@ main = if True then 100
     eprintln!("{}", src);
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(100)));
     Ok(())
-}
-
-#[test]
-fn test_no_return() {
-    let src = "main = if False then 100 ";
-    let result = from_string(src)
-        .err()
-        .map(|c| c.downcast::<crate::error::Error>().ok())
-        .flatten()
-        .map(|e| e.kind());
-    assert_eq!(result, Some(ErrorKind::EmptyReturn));
 }
 
 #[test]
@@ -366,3 +361,19 @@ main = b 3
     assert_eq!(from_string(src)?, Expr::Constant(Atom::Int(6)));
     Ok(())
 }
+
+// #[test]
+// fn test_lambda_cal_and() -> CResult<()> {
+//     let src = r#"
+// TRUE x y = x
+// FALSE x y = y
+// AND p q = p q p
+// main = (AND TRUE TRUE) "HELLO"
+// "#;
+//     eprintln!("{}", src);
+//     assert_eq!(
+//         from_string(src)?,
+//         Expr::Constant(Atom::String("HELLO".to_string()))
+//     );
+//     Ok(())
+// }

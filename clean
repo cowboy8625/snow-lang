@@ -1,0 +1,2 @@
+#!/bin/bash
+find samples ! -name "*.snow" -type f -exec rm -f {} +

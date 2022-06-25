@@ -21,6 +21,7 @@ pub enum KeyWord {
     Do,
     Print,
     PrintLn,
+    DbgInt,
 }
 
 impl fmt::Display for KeyWord {
@@ -40,6 +41,7 @@ impl fmt::Display for KeyWord {
             Self::Do => write!(f, "do"),
             Self::Print => write!(f, "print"),
             Self::PrintLn => write!(f, "println"),
+            Self::DbgInt => write!(f, "dbg_int"),
         }
     }
 }
@@ -62,6 +64,7 @@ impl KeyWord {
             "do" => Some(Do),
             "print" => Some(Print),
             "println" => Some(PrintLn),
+            "dbg_int" => Some(DbgInt),
             _ => None,
         }
     }
@@ -77,6 +80,7 @@ pub enum Token {
     KeyWord(KeyWord),
     InDent,
     DeDent,
+    Delimiter,
     Op(&'static str),
     Ctrl(char),
 }
@@ -92,6 +96,7 @@ impl Token {
             Self::KeyWord(i) => i.to_string(),
             Self::InDent => "InDent".into(),
             Self::DeDent => "DeDent".into(),
+            Self::Delimiter => ";".into(),
             Self::Op(i) => i.to_string(),
             Self::Ctrl(i) => i.to_string(),
         }
@@ -107,6 +112,7 @@ impl Token {
             Self::KeyWord(i) => i.to_string(),
             Self::InDent => "InDent".to_string(),
             Self::DeDent => "DeDent".to_string(),
+            Self::Delimiter => ";".into(),
             Self::Op(_) => "Operator".to_string(),
             Self::Ctrl(i) => match i {
                 '(' | ')' => "parenthesis".to_string(),
@@ -129,6 +135,7 @@ impl fmt::Display for Token {
             Self::KeyWord(i) => write!(f, "KeyWord({})", i),
             Self::InDent => write!(f, "InDent"),
             Self::DeDent => write!(f, "DeDent"),
+            Self::Delimiter => write!(f, ";"),
             Self::Op(i) => write!(f, "Op({})", i),
             Self::Ctrl(i) => write!(f, "Ctrl({})", i),
         }
@@ -143,6 +150,7 @@ struct Scanner<'a> {
     indent: Vec<usize>,
     current: Option<&'a CharPos>,
     previous: char,
+    is_in_do_block: usize,
 }
 
 impl<'a> Scanner<'a> {
@@ -155,6 +163,7 @@ impl<'a> Scanner<'a> {
             indent: Vec::new(),
             current: None,
             previous: '\n',
+            is_in_do_block: 0,
         }
     }
 
@@ -196,7 +205,10 @@ impl<'a> Scanner<'a> {
             match cp.chr {
                 '-' if self.peek_char() == '-' => self.line_comment(),
                 '{' if self.peek_char() == '-' => self.block_comment(),
-                '\n' => self.indent(),
+                '\n' => {
+                    self.delimiter(cp);
+                    self.indent();
+                }
                 // '\n' if self.peek_char().is_ascii_alphabetic() => self.dedent(cp),
                 '=' if self.peek_char() == '=' => {
                     let end = self.next().unwrap();
@@ -254,6 +266,14 @@ impl<'a> Scanner<'a> {
                 self.push((Token::DeDent, item.span()));
             }
         }
+        for spanned in self.delimiters.iter() {
+            eprintln!("{}", spanned.node);
+            self.errors.push(Error::new(
+                &format!("missing {} {}", spanned.node.name(), spanned.node.unwrap()),
+                spanned.span(),
+                ErrorKind::UnclosedDelimiter,
+            ));
+        }
         self
     }
 
@@ -263,7 +283,7 @@ impl<'a> Scanner<'a> {
     {
         let spanned = spanned.into();
         match &spanned.node {
-            Token::Ctrl('(') | Token::Ctrl('[') | Token::Ctrl('{') => {
+            Token::Ctrl('(' | '[' | '{') => {
                 self.delimiters.push(spanned.clone());
             }
             Token::Ctrl(n @ (')' | ']' | '}')) => {
@@ -286,6 +306,12 @@ impl<'a> Scanner<'a> {
             }
             _ => {}
         }
+        if let Token::KeyWord(KeyWord::Do) = spanned.node {
+            self.is_in_do_block += 1;
+        }
+        if let Token::DeDent = spanned.node {
+            self.is_in_do_block -= 1;
+        }
         self.tokens.push(spanned.into());
     }
 
@@ -303,6 +329,20 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    fn delimiter(&mut self, cp: &CharPos) {
+        if self.is_in_do_block > 0
+            && !matches!(
+                self.tokens.last(),
+                Some(Spanned {
+                    node: Token::KeyWord(KeyWord::Do),
+                    ..
+                })
+            )
+        {
+            self.push((Token::Delimiter, (cp, cp).into()));
+        }
+    }
+
     fn indent(&mut self) {
         let mut count = 0;
         // let start = self.next().unwrap();
@@ -316,7 +356,7 @@ impl<'a> Scanner<'a> {
             span = Some((start.unwrap(), cp).into());
         }
 
-        // Code Donated to by MizardX 😃
+        // Code Donated by MizardX 😃
         match count.cmp(&self.indent.last().unwrap_or(&0)) {
             std::cmp::Ordering::Greater => {
                 self.indent.push(count);
@@ -400,7 +440,7 @@ impl<'a> Scanner<'a> {
     fn identifier(&mut self, start: &CharPos) {
         let mut idt = start.chr.to_string();
         let mut end = start;
-        while let Some(cp) = self.next_if(|&cp| cp.chr.is_ascii_alphanumeric()) {
+        while let Some(cp) = self.next_if(|&cp| cp.chr.is_ascii_alphanumeric() || cp.chr == '_') {
             end = cp;
             idt.push(cp.chr);
         }

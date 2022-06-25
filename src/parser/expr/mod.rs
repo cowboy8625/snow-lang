@@ -22,12 +22,19 @@ where
 pub fn indent_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
     next_token(Token::InDent)
 }
+
 pub fn equal_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
     next_token(Token::Op("="))
 }
+
 pub fn do_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
     next_token(Token::KeyWord(KeyWord::Do))
 }
+
+pub fn delimiter_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
+    next_token(Token::Delimiter)
+}
+
 pub fn dedent_token<'a>() -> impl Parser<'a, Token, Spanned<Token>> {
     next_token(Token::DeDent)
 }
@@ -69,7 +76,7 @@ fn next_token<'a>(token: Token) -> impl Parser<'a, Token, Spanned<Token>> {
 fn do_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     move |input: &'a [Spanned<Token>]| {
         let (i, span_start) = left(do_token(), indent_token()).parse(input)?;
-        let (i, body) = one_or_more(func_expr()).parse(i)?;
+        let (i, body) = one_or_more(left(func_expr(), delimiter_token())).parse(i)?;
         let (i, end) = dedent_token().parse(i)?;
         let span: Span = (span_start.span(), end.span()).into();
         Ok((i, (Expr::Do(body), span).into()))
@@ -172,7 +179,7 @@ pub enum Expr {
     Let(Vec<Spanned<Self>>, Box<Spanned<Self>>),
     // (if predicate do-this)
     If(Box<Spanned<Expr>>, Box<Spanned<Expr>>),
-    // // (if predicate do-this otherwise-do-this)
+    //    (if predicate do-this otherwise-do-this)
     IfElse(Box<Spanned<Expr>>, Box<Spanned<Expr>>, Box<Spanned<Expr>>),
 }
 

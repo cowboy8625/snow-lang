@@ -6,7 +6,7 @@ pub type CResult<T> = Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Default)]
 pub struct MulitError {
-    errors: Vec<Box<dyn std::error::Error>>,
+    pub errors: Vec<Box<dyn std::error::Error>>,
 }
 
 impl std::error::Error for MulitError {}

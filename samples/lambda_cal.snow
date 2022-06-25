@@ -1,0 +1,25 @@
+negInt x = - 0 x
+negFloat x = - 0.0 x
+
+TRUE x y = x
+FALSE x y = y
+AND p q = p q p
+OR p q = p p q
+NOT p = p FALSE TRUE
+IFTHENELSE p a b = p a b
+PAIR x y f = f x y
+NIL x = TRUE
+ISNIL p = let f x y = FALSE in p f
+
+main =
+  do
+    do
+      println (TRUE "LEFT" "RIGHT")
+    do
+      println (FALSE "LEFT" "RIGHT")
+    do
+      println ((AND TRUE TRUE) "HELLO")
+    do
+      println (+ 1 2 3)
+    do
+      ISNIL (PAIR 1 (PAIR 2 (PAIR 3 (PAIR NIL))))

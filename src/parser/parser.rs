@@ -16,7 +16,7 @@ pub fn parser<'a>() -> impl Parser<'a, Token, FunctionList> {
                         (name.span(), body.span()).into(),
                     ),
                 ),
-                x => unreachable!(x),
+                x => unreachable!("{}", x),
             };
         }
         Ok((i, funcs))

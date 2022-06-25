@@ -1,0 +1,3 @@
+main = do
+    println "Hello World"
+    println "Hello World"

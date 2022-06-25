@@ -1,0 +1,9 @@
+
+game x =
+  do
+    if (> x 10) then
+        game (+ 1 x)
+    else
+        println "Done"
+
+main = game 10

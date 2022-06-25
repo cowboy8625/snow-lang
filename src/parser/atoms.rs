@@ -61,8 +61,19 @@ pub enum Atom {
     Float(f32),
     String(String),
     Boolean(bool),
-    // Keyword(KeyWord),
     BuiltIn(BuiltIn),
+}
+
+impl Atom {
+    pub fn display(&self) -> String {
+        match self {
+            Self::Int(i) => i.to_string(),
+            Self::Float(i) => i.to_string(),
+            Self::String(i) => format!("{:?}", i),
+            Self::Boolean(i) => i.to_string(),
+            Self::BuiltIn(i) => i.display(),
+        }
+    }
 }
 
 impl fmt::Display for Atom {
@@ -72,7 +83,6 @@ impl fmt::Display for Atom {
             Self::Float(i) => write!(f, "{}", i),
             Self::String(i) => write!(f, "{}", i),
             Self::Boolean(i) => write!(f, "{}", i),
-            // Self::Keyword(i) => write!(f, "{}", i),
             Self::BuiltIn(i) => write!(f, "{}", i),
         }
     }
