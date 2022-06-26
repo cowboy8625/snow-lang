@@ -233,6 +233,7 @@ main = do
         InDent,
         KeyWord(PrintLn),
         String("If".into()),
+        Delimiter,
         DeDent,
         KeyWord(Else),
         KeyWord(If),
@@ -246,6 +247,7 @@ main = do
         InDent,
         KeyWord(PrintLn),
         String("Else".into()),
+        Delimiter,
         DeDent,
         DeDent,
     ];

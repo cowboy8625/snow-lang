@@ -1,7 +1,7 @@
 mod conditionals;
 mod let_expr;
 use super::mini_parse::{self, either, left, one_or_more, surround, zero_or_more, Parser};
-use super::{boolean, builtin, number, string, Atom, KeyWord, Span, Spanned, Token};
+use super::{boolean, builtin, number, string, Atom, Error, KeyWord, Span, Spanned, Token};
 use crate::one_of;
 use conditionals::conditional;
 use let_expr::let_expr;
@@ -160,32 +160,21 @@ pub(crate) fn function<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
+    Error(Error),
     Constant(Atom),
-    // func-name args
-    // + 1 2   -> + [1 2]
-    // (+ 1) 2 -> (+ 1) [2]
-    // ((+ 1 2) 3) -> (+ [1, 2]) [3]
-    // (((+ 1) 2) 3) -> ((+ [1]) [2]) [3]
-    //
-    // + 1 2   -> + [1 2]
     Application(Box<Spanned<Self>>, Vec<Spanned<Self>>),
-    // func-name prams body
     Function(Spanned<String>, Vec<Spanned<String>>, Box<Spanned<Self>>),
-    // func name's or pram name's
     Local(Spanned<String>),
-    // do block
     Do(Vec<Spanned<Self>>),
-    //   expr           body
     Let(Vec<Spanned<Self>>, Box<Spanned<Self>>),
-    // (if predicate do-this)
     If(Box<Spanned<Expr>>, Box<Spanned<Expr>>),
-    //    (if predicate do-this otherwise-do-this)
     IfElse(Box<Spanned<Expr>>, Box<Spanned<Expr>>, Box<Spanned<Expr>>),
 }
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Error(_) => write!(f, "Error"),
             Self::Local(name) => write!(f, "Local({})", name.node),
             Self::Constant(a) => write!(f, "{}", a),
             Self::Application(n, a) => write!(

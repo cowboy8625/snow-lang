@@ -34,9 +34,19 @@ pub fn code_gen_expr(expr: Expr) -> String {
                 .collect::<String>()
         ),
         Expr::Let(_name, _body) => unimplemented!("Expr::Let is not implemented yet"),
-        Expr::If(_condition, _body) => unimplemented!("Expr::If is not implemented yet"),
-        Expr::IfElse(_condition, _body, _then) => {
-            unimplemented!("Expr::IfElse is not implemented yet")
+        Expr::If(condition, body) => format!(
+            "if {} then {}",
+            code_gen_expr(condition.node),
+            code_gen_expr(body.node),
+        ),
+        Expr::IfElse(condition, body, then) => {
+            format!(
+                "if {} then {} else {}",
+                code_gen_expr(condition.node),
+                code_gen_expr(body.node),
+                code_gen_expr(then.node)
+            )
         }
+        e => unreachable!("unimplemented '{}' for code_gen", e),
     }
 }

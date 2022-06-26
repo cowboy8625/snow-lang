@@ -70,7 +70,7 @@ pub fn conditional<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     }
 }
 pub fn else_expr<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
-    right(else_token(), expr())
+    right(else_token(), either(expr(), left(expr(), dedent_token())))
 }
 pub fn else_if_expr<'a>() -> impl Parser<'a, Token, (Spanned<Expr>, Spanned<Expr>)> {
     pair(
@@ -78,11 +78,14 @@ pub fn else_if_expr<'a>() -> impl Parser<'a, Token, (Spanned<Expr>, Spanned<Expr
             pair(else_token(), if_token()),
             left(condition(), then_token()),
         ),
-        expr(),
+        either(expr(), left(expr(), dedent_token())),
     )
 }
 pub fn if_expr<'a>() -> impl Parser<'a, Token, (Spanned<Expr>, Spanned<Expr>)> {
-    pair(right(if_token(), left(condition(), then_token())), expr())
+    pair(
+        right(if_token(), left(condition(), then_token())),
+        either(expr(), left(expr(), dedent_token())),
+    )
 }
 pub fn condition<'a>() -> impl Parser<'a, Token, Spanned<Expr>> {
     either(app(), constant())

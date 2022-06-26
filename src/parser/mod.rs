@@ -1,4 +1,5 @@
 use super::{
+    error::Error,
     function::{Function, FunctionList},
     position::{Span, Spanned},
     scanner::{KeyWord, Token},

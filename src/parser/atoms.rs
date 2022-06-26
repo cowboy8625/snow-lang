@@ -70,7 +70,7 @@ impl Atom {
             Self::Int(i) => i.to_string(),
             Self::Float(i) => i.to_string(),
             Self::String(i) => format!("{:?}", i),
-            Self::Boolean(i) => i.to_string(),
+            Self::Boolean(i) => if *i { "True" } else { "False" }.to_string(),
             Self::BuiltIn(i) => i.display(),
         }
     }
@@ -82,7 +82,7 @@ impl fmt::Display for Atom {
             Self::Int(i) => write!(f, "{}", i),
             Self::Float(i) => write!(f, "{}", i),
             Self::String(i) => write!(f, "{}", i),
-            Self::Boolean(i) => write!(f, "{}", i),
+            Self::Boolean(i) => write!(f, "{}", if *i { "True" } else { "False" }),
             Self::BuiltIn(i) => write!(f, "{}", i),
         }
     }

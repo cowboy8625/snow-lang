@@ -9,7 +9,7 @@ pub struct CharPos {
     pub loc: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Eq)]
 pub struct Pos {
     pub idx: usize,
     pub col: usize,
@@ -36,7 +36,7 @@ impl From<&CharPos> for Pos {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Eq)]
 pub struct Span {
     pub start: Pos,
     pub end: Pos,
@@ -49,6 +49,10 @@ impl Span {
             end,
             loc: loc.to_string(),
         }
+    }
+
+    pub fn to_range(&self) -> std::ops::Range<usize> {
+        self.start.idx..self.end.idx + 1
     }
 }
 

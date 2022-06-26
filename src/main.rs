@@ -2,35 +2,26 @@ mod args;
 mod code_gen;
 mod error;
 mod function;
-mod interpreter;
 mod parser;
 mod position;
 mod scanner;
-#[cfg(test)]
-mod test;
-#[cfg(test)]
-mod test_error;
-#[cfg(test)]
-mod test_parser;
 #[cfg(test)]
 mod test_scanner;
 
 use std::fs::OpenOptions;
 use std::io::Write;
 
-use crate::error::{CResult, Error, ErrorKind};
+use crate::error::Result;
 use crate::function::FunctionList;
-use crate::position::{Pos, Span, Spanned};
-use clap::{crate_description, crate_name, crate_version, Arg, Command};
-use parser::{Expr, Parser};
+use error::Error;
+use parser::Parser;
+use position::Span;
 
 fn pop_extesion<'a>(filename: &'a str) -> &'a str {
     filename.split('.').collect::<Vec<&'a str>>()[0]
 }
 
-fn haskell_code_gen(filename: &str, show_tokens: bool, show_ast: bool) -> CResult<()> {
-    println!("{}", filename);
-    let src = args::snow_source_file(filename)?;
+fn haskell_code_gen(filename: &str, src: &str, show_tokens: bool, show_ast: bool) -> Result<()> {
     let tokens = scanner::scanner(filename, &src)?;
     if show_tokens {
         dbg!(&tokens);
@@ -49,183 +40,64 @@ fn haskell_code_gen(filename: &str, show_tokens: bool, show_ast: bool) -> CResul
         .write(true)
         .create(true)
         .truncate(true)
-        .open(format!("{}.hs", pop_extesion(filename)))?;
-    file.write_all(hcode.as_bytes())?;
+        .open(format!("{}.hs", pop_extesion(filename)))
+        .map_err(|e| Error {
+            last: None,
+            msg: e.to_string(),
+            span: Span::default(),
+        })?;
+    file.write_all(hcode.as_bytes()).map_err(|e| Error {
+        last: None,
+        msg: e.to_string(),
+        span: Span::default(),
+    })?;
     Ok(())
 }
 
-fn _excute_with_env_of<'a>(src: &str, local: &mut FunctionList, funcs: &'a mut FunctionList) {
-    let tokens = scanner::scanner("shell.snow", src).unwrap_or(Vec::new());
-    // Try and parse all functions
-    let (t, expr): (Vec<_>, Option<_>) = match parser::parser().parse(&tokens) {
-        // If all was paresed look into current functions and replace old functions
-        // with new def.
-        Ok((t, f)) => {
-            for (k, v) in f.iter() {
-                // Old functions is thrown away if present.
-                let _ = funcs.insert(k.to_string(), v.clone());
-            }
-            (t.to_vec(), None)
-        }
-        // If failed to parse try and parse Atoms
-        Err(t) => match t.first().map(|s| s.node.clone()) {
-            Some(scanner::Token::DeDent) => match parser::app().parse(&t[1..]) {
-                Ok((t, expr)) => (t.to_vec(), Some(expr.node)),
-                Err(t) => (t.to_vec(), None),
-            },
-            _ => match parser::app().parse(&t) {
-                Ok((t, expr)) => (t.to_vec(), Some(expr.node)),
-                Err(t) => (t.to_vec(), None),
-            },
-        },
-    };
+fn report_error_to_user(src: &str, error: &Error) {
+    if let Some(error) = &error.last {
+        report_error_to_user(src, &error);
+    }
 
-    if !t.is_empty() {
-        eprintln!("{}", ErrorKind::LexeringFailer);
-        for s in t.iter() {
-            eprintln!("{}", s);
-        }
-    }
-    if let Some(e) = &expr {
-        match interpreter::evaluation(e, &[], local, &funcs) {
-            Ok(out) => eprintln!("[OUT]: {}", out),
-            Err(e) => eprintln!("{}", e),
-        }
-    }
+    println!("{}", error.span);
+    let start = &src[error.span.to_range()]
+        .chars()
+        .rev()
+        .enumerate()
+        .find(|(_, i)| i == &'\n')
+        .map(|(i, _)| i)
+        .unwrap_or(error.span.start.idx);
+    let end = *&src[error.span.to_range()]
+        .chars()
+        .enumerate()
+        .find(|(_, i)| i == &'\n')
+        .map(|(i, _)| error.span.start.idx + i)
+        .unwrap_or(src.len().saturating_sub(1));
+    let source_line = format!(
+        "{}{}{}",
+        &src[(error.span.start.idx - start)..error.span.start.idx],
+        &src[error.span.to_range()],
+        &src[error.span.start.idx + 1..end],
+    );
+    println!("|   {}", source_line);
+    let spacing = &src[(error.span.start.idx - start)..error.span.start.idx]
+        .chars()
+        .map(|_| ' ')
+        .collect::<String>();
+    println!("|   {}^", spacing);
+    println!("|   {}{}", spacing, error.msg);
+    let line = (0..source_line.len()).map(|_| '-').collect::<String>();
+    println!("|---{}", line);
 }
 
-fn _from_file(filename: &str) -> CResult<Expr> {
-    let src = args::snow_source_file(&filename)?;
-    run(filename, &src)
-}
-
-fn run(filename: &str, src: &str) -> CResult<Expr> {
-    let tokens = scanner::scanner(filename, src)?;
-    let (_, mut funcs) = match parser::parser().parse(&tokens) {
-        Ok((t, f)) => (t, f),
-        Err(t) => (t, FunctionList::new()),
-    };
-
-    let args: Vec<Spanned<Expr>> = Vec::new();
-    let mut local = FunctionList::new();
-    match funcs.get_mut("main") {
-        Some(func) => {
-            let mut idx = 0;
-            for (i, arg) in args.iter().enumerate() {
-                if func.bind_arg(arg.node.clone(), &mut local) {
-                    break;
-                }
-                idx = i;
-            }
-            let left_of_args = args[idx..].to_vec();
-            func.local(&mut local);
-            Ok(interpreter::evaluation(
-                &func.body(),
-                &left_of_args,
-                &mut local,
-                &funcs,
-            )?)
-        }
-        _ => Err(Error::new(
-            "you must provide a 'main' entry point",
-            Span::new(Pos::default(), Pos::default(), filename),
-            ErrorKind::NoMain,
-        )),
-    }
-}
-
-fn run_file(filename: &str) {
-    let src = match args::snow_source_file(&filename) {
-        Ok(f) => f,
-        Err(e) => {
-            println!("{}", e);
-            std::process::exit(1);
-        }
-    };
-    match run(filename, &src) {
-        Ok(_) => {}
-        Err(e) => println!("{}", e),
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct UserSettings {
-    pub filenames: Vec<String>,
-    pub tokens: bool,
-    pub ast: bool,
-    pub shell: bool,
-}
-
-// Command Line Arguments
-pub fn cargs() -> UserSettings {
-    let matches = Command::new(crate_name!())
-        .version(crate_version!())
-        .author("cowboy8625")
-        .about(crate_description!())
-        .arg(
-            Arg::new("tokens")
-                .short('t')
-                .long("tokens")
-                .help("Display tokens generated by compiler")
-                .action(clap::ArgAction::SetTrue)
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("ast")
-                .short('a')
-                .long("ast")
-                .help("Display ast tree generated by compiler")
-                .action(clap::ArgAction::SetTrue)
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("shell")
-                .short('s')
-                .long("shell")
-                .help("run file in interpreter")
-                .action(clap::ArgAction::SetTrue)
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("files")
-                .multiple_occurrences(true)
-                .value_name("FILES"),
-        )
-        .get_matches();
-
-    let tokens = matches
-        .get_one::<bool>("tokens")
-        .expect("filed to convert flag token into bool");
-    let ast = matches
-        .get_one::<bool>("ast")
-        .expect("failed to convert flag ast into bool");
-    let shell = matches
-        .get_one::<bool>("shell")
-        .expect("failed to convert flag shell into bool");
-    let filenames: Vec<String> = matches
-        .get_many("files")
-        .expect("files are expected")
-        .cloned()
-        .collect();
-
-    UserSettings {
-        filenames,
-        tokens: *tokens,
-        ast: *ast,
-        shell: *shell,
-    }
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let settings = cargs();
-    if settings.shell {
-        for filename in settings.filenames.iter() {
-            run_file(filename);
-        }
-        std::process::exit(0);
-    }
+fn main() -> Result<()> {
+    let settings = args::cargs();
     for filename in settings.filenames.iter() {
-        haskell_code_gen(filename, settings.tokens, settings.ast)?;
+        let src = args::snow_source_file(filename)?;
+        match haskell_code_gen(filename, &src, settings.tokens, settings.ast) {
+            Err(e) => report_error_to_user(&src, &e),
+            _ => {}
+        }
     }
     Ok(())
 }

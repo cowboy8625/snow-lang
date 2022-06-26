@@ -1,7 +1,8 @@
 use super::{
-    error::{CResult, Error, ErrorKind, MulitError},
+    error::{Error, Result},
     position::{CharPos, Span, Spanned},
 };
+
 use std::{fmt, iter::Peekable};
 type Stream<'a, T> = Peekable<std::slice::Iter<'a, T>>;
 
@@ -145,7 +146,7 @@ impl fmt::Display for Token {
 struct Scanner<'a> {
     stream: Stream<'a, CharPos>,
     tokens: Vec<Spanned<Token>>,
-    errors: MulitError,
+    errors: Option<Error>,
     delimiters: Vec<Spanned<Token>>,
     indent: Vec<usize>,
     current: Option<&'a CharPos>,
@@ -158,7 +159,7 @@ impl<'a> Scanner<'a> {
         Self {
             stream: src.iter().peekable(),
             tokens: Vec::new(),
-            errors: MulitError::default(),
+            errors: None,
             delimiters: Vec::new(),
             indent: Vec::new(),
             current: None,
@@ -222,6 +223,14 @@ impl<'a> Scanner<'a> {
                     let end = self.next().unwrap();
                     self.push((Token::Op(">="), (cp, end).into()))
                 }
+                '|' if self.peek_char() == '>' => {
+                    let end = self.next().unwrap();
+                    self.push((Token::Op("|>"), (cp, end).into()))
+                }
+                '<' if self.peek_char() == '|' => {
+                    let end = self.next().unwrap();
+                    self.push((Token::Op("<|"), (cp, end).into()))
+                }
                 '<' if self.peek_char() == '=' => {
                     let end = self.next().unwrap();
                     self.push((Token::Op("<="), (cp, end).into()))
@@ -251,12 +260,11 @@ impl<'a> Scanner<'a> {
                 num if num.is_numeric() => self.number(cp),
                 ' ' => {}
                 _ => {
-                    println!("{:?}:{}:{}:{}", cp.chr, cp.idx, cp.row, cp.col);
-                    self.errors.push(Error::new(
-                        "",
-                        Span::new(cp.into(), cp.into(), &cp.loc),
-                        ErrorKind::UnknownChar,
-                    ));
+                    self.errors = Some(Error {
+                        last: self.errors.clone().map(Box::new),
+                        msg: format!("unknown char '{}'", cp.chr),
+                        span: Span::new(cp.into(), cp.into(), &cp.loc),
+                    })
                 }
             }
         }
@@ -268,11 +276,15 @@ impl<'a> Scanner<'a> {
         }
         for spanned in self.delimiters.iter() {
             eprintln!("{}", spanned.node);
-            self.errors.push(Error::new(
-                &format!("missing {} {}", spanned.node.name(), spanned.node.unwrap()),
-                spanned.span(),
-                ErrorKind::UnclosedDelimiter,
-            ));
+            self.errors = Some(Error {
+                last: self.errors.map(Box::new),
+                msg: format!(
+                    "unclosed delimiter missing {} {}",
+                    spanned.node.name(),
+                    spanned.node.unwrap()
+                ),
+                span: spanned.span(),
+            });
         }
         self
     }
@@ -297,11 +309,15 @@ impl<'a> Scanner<'a> {
                 // let span: Span = (open.span(), spanned.span()).into();
                 if opsit != open.node.unwrap() {
                     let node = &open.node;
-                    self.errors.push(Error::new(
-                        &format!("missing {} {}", node.name(), node.unwrap()),
-                        open.span(),
-                        ErrorKind::UnclosedDelimiter,
-                    ));
+                    self.errors = Some(Error {
+                        last: self.errors.clone().map(Box::new),
+                        msg: format!(
+                            "unclosed delimiter missing {} {}",
+                            node.name(),
+                            node.unwrap()
+                        ),
+                        span: open.span(),
+                    });
                 }
             }
             _ => {}
@@ -334,7 +350,7 @@ impl<'a> Scanner<'a> {
             && !matches!(
                 self.tokens.last(),
                 Some(Spanned {
-                    node: Token::KeyWord(KeyWord::Do),
+                    node: Token::KeyWord(KeyWord::Do | KeyWord::Then | KeyWord::Else),
                     ..
                 })
             )
@@ -370,22 +386,16 @@ impl<'a> Scanner<'a> {
                     self.push((Token::DeDent, span.clone().unwrap_or_default()));
                 }
                 if count > *self.indent.last().unwrap_or(&0) {
-                    self.errors.push(Error::new(
-                        "",
-                        span.unwrap_or_default(),
-                        ErrorKind::InvalidIndentation,
-                    ));
+                    self.errors = Some(Error {
+                        last: self.errors.clone().map(Box::new),
+                        msg: "invalid indention".into(),
+                        span: span.unwrap_or_default(),
+                    });
                 }
             }
             _ => (),
         }
     }
-
-    // fn dedent(&mut self, start: &CharPos) {
-    //     let span: Span = (start, start).into();
-    //     let token = (Token::DeDent, span);
-    //     self.push(token);
-    // }
 
     fn unwrap_dedent(&mut self) {
         for _ in self.indent.clone().iter() {
@@ -427,11 +437,11 @@ impl<'a> Scanner<'a> {
         }
         let span: Span = (start, end).into();
         if KeyWord::lookup(&idt).is_some() {
-            self.errors.push(Error::new(
-                &format!("can not use a '{}' as a function name", idt),
-                span.clone(),
-                ErrorKind::ReserverdWord,
-            ));
+            self.errors = Some(Error {
+                last: self.errors.clone().map(Box::new),
+                msg: format!("'{}' is a reserved word found in function name", idt),
+                span: span.clone(),
+            });
         }
 
         self.push((Token::Fn(idt), span));
@@ -504,11 +514,11 @@ fn pos_enum<'a>(loc: &str, src: &str) -> Vec<CharPos> {
 }
 
 // FIXME: This does not need to clone.
-pub fn scanner(filename: &str, src: &str) -> CResult<Vec<Spanned<Token>>> {
+pub fn scanner(filename: &str, src: &str) -> Result<Vec<Spanned<Token>>> {
     let chrpos = pos_enum(filename, src);
     let scanner = Scanner::new(&chrpos).scan();
-    if !scanner.errors.is_empty() {
-        return Err(Box::new(scanner.errors));
+    if let Some(error) = scanner.errors {
+        return Err(error);
     }
     Ok(scanner.tokens.clone())
 }

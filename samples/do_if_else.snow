@@ -1,0 +1,7 @@
+main = do
+    if True then
+        println "IF"
+    else if False then
+        println "ELSE IF"
+    else
+        println "ELSE"

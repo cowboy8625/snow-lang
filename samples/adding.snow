@@ -1,0 +1,1 @@
+main = println % <| & show <| + 1 2
