@@ -1,0 +1,11 @@
+[package]
+name = "parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+scanner = { path = "../scanner" }
+error = {path = "../error" }
+
+[dev-dependencies]
+pretty_assertions = '1.1.0'
