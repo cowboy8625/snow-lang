@@ -4,6 +4,9 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+parser = { path="./crates/parser" }
+report = { path="./crates/report" }
+one-liner = { path="./crates/one-liner" }
 
 [dev-dependencies]
 pretty_assertions = "1.1.0"
