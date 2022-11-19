@@ -1,1 +1,8 @@
-main = if True then println "IF" else if False then println "ELSE IF" else println "ELSE"
+fn main =
+    if true then
+        println "IF"
+    else if false then
+        println "ELSE IF"
+    else
+        println "ELSE"
+;
