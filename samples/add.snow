@@ -1,1 +1,1 @@
-fn main = print (123 + 321)
+fn main = print (123 + 321);
