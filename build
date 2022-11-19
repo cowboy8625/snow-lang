@@ -1,6 +1,0 @@
-#!/bin/bash
-path=$1
-filename="${path%.*}";
-cargo run --release -- $path &&
-    ghc "${filename}.hs" &&
-    ./${filename}

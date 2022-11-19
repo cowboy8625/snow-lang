@@ -1,2 +1,0 @@
-main = do
-    println "Hello World"

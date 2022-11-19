@@ -1,1 +1,1 @@
-main = dbg_int (+ 123 321)
+fn main = print (123 + 321);
