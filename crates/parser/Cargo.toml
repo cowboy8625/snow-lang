@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 scanner = { path = "../scanner" }
-error = {path = "../error" }
+snowc-errors = {path = "../snowc-errors" }
 
 [dev-dependencies]
 pretty_assertions = '1.1.0'

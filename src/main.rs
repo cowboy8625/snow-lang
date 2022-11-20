@@ -11,7 +11,7 @@ fn main() {
                 }
                 Err(e) => {
                     let span = e
-                        .downcast_ref::<parser::ParserError>()
+                        .downcast_ref::<parser::error::ParserError>()
                         .map(|i| i.span())
                         .unwrap_or(0..0);
                     print!("{}", report::report(&src, span, &e.to_string()));

@@ -1,4 +1,3 @@
-// use error::CResult;
 #![allow(dead_code)]
 use crossterm::{
     cursor::{position, MoveLeft, MoveTo},
@@ -26,7 +25,7 @@ fn eval(line: &str) -> String {
             .collect(),
         Err(e) => {
             let span = e
-                .downcast_ref::<parser::ParserError>()
+                .downcast_ref::<parser::error::ParserError>()
                 .map(|i| i.span())
                 .unwrap_or(0..0);
             report::report(line.trim(), span, &e.to_string())
@@ -52,12 +51,7 @@ pub fn repl() {
                     let mut line = String::new();
                     let mut writer = stdout();
                     loop {
-                        execute!(
-                            writer,
-                            MoveTo(x, y),
-                            Print(prompt(&line)),
-                            MoveLeft(1),
-                        )?;
+                        execute!(writer, MoveTo(x, y), Print(prompt(&line)), MoveLeft(1),)?;
                         if poll(Duration::from_millis(1_000))? {
                             let event = read()?;
                             match event {
@@ -136,11 +130,7 @@ pub fn repl() {
                                     } => {
                                         history.push(line.clone());
                                         history_number = history.len() - 1;
-                                        execute!(
-                                            writer,
-                                            MoveTo(x, y),
-                                            Print(prompt(&line)),
-                                        )?;
+                                        execute!(writer, MoveTo(x, y), Print(prompt(&line)),)?;
                                         let result = eval(&line);
                                         y += 1;
                                         execute!(writer, MoveTo(x, y), Print(&result),)?;
