@@ -1,0 +1,9 @@
+[package]
+name = "snowc-repl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+snowc-error-messages = { path = "../snowc-error-messages" }
+snowc-parse = { path = "../snowc-parse" }
+crossterm = "0.25.0"

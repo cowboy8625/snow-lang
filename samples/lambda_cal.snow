@@ -1,25 +1,18 @@
-negInt x = - 0 x
-negFloat x = - 0.0 x
+fn negInt x = 0 - x;
+fn negFloat x = 0.0 - x;
 
-TRUE x y = x
-FALSE x y = y
-AND p q = p q p
-OR p q = p p q
-NOT p = p FALSE TRUE
-IFTHENELSE p a b = p a b
-PAIR x y f = f x y
-NIL x = TRUE
-ISNIL p = let f x y = FALSE in p f
+fn TRUE x y = x;
+fn FALSE x y = y;
+fn AND p q = p q p;
+fn OR p q = p p q;
+fn NOT p = p FALSE TRUE;
+fn IFTHENELSE p a b = p a b;
+fn PAIR x y f = f x y;
+fn NIL x = TRUE;
 
-main =
-  do
-    do
-      println (TRUE "LEFT" "RIGHT")
-    do
-      println (FALSE "LEFT" "RIGHT")
-    do
-      println ((AND TRUE TRUE) "HELLO")
-    do
-      println (+ 1 2 3)
-    do
-      ISNIL (PAIR 1 (PAIR 2 (PAIR 3 (PAIR NIL))))
+-- fn ISNIL p = let f x y = FALSE in p f;
+-- main = println (TRUE "LEFT" "RIGHT")
+--        println (FALSE "LEFT" "RIGHT")
+--        println ((AND TRUE TRUE) "HELLO")
+--        println (+ 1 2 3)
+--        ISNIL (PAIR 1 (PAIR 2 (PAIR 3 (PAIR NIL))))

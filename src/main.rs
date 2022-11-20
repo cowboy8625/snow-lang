@@ -1,9 +1,9 @@
 fn main() {
     std::env::args().nth(1).map_or_else(
-        || one_liner::repl(),
+        || snowc_repl::repl(),
         |filename| {
             let src = std::fs::read_to_string(&filename).unwrap_or("".into());
-            match parser::parse(&src, false) {
+            match snowc_parse::parse(&src, false) {
                 Ok(s) => {
                     for f in s.iter() {
                         println!("{f}");
@@ -11,10 +11,13 @@ fn main() {
                 }
                 Err(e) => {
                     let span = e
-                        .downcast_ref::<parser::ParserError>()
+                        .downcast_ref::<snowc_parse::error::ParserError>()
                         .map(|i| i.span())
                         .unwrap_or(0..0);
-                    print!("{}", report::report(&src, span, &e.to_string()));
+                    print!(
+                        "{}",
+                        snowc_error_messages::report(&src, span, &e.to_string())
+                    );
                 }
             }
         },

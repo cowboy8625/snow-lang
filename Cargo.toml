@@ -4,9 +4,9 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-parser = { path="./crates/parser" }
-report = { path="./crates/report" }
-one-liner = { path="./crates/one-liner" }
+snowc-parse = { path="./crates/snowc-parse" }
+snowc-error-messages = { path="./crates/snowc-error-messages" }
+snowc-repl = { path="./crates/snowc-repl" }
 
 [dev-dependencies]
 pretty_assertions = "1.1.0"
@@ -15,3 +15,11 @@ pretty_assertions = "1.1.0"
 members = [
     "./crates/*",
 ]
+
+[profile.release]
+opt-level = 'z'     # Optimize for size.
+lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations.
+panic = 'abort'     # Abort on panic
+strip = true        # Strip symbols from binary*
+
