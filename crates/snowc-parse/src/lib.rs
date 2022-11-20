@@ -7,8 +7,8 @@ mod precedence;
 mod tests;
 pub use crate::parser::parse;
 use op::Op;
-use scanner::{Scanner, Token};
 use snowc_errors::CResult;
+use snowc_lexer::{Scanner, Token};
 
 type Span = std::ops::Range<usize>;
 

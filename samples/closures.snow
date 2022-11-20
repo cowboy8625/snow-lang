@@ -1,7 +1,0 @@
-fn add = λ x -> λ y -> x + y;
-fn max = λ x y -> if x > y then x else y;
--- fn captured x =
---     let f
---     let y
---     = x + y in f;
--- fn main = println (captured 1 2);

@@ -1,9 +1,0 @@
-[package]
-name = "one-liner"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-report = { path = "../report" }
-parser = { path = "../parser" }
-crossterm = "0.25.0"

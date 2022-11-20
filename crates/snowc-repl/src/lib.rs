@@ -17,7 +17,7 @@ const HELP_MESSAGE: &str = "Help Commands
 ";
 
 fn eval(line: &str) -> String {
-    match parser::parse(line.trim(), true) {
+    match snowc_parse::parse(line.trim(), true) {
         Ok(s) => s
             .iter()
             .map(|f| {
@@ -30,10 +30,10 @@ fn eval(line: &str) -> String {
             .collect(),
         Err(e) => {
             let span = e
-                .downcast_ref::<parser::error::ParserError>()
+                .downcast_ref::<snowc_parse::error::ParserError>()
                 .map(|i| i.span())
                 .unwrap_or(0..0);
-            report::report(line.trim(), span, &e.to_string())
+            snowc_error_messages::report(line.trim(), span, &e.to_string())
         }
     }
 }

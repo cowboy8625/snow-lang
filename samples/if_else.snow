@@ -1,8 +1,0 @@
-fn main =
-    if true then
-        println "IF"
-    else if false then
-        println "ELSE IF"
-    else
-        println "ELSE"
-;

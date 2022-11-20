@@ -1,10 +1,10 @@
 [package]
-name = "parser"
+name = "snowc-parse"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-scanner = { path = "../scanner" }
+snowc-lexer = { path = "../snowc-lexer" }
 snowc-errors = {path = "../snowc-errors" }
 
 [dev-dependencies]
