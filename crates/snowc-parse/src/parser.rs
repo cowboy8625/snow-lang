@@ -195,7 +195,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn closure(&mut self) -> CResult<Expr> {
-        if matches!(self.peek(), (Token::Op(ref op), _) if op == "λ") {
+        if matches!(self.peek(), (Token::Op(ref op), _) if op == "λ" || op == "\\") {
             self.lexer.next();
             return Ok(Expr::Clouser(
                 Box::new(self.expression(Precedence::Fn)?),
@@ -279,12 +279,23 @@ impl<'a> Parser<'a> {
                 Ok(lhs)
             }
             o @ ("-" | "!") => {
-                let op = Op::try_from(o)?;
                 self.lexer.next();
+                let op = Op::try_from(o)?;
                 let lhs = self.expression(Precedence::Unary)?;
                 Ok(Expr::Unary(op, Box::new(lhs)))
             }
-            c => bail!(span, "unknown op char: {}", c),
+            c => {
+                let mut l = self.lexer.clone();
+                l.next();
+                let peek = l.peek().map(|(t, _)| t.clone()).unwrap_or(Token::Eof);
+                if Op::try_from(op).is_ok() && matches!(peek, Token::Op(op) if op == ")") {
+                    self.lexer = l;
+                    let op = Op::try_from(op)?;
+                    Ok(Expr::Atom(Atom::Id(format!("({op})"))))
+                } else {
+                    bail!(span, "unknown op char: {}", c)
+                }
+            }
         }
     }
 

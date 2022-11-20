@@ -1,5 +1,5 @@
 use super::{parser::Parser, precedence::Precedence, Scanner};
-use pretty_assertions::assert_eq;
+// use pretty_assertions::assert_eq;
 use snowc_errors::CResult;
 
 // macro_rules! setup_test {
@@ -163,15 +163,22 @@ fn super_duper_function_def() {
     let result = "<main: <print: (<max: ((+ <add: (1, 2)> <sub: (1, 2)>), 20)>)>>";
     let lexer = Scanner::new(src).peekable();
     let mut p = Parser::new(lexer);
-    let exprs = p.parse(false).unwrap();
-    let mut exprs = exprs.iter();
-    assert_eq!(
-        exprs
-            .next()
-            .map(|e| e.to_string())
-            .unwrap_or("FAILED".to_string()),
-        result
-    );
+    match p.parse(false) {
+        Ok(exprs) => {
+            let mut exprs = exprs.iter();
+            assert_eq!(
+                exprs
+                    .next()
+                    .map(|e| e.to_string())
+                    .unwrap_or("FAILED".to_string()),
+                result
+            );
+        }
+        Err(e) => {
+            dbg!(e);
+            assert!(false);
+        }
+    }
 }
 
 #[test]
@@ -187,6 +194,24 @@ fn multi_function_def() {
 #[test]
 fn closures() {
     let lexer = Scanner::new("fn add = (λx -> (λy -> x + y));").peekable();
+    let mut parser = Parser::new(lexer);
+    match parser.parse(false) {
+        Ok(e) => {
+            let mut e = e.iter();
+            assert_eq!(
+                e.next()
+                    .map(ToString::to_string)
+                    .unwrap_or("NONE".to_string()),
+                "<add: x -> y -> (+ x y)>"
+            );
+        }
+        Err(e) => {
+            dbg!(e);
+            assert!(false);
+        }
+    }
+
+    let lexer = Scanner::new(r#"fn add = (\x -> (\y -> x + y));"#).peekable();
     let mut parser = Parser::new(lexer);
     match parser.parse(false) {
         Ok(e) => {

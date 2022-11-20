@@ -43,7 +43,7 @@ impl TryFrom<&str> for Op {
             "==" => Ok(Self::Eq),
             "!=" => Ok(Self::Neq),
             "!" => Ok(Self::Not),
-            "=" => Ok(Self::Equals),
+            // "=" => Ok(Self::Equals),
             "|>" => Ok(Self::Pipe),
             _ => Err("not an operator"),
         }

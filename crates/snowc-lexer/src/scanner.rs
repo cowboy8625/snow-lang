@@ -144,6 +144,7 @@ impl<'a> Iterator for Scanner<'a> {
                     let _ = self.next_char();
                     return Some((Token::Op("|>".into()), self.span(start)));
                 }
+                '\\' => return Some((Token::Op(r#"\"#.into()), self.span_one())),
                 '|' => return Some((Token::Op("|".into()), self.span_one())),
                 '!' => return Some((Token::Op("!".into()), self.span_one())),
                 '<' => return Some((Token::Op("<".into()), self.span_one())),
