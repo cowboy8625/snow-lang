@@ -5,8 +5,8 @@ pub mod parser;
 mod precedence;
 #[cfg(test)]
 mod tests;
+pub use crate::parser::parse;
 use op::Op;
-pub use parser::parse;
 use scanner::{Scanner, Token};
 use snowc_errors::CResult;
 

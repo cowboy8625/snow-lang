@@ -58,9 +58,7 @@ impl<'a> Scanner<'a> {
     fn number(&mut self) -> Option<(Token, Span)> {
         let mut number = self.current.unwrap().to_string();
         let start = self.pos;
-        while let Some(ch) =
-            self.next_if(|c| c.is_ascii_digit() || c == &'_' || c == &'.')
-        {
+        while let Some(ch) = self.next_if(|c| c.is_ascii_digit() || c == &'_' || c == &'.') {
             number.push(ch);
         }
         let span = self.span(start);
@@ -98,6 +96,11 @@ impl<'a> Scanner<'a> {
         let _ = self.next_char();
         Some((Token::Op("=>".into()), self.span(start)))
     }
+
+    fn line_comment(&mut self) -> Option<(Token, Span)> {
+        while let Some(_) = self.next_if(|c| c != &'\n') {}
+        self.next()
+    }
 }
 
 impl<'a> Iterator for Scanner<'a> {
@@ -107,6 +110,7 @@ impl<'a> Iterator for Scanner<'a> {
             match ch {
                 num if num.is_ascii_digit() => return self.number(),
                 ident if ident.is_ascii_alphabetic() => return self.id(),
+                '-' if self.peek_char() == '-' => return self.line_comment(),
                 '-' if self.peek_char() == '>' => return self.rarrow(),
                 '=' if self.peek_char() == '>' => return self.fatrarrow(),
                 '<' if self.peek_char() == '-' => return self.larrow(),
@@ -158,6 +162,7 @@ impl<'a> Iterator for Scanner<'a> {
                 ']' => return Some((Token::Op("]".into()), self.span_one())),
                 '{' => return Some((Token::Op("{".into()), self.span_one())),
                 '}' => return Some((Token::Op("}".into()), self.span_one())),
+                'λ' => return Some((Token::Op("λ".into()), self.span_one())),
                 ' ' | '\n' => return self.next(),
                 c => panic!("Unknown char: {c}"),
             }

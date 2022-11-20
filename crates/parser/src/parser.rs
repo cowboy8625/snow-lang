@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
         if token != expected {
             bail!(
                 span,
-                "{msg}\nexpected '{:?}' but found '{:?}'",
+                "{msg}\r\nexpected '{:?}' but found '{:?}'",
                 expected,
                 token
             );
@@ -101,7 +101,7 @@ impl<'a> Parser<'a> {
                 }
             }
             (_, _) if bs => {
-                let expr = self.conditional();
+                let expr = self.closure();
                 if expr.is_ok() {
                     self.consume(
                         Token::Op(";".into()),
@@ -180,13 +180,13 @@ impl<'a> Parser<'a> {
                             );
                         }
                         self.consume(Token::Op("=".into()), "After args '=' then function body")?;
-                        let body = self.conditional()?;
+                        let body = self.closure()?;
                         self.consume(Token::Op(";".into()), "functions end with a ';'")?;
                         Ok(Expr::Clouser(Box::new(lhs), Box::new(body)))
                     })
                     .or_else(|_| {
                         self.consume(Token::Op("=".into()), "After args '=' then function body")?;
-                        let lhs = self.conditional()?;
+                        let lhs = self.closure()?;
                         self.consume(Token::Op(";".into()), "functions end with a ';'")?;
                         Ok::<Expr, Box<dyn std::error::Error>>(lhs)
                     })?,
@@ -194,20 +194,49 @@ impl<'a> Parser<'a> {
         ))
     }
 
+    pub(crate) fn closure(&mut self) -> CResult<Expr> {
+        if matches!(self.peek(), (Token::Op(ref op), _) if op == "λ") {
+            self.lexer.next();
+            return Ok(Expr::Clouser(
+                Box::new(self.expression(Precedence::Fn)?),
+                Box::new(
+                    self.closure()
+                        .and_then(|mut lhs| {
+                            while let Some((Token::Id(_), _)) = self.lexer.peek().cloned() {
+                                lhs = Expr::Clouser(
+                                    Box::new(lhs),
+                                    Box::new(self.expression(Precedence::Fn)?),
+                                );
+                            }
+                            self.consume(Token::Op("->".into()), "lambda expressions")?;
+                            let body = self.closure()?;
+                            Ok(Expr::Clouser(Box::new(lhs), Box::new(body)))
+                        })
+                        .or_else(|_| {
+                            self.consume(Token::Op("->".into()), "lambda expressions")?;
+                            let lhs = self.closure()?;
+                            Ok::<Expr, Box<dyn std::error::Error>>(lhs)
+                        })?,
+                ),
+            ));
+        }
+        self.conditional()
+    }
+
     pub(crate) fn conditional(&mut self) -> CResult<Expr> {
-        if matches!(self.lexer.peek(), Some((Token::KeyWord(ref k), _)) if k == "if") {
+        if matches!(self.peek(), (Token::KeyWord(ref k), _) if k == "if") {
             let (_, _start_span) = self.consume(Token::KeyWord("if".into()), "WHAT")?;
             let condition = self.expression(Precedence::None)?;
             self.consume(
                 Token::KeyWord("then".into()),
                 "else keyword is required with an if expression",
             )?;
-            let branch1 = self.conditional()?;
+            let branch1 = self.closure()?;
             self.consume(
                 Token::KeyWord("else".into()),
                 "else keyword is required with an if expression",
             )?;
-            let branch2 = self.conditional()?;
+            let branch2 = self.closure()?;
             return Ok(Expr::IfElse(
                 Box::new(condition),
                 Box::new(branch1),
@@ -245,7 +274,7 @@ impl<'a> Parser<'a> {
         match op {
             "(" => {
                 self.lexer.next();
-                let lhs = self.call(Precedence::None)?;
+                let lhs = self.closure()?;
                 self.consume(Token::Op(")".into()), "closing ')' missing")?;
                 Ok(lhs)
             }
