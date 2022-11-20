@@ -10,6 +10,11 @@ use crossterm::{
 use std::fs;
 use std::io::stdout;
 use std::time::Duration;
+const HELP_MESSAGE: &str = "Help Commands
+:help           get this message
+:exit | :quit   kill repl
+:clear          clears screen
+";
 
 fn eval(line: &str) -> String {
     match parser::parse(line.trim(), true) {
@@ -35,6 +40,22 @@ fn eval(line: &str) -> String {
 
 fn prompt(msg: &str) -> String {
     format!(":> {msg} ")
+}
+
+enum Command {
+    Quit,
+    Clear,
+    Help,
+    None,
+}
+
+fn check_for_command(command: &str) -> Command {
+    match command.trim() {
+        ":quit" | ":exit" => Command::Quit,
+        ":clear" => Command::Clear,
+        ":help" => Command::Help,
+        _ => Command::None,
+    }
 }
 
 pub fn repl() {
@@ -101,6 +122,13 @@ pub fn repl() {
                                         line = history[history_number].to_string();
                                     }
                                     KeyEvent {
+                                        code: KeyCode::Down,
+                                        ..
+                                    } => {
+                                        history_number = (history_number + 1).min(history.len());
+                                        line = history[history_number].to_string();
+                                    }
+                                    KeyEvent {
                                         code: KeyCode::Backspace,
                                         ..
                                     } => {
@@ -130,11 +158,39 @@ pub fn repl() {
                                     } => {
                                         history.push(line.clone());
                                         history_number = history.len() - 1;
-                                        execute!(writer, MoveTo(x, y), Print(prompt(&line)),)?;
-                                        let result = eval(&line);
-                                        y += 1;
-                                        execute!(writer, MoveTo(x, y), Print(&result),)?;
-                                        y += result.lines().count() as u16;
+                                        match check_for_command(line.as_str()) {
+                                            Command::Quit => break,
+                                            Command::Clear => {
+                                                x = 0;
+                                                y = 0;
+                                                execute!(
+                                                    writer,
+                                                    Clear(ClearType::All),
+                                                    MoveTo(x, y),
+                                                    Print(prompt(""))
+                                                )?;
+                                            }
+                                            Command::Help => {
+                                                execute!(
+                                                    writer,
+                                                    Clear(ClearType::All),
+                                                    MoveTo(x, y),
+                                                    Print(HELP_MESSAGE.replace("\n", "\r\n"))
+                                                )?;
+                                                y += HELP_MESSAGE.lines().count() as u16;
+                                            }
+                                            Command::None => {
+                                                execute!(
+                                                    writer,
+                                                    MoveTo(x, y),
+                                                    Print(prompt(&line)),
+                                                )?;
+                                                let result = eval(&line);
+                                                y += 1;
+                                                execute!(writer, MoveTo(x, y), Print(&result),)?;
+                                                y += result.lines().count() as u16;
+                                            }
+                                        }
                                         line.clear();
                                     }
                                     _ => {}
