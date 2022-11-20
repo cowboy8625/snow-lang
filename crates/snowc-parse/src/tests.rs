@@ -99,20 +99,26 @@ fn changing_precedence() -> CResult<()> {
     Ok(())
 }
 
-// #[test]
-// fn calling_operator() -> CResult<()> {
-//     let lexer = Scanner::new("(+) 1 2").peekable();
-//     let mut parser = Parser::new(lexer);
-//     let left = parser.call(Precedence::None)?.to_string();
-//     assert_eq!(left, "<(+): (1, 2)>");
-//     // let exprs = parser.parse(false)?;
-//     // let mut e = exprs.iter();
-//     // assert_eq!(
-//     //     e.next().map(ToString::to_string),
-//     //     Some("<(+): (1, 2)>".into())
-//     // );
-//     Ok(())
-// }
+#[test]
+fn calling_operator() {
+    let lexer = Scanner::new("(+) 1 2;").peekable();
+    let mut parser = Parser::new(lexer);
+    match parser.parse(true) {
+        Ok(e) => {
+            let mut e = e.iter();
+            assert_eq!(
+                e.next()
+                    .map(ToString::to_string)
+                    .unwrap_or("NONE".to_string()),
+                "<(+): (1, 2)>"
+            );
+        }
+        Err(e) => {
+            dbg!(e);
+            assert!(false);
+        }
+    }
+}
 
 #[test]
 fn call() -> CResult<()> {
