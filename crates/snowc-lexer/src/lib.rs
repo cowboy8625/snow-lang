@@ -1,4 +1,3 @@
-mod kind;
 mod scanner;
 #[cfg(test)]
 mod test;
