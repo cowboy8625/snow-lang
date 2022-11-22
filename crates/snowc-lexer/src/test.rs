@@ -4,11 +4,11 @@ use super::{Scanner, Token};
 // use pretty_assertions::assert_eq;
 
 fn get_next<'a>(scanner: &mut Scanner, src: &'a str) -> Option<(Token, &'a str)> {
-    scanner.next().map(|(t, s)| (t, &src[s]))
+    scanner.next().map(|(t, s)| (t, dbg!(&src[dbg!(s)])))
 }
 
 macro_rules! setup_test {
-    ($name:ident, $input:expr, $(($token:ident, $output:expr)), *) => {
+    ($name:ident, $input:expr $(, ($token:ident, $output:expr))* $(,)?) => {
         #[test]
         fn $name() {
             use Token::*;
@@ -17,12 +17,13 @@ macro_rules! setup_test {
             $(
                 assert_eq!(
                     get_next(&mut scanner, src),
-                    Some(($token($output.into()), $output))
-                );
+                    Some(($token($output.into()), $output)), "{src}");
             ) *
         }
     };
 }
+
+setup_test!(symbol_scan, "λλλ", (Op, "λ"), (Op, "λ"), (Op, "λ"),);
 
 setup_test!(
     scanner_main,
@@ -40,7 +41,37 @@ setup_test!(
     (Op, ";"),
     (Op, "}")
 );
+setup_test!(
+    lambdas,
+    r#"\x -> x;"#,
+    (Op, "\\"),
+    (Id, "x"),
+    (Op, "->"),
+    (Id, "x"),
+    (Op, ";")
+);
 
+setup_test!(
+    lambda_symbol,
+    r#"fn add = (λx -> (λy -> x + y));"#,
+    (KeyWord, "fn"),
+    (Id, "add"),
+    (Op, "="),
+    (Op, "("),
+    (Op, "λ"),
+    (Id, "x"),
+    (Op, "->"),
+    (Op, "("),
+    (Op, "λ"),
+    (Id, "y"),
+    (Op, "->"),
+    (Id, "x"),
+    (Op, "+"),
+    (Id, "y"),
+    (Op, ")"),
+    (Op, ")"),
+    (Op, ";")
+);
 setup_test!(
     scanner_add_func,
     r#"fn add(x u64, y u64) u64 {
