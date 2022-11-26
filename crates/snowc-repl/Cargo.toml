@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 snowc-error-messages = { path = "../snowc-error-messages" }
 snowc-parse = { path = "../snowc-parse" }
+snowc-tree-walker-eval = { path = "../snowc-tree-walker-eval" }
 crossterm = "0.25.0"

@@ -1,12 +1,14 @@
 pub mod error;
 pub mod expr;
-mod op;
+pub mod op;
 pub mod parser;
+pub use error::ParserError;
+pub use expr::{Atom, Expr};
+pub use op::Op;
+pub use parser::parse;
 mod precedence;
 #[cfg(test)]
 mod tests;
-pub use crate::parser::parse;
-use op::Op;
 use snowc_errors::CResult;
 use snowc_lexer::{Scanner, Token};
 

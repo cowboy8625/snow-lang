@@ -179,13 +179,19 @@ impl<'a> Parser<'a> {
                                 Box::new(self.expression(Precedence::Fn)?),
                             );
                         }
-                        self.consume(Token::Op("=".into()), "After args '=' then function body")?;
+                        self.consume(
+                            Token::Op("=".into()),
+                            "After args '=' then function body",
+                        )?;
                         let body = self.closure()?;
                         self.consume(Token::Op(";".into()), "functions end with a ';'")?;
                         Ok(Expr::Clouser(Box::new(lhs), Box::new(body)))
                     })
                     .or_else(|_| {
-                        self.consume(Token::Op("=".into()), "After args '=' then function body")?;
+                        self.consume(
+                            Token::Op("=".into()),
+                            "After args '=' then function body",
+                        )?;
                         let lhs = self.closure()?;
                         self.consume(Token::Op(";".into()), "functions end with a ';'")?;
                         Ok::<Expr, Box<dyn std::error::Error>>(lhs)
@@ -202,7 +208,8 @@ impl<'a> Parser<'a> {
                 Box::new(
                     self.closure()
                         .and_then(|mut lhs| {
-                            while let Some((Token::Id(_), _)) = self.lexer.peek().cloned() {
+                            while let Some((Token::Id(_), _)) = self.lexer.peek().cloned()
+                            {
                                 lhs = Expr::Clouser(
                                     Box::new(lhs),
                                     Box::new(self.expression(Precedence::Fn)?),
@@ -288,7 +295,8 @@ impl<'a> Parser<'a> {
                 let mut l = self.lexer.clone();
                 l.next();
                 let peek = l.peek().map(|(t, _)| t.clone()).unwrap_or(Token::Eof);
-                if Op::try_from(op).is_ok() && matches!(peek, Token::Op(op) if op == ")") {
+                if Op::try_from(op).is_ok() && matches!(peek, Token::Op(op) if op == ")")
+                {
                     self.lexer = l;
                     let op = Op::try_from(op)?;
                     Ok(Expr::Atom(Atom::Id(format!("({op})"))))
@@ -331,7 +339,7 @@ impl<'a> Parser<'a> {
                 Token::Op(_) => Precedence::try_from(token.clone())?,
                 _ => break,
             };
-            if cbp < min_bp {
+            if cbp <= min_bp {
                 break;
             }
             match cbp {
@@ -341,13 +349,15 @@ impl<'a> Parser<'a> {
                 | Precedence::Equality => {
                     let _ = self.lexer.next();
                     let rhs = self.expression(cbp)?;
-                    lhs = Expr::Binary(Op::try_from(&token)?, Box::new(lhs), Box::new(rhs));
+                    lhs =
+                        Expr::Binary(Op::try_from(&token)?, Box::new(lhs), Box::new(rhs));
                 }
                 Precedence::Assignment | Precedence::None => break,
                 Precedence::Pipe => {
                     let _ = self.lexer.next();
                     let rhs = self.call(cbp)?;
-                    lhs = Expr::Binary(Op::try_from(&token)?, Box::new(lhs), Box::new(rhs));
+                    lhs =
+                        Expr::Binary(Op::try_from(&token)?, Box::new(lhs), Box::new(rhs));
                 }
                 _ => bail!(start_span.start..span.end, "cbp: {cbp:?}, token: {token}"),
             }

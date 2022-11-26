@@ -76,7 +76,7 @@ fn binary_ids() -> CResult<()> {
     let lexer = Scanner::new("a + b * c * d + e").peekable();
     let mut parser = Parser::new(lexer);
     let left = parser.expression(Precedence::None)?.to_string();
-    assert_eq!(left, "(+ a (+ (* b (* c d)) e))");
+    assert_eq!(left, "(+ (+ a (* (* b c) d)) e)");
 
     let lexer = Scanner::new("a + b").peekable();
     let mut parser = Parser::new(lexer);
