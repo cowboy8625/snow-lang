@@ -8,8 +8,8 @@ pub enum Token {
     Int(String),
     Float(String),
     String(String),
-    Char(char),
-    Error(char),
+    Char(String),
+    Error(String),
     Eof,
 }
 impl Token {
