@@ -23,6 +23,7 @@ macro_rules! setup_test {
     };
 }
 
+setup_test!(token_error, "😅", (Error, "😅"));
 setup_test!(symbol_scan, "λλλ", (Op, "λ"), (Op, "λ"), (Op, "λ"),);
 
 setup_test!(

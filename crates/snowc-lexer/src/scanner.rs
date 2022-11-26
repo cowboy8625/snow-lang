@@ -75,7 +75,9 @@ impl<'a> Scanner<'a> {
 
     fn number(&mut self) -> (Token, Span) {
         let mut number = self.current.unwrap().to_string();
-        while let Some(ch) = self.next_if(|c| c.is_ascii_digit() || c == &'_' || c == &'.') {
+        while let Some(ch) =
+            self.next_if(|c| c.is_ascii_digit() || c == &'_' || c == &'.')
+        {
             number.push(ch);
         }
         let span = self.span();
@@ -107,6 +109,10 @@ impl<'a> Scanner<'a> {
             self.next_char();
         }
         (Token::Op(op.into()), self.span())
+    }
+
+    fn err(&mut self, c: char) -> Option<(Token, Span)> {
+        Some((Token::Error(c.to_string()), self.span()))
     }
 }
 
@@ -153,7 +159,7 @@ impl<'a> Iterator for Scanner<'a> {
                 self.reset_span();
                 self.next()
             }
-            c => panic!("Unknown char: {c}"),
+            c => self.err(c),
         }
     }
 }

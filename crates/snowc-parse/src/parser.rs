@@ -328,7 +328,7 @@ impl<'a> Parser<'a> {
         loop {
             let (token, span) = self.peek();
             let cbp: Precedence = match token.clone() {
-                Token::Op(_) => Precedence::from(token.clone()),
+                Token::Op(_) => Precedence::try_from(token.clone())?,
                 _ => break,
             };
             if cbp < min_bp {

@@ -9,6 +9,7 @@ pub enum Token {
     Float(String),
     String(String),
     Char(char),
+    Error(char),
     Eof,
 }
 impl Token {
@@ -31,6 +32,7 @@ impl fmt::Display for Token {
             Self::Float(i) => write!(f, "{i}"),
             Self::String(i) => write!(f, "{i}"),
             Self::Char(i) => write!(f, "{i}"),
+            Self::Error(i) => write!(f, "{i}"),
             Self::Eof => write!(f, "EOF"),
         }
     }
