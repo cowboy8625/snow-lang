@@ -16,6 +16,14 @@ members = [
     "./crates/*",
 ]
 
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[lib]
+name = "snowc"
+path = "src/lib.rs"
+
 [profile.release]
 opt-level = 'z'     # Optimize for size.
 lto = true          # Enable Link Time Optimization

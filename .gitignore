@@ -1,6 +1,8 @@
 /target
 *.lock
 *.txt
+*.svg
+*.dot
 *.vim
 /example_scripts/rule110.snow
 history.txt
