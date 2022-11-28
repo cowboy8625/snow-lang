@@ -2,9 +2,8 @@
 *.lock
 *.txt
 *.svg
+*.png
 *.dot
 *.vim
-/example_scripts/rule110.snow
-history.txt
-open
-clean
+*.sh
+rule110.snow
