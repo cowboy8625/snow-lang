@@ -1,8 +1,1 @@
-fn main =
-    if true then
-        println "IF"
-    else if false then
-        println "ELSE IF"
-    else
-        println "ELSE"
-;
+fn main = if 1 > 3 then x else y;
