@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-// use std::{fs::OpenOptions, io::Write};
-
 use snowc::*;
 fn main() {
     std::env::args().nth(1).map_or_else(
