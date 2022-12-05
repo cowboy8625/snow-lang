@@ -92,15 +92,15 @@ pub fn eval(expr: Expr, funcs: &mut FuncMap) -> Option<Atom> {
                 (Atom::Float(l), Atom::Float(r)) => {
                     Atom::Bool(l.parse::<f32>().unwrap() == r.parse::<f32>().unwrap())
                 }
-                _ => unimplemented!(),
+                a => unimplemented!("'{a:?}'"),
             }),
-            _ => unimplemented!(),
+            a => unimplemented!("'{a:?}'"),
         },
         Expr::IfElse(condition, branch1, branch2) => {
             Some(match eval(*condition, funcs)? {
                 Atom::Bool(true) => eval(*branch1, funcs)?,
                 Atom::Bool(false) => eval(*branch2, funcs)?,
-                _ => unimplemented!(),
+                a => unimplemented!("'{a:?}'"),
             })
         }
         Expr::App(head, args) => {
