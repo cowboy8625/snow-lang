@@ -149,8 +149,7 @@ impl Repl {
     }
 
     fn clear_screen(&mut self) -> Result<()> {
-        self.cursor = Pos::default();
-        self.cursor.x = Self::PROMPT.len() as u16;
+        self.cursor.y = 0;
         let prompt = self.prompt();
         execute!(
             self.writer,
@@ -161,6 +160,7 @@ impl Repl {
         )?;
         Ok(())
     }
+
     fn welcome_message(&mut self) -> Result<()> {
         execute!(
             self.writer,
@@ -300,21 +300,21 @@ impl Repl {
                     .saturating_sub(1)
                     .max(Self::PROMPT.len() as u16);
             }
-            KeyCode::Char(c) => {
-                self.cursor.x += 1;
-                self.input.push(c);
-                let Some(word) = self.get_current_word() else {
-
-                self.suggestion = None;
-                    return Ok(());
-                };
-
-                let word_list = self.word_dict.lookup(word.as_str());
-                self.suggestion = word_list.get(0).cloned();
-            }
+            KeyCode::Char(c) => self.input_char(c),
             _ => {}
         }
         Ok(())
+    }
+
+    fn input_char(&mut self, c: char) {
+        self.cursor.x += 1;
+        self.input.push(c);
+        let Some(word) = self.get_current_word() else {
+            self.suggestion = None;
+            return;
+        };
+        let word_list = self.word_dict.lookup(word.as_str());
+        self.suggestion = word_list.get(0).cloned();
     }
 
     fn control_modifiers(&mut self, code: KeyCode) -> Result<()> {
@@ -329,6 +329,11 @@ impl Repl {
 
     fn keyevent(&mut self, key: KeyEvent) -> Result<()> {
         match key {
+            KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers: KeyModifiers::SHIFT,
+                ..
+            } => self.input_char(c),
             KeyEvent {
                 code,
                 modifiers: KeyModifiers::NONE,
