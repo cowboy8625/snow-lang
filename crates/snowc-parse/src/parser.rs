@@ -115,6 +115,7 @@ impl<'a> Parser<'a> {
             }
         }
     }
+
     fn type_dec(&mut self, name: &str, _span: Span) -> CResult<Expr> {
         let mut types = vec![];
         while let Some((t, _)) = self
@@ -138,6 +139,7 @@ impl<'a> Parser<'a> {
             self.consume(Token::Op(";".into()), "type declaration's end with a ';'")?;
         Ok(Expr::TypeDec(name.into(), types))
     }
+
     fn user_type_def(&mut self, span: Span) -> CResult<Expr> {
         let Some((Token::Id(name), _name_span)) = self.lexer.next() else {
             bail!(
@@ -146,19 +148,23 @@ impl<'a> Parser<'a> {
                 Token::Id("<name>".into()));
         };
 
-        self.consume(Token::Op("=".into()), "expected '=' but found")?;
         let mut variants = vec![];
-        while let Some((Token::Id(name), _)) = self.lexer.next() {
-            let mut type_list = vec![];
-            while let Some((Token::Id(type_id), _)) =
-                self.lexer.next_if(|(t, _)| matches!(t, Token::Id(_)))
-            {
-                type_list.push(type_id);
+        match self.consume(Token::Op("=".into()), "expected '=' but found") {
+            Ok(_) => {
+                while let Some((Token::Id(name), _)) = self.lexer.next() {
+                    let mut type_list = vec![];
+                    while let Some((Token::Id(type_id), _)) =
+                        self.lexer.next_if(|(t, _)| matches!(t, Token::Id(_)))
+                    {
+                        type_list.push(type_id);
+                    }
+                    variants.push((name, type_list));
+                    if self.advance(Some(Token::Op("|".into()))).is_err() {
+                        break;
+                    }
+                }
             }
-            variants.push((name, type_list));
-            if self.advance(Some(Token::Op("|".into()))).is_err() {
-                break;
-            }
+            Err(_) => {}
         }
         self.consume(Token::Op(";".into()), "type's end with a ';'")?;
         Ok(Expr::Type(name.into(), variants))
@@ -172,20 +178,21 @@ impl<'a> Parser<'a> {
             name,
             Box::new(
                 self.expression(Precedence::Fn)
-                    .and_then(|mut lhs| {
+                    .and_then(|lhs| {
+                        let mut args = vec![lhs];
                         while let Some((Token::Id(_), _)) = self.lexer.peek().cloned() {
-                            lhs = Expr::Clouser(
-                                Box::new(lhs),
-                                Box::new(self.expression(Precedence::Fn)?),
-                            );
+                            args.push(self.expression(Precedence::Fn)?);
                         }
                         self.consume(
                             Token::Op("=".into()),
                             "After args '=' then function body",
                         )?;
                         let body = self.closure()?;
+                        let f = args.into_iter().rev().fold(body, |last, next| {
+                            Expr::Clouser(Box::new(next), Box::new(last))
+                        });
                         self.consume(Token::Op(";".into()), "functions end with a ';'")?;
-                        Ok(Expr::Clouser(Box::new(lhs), Box::new(body)))
+                        Ok(f)
                     })
                     .or_else(|_| {
                         self.consume(

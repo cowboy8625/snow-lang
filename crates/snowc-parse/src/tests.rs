@@ -1,22 +1,5 @@
 use super::{parser::Parser, precedence::Precedence, Scanner};
-// use pretty_assertions::assert_eq;
 use snowc_errors::CResult;
-
-// macro_rules! setup_test {
-//     ($name:ident $(, $input:expr, $output:expr)* $(,)?) => {
-//         #[test]
-//         fn $name() -> CResult<()> {
-//             $(
-//                 let s = parse($input)?;
-//                 dbg!(&s);
-//                 for (i, o) in s.iter().zip($output) {
-//                     assert_eq!(i.to_string(), o);
-//                 }
-//             ) *
-//                 Ok(())
-//         }
-//     };
-// }
 
 #[test]
 fn expression() -> CResult<()> {
@@ -153,7 +136,7 @@ fn function_def() -> CResult<()> {
     let mut p = Parser::new(lexer);
     p.lexer.next();
     let left = p.function(0..0)?.to_string();
-    assert_eq!(left, "<add: x -> y -> (+ x y)>");
+    assert_eq!(left, r#"<add: (\x -> (\y -> (+ x y)))>"#);
     Ok(())
 }
 
@@ -187,8 +170,14 @@ fn multi_function_def() {
     let mut parser = Parser::new(lexer);
     let exprs = parser.parse(false).unwrap_or(vec![]);
     let mut e = exprs.iter();
-    assert_eq!(e.next().unwrap().to_string(), "<add: x -> y -> (+ x y)>");
-    assert_eq!(e.next().unwrap().to_string(), "<sub: x -> y -> (- x y)>");
+    assert_eq!(
+        e.next().unwrap().to_string(),
+        r#"<add: (\x -> (\y -> (+ x y)))>"#
+    );
+    assert_eq!(
+        e.next().unwrap().to_string(),
+        r#"<sub: (\x -> (\y -> (- x y)))>"#
+    );
 }
 
 #[test]

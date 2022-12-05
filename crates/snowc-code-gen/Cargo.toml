@@ -1,7 +1,8 @@
 [package]
-name = "snowc-tree-walker-eval"
+name = "snowc-code-gen"
 version = "0.0.0"
 edition = "2021"
 
 [dependencies]
 snowc-parse = { path = "../snowc-parse" }
+snowc-errors = { path = "../snowc-errors" }

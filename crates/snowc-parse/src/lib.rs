@@ -16,10 +16,8 @@ type Span = std::ops::Range<usize>;
 
 #[macro_export]
 macro_rules! bail {
-    ($span:expr $(, $arg:expr)* $(,)?) => {
-        return Err(Box::new(crate::error::ParserError::new(
-                    format!($($arg,) *),
-                    $span
-        )))
-    };
+    ($span:expr $(, $arg:expr)* $(,)?) => {{
+        let msg = format!($($arg, )*);
+        return Err(Box::new(crate::error::ParserError::new(msg, $span)));
+    }};
 }

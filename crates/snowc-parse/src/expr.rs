@@ -1,10 +1,10 @@
 use super::Op;
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Atom {
     Int(i32),
-    Float(f32),
+    Float(String),
     Id(String),
     Bool(bool),
 }
@@ -20,7 +20,7 @@ impl fmt::Display for Atom {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum Expr {
     Atom(Atom),
     Unary(Op, Box<Self>),
@@ -43,7 +43,7 @@ impl fmt::Display for Expr {
                 write!(f, "(if ({condition}) then {branch1} else {branch2})")
             }
             Self::Clouser(head, tail) => {
-                write!(f, "{head} -> {tail}")
+                write!(f, "(\\{head} -> {tail})")
             }
             Self::Func(name, clouser) => {
                 write!(f, "<{name}: {clouser}>")
@@ -60,6 +60,9 @@ impl fmt::Display for Expr {
                 Ok(())
             }
             Self::Type(name, args) => {
+                if args.is_empty() {
+                    return write!(f, "<{name}>");
+                }
                 let fstring = args.iter().enumerate().fold(
                     format!("<{name}: "),
                     |fstring, (i, (name, type_arg))| {

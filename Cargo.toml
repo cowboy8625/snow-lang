@@ -7,6 +7,7 @@ edition = "2021"
 snowc-parse = { path="./crates/snowc-parse" }
 snowc-error-messages = { path="./crates/snowc-error-messages" }
 snowc-repl = { path="./crates/snowc-repl" }
+snowc-tree-walker-eval = { path="./crates/snowc-tree-walker-eval" }
 
 [dev-dependencies]
 pretty_assertions = "1.1.0"

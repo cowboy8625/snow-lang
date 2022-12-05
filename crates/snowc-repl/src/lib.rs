@@ -8,7 +8,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
     Result,
 };
-use snowc_parse::{Atom, Expr};
+use snowc_parse::Expr;
 use snowc_tree_walker_eval::FuncMap;
 use std::time::Duration;
 use trie::Trie;
@@ -19,8 +19,8 @@ const HELP_MESSAGE: &str = "Help Commands
 ";
 const WELCOME: &str = "snow-lang version 0.0.0";
 
-fn eval(e: Expr, stack: &mut Vec<Atom>, funcmap: &mut FuncMap) -> String {
-    let Some(output) = snowc_tree_walker_eval::eval(e, stack, funcmap) else {
+fn eval(e: Expr, funcmap: &mut FuncMap) -> String {
+    let Some(output) = snowc_tree_walker_eval::eval(e, funcmap) else {
         return "".into();
     };
     format!(
@@ -109,7 +109,6 @@ pub struct Repl {
     size: Pos,
     input: String,
     is_running: bool,
-    stack: Vec<Atom>,
     funcmap: FuncMap,
     word_dict: Trie,
     suggestion: Option<String>,
@@ -233,7 +232,7 @@ impl Repl {
         let (ast, exprs) = parse(&self.input);
         self.println(&ast)?;
         for e in exprs.iter() {
-            let output = eval(e.clone(), &mut self.stack, &mut self.funcmap);
+            let output = eval(e.clone(), &mut self.funcmap);
             self.println(&output)?;
         }
         self.history.push(&self.input);
@@ -376,7 +375,6 @@ impl Default for Repl {
             size: size().map(Pos::from).unwrap_or_else(|_| Pos::default()),
             input: String::default(),
             is_running: true,
-            stack: vec![],
             funcmap: FuncMap::default(),
             word_dict,
             suggestion: None,

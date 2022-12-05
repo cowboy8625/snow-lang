@@ -1,6 +1,5 @@
 #![allow(dead_code)]
-use std::fmt;
-use std::{fs::OpenOptions, io::Write};
+// use std::{fs::OpenOptions, io::Write};
 
 use snowc::*;
 fn main() {
@@ -8,11 +7,28 @@ fn main() {
         || Repl::default().run().expect("failed to run repl"),
         |filename| {
             let src = std::fs::read_to_string(&filename).unwrap_or("".into());
+            let mut funcmap = FuncMap::new();
             match parse(&src, false) {
                 Ok(s) => {
-                    let node_tree = output_node_tree(&s);
-                    for f in s.iter() {
-                        println!("{f}");
+                    for expr in s.iter() {
+                        match expr {
+                            Expr::Func(name, body) => {
+                                let (params, body) =
+                                    seperate_args_from_body(*body.clone());
+                                funcmap
+                                    .insert(name.to_string(), Function { params, body });
+                            }
+                            _ => println!("{expr}"),
+                        }
+                    }
+                    if let Some(Function { body, .. }) = funcmap.get("main") {
+                        if let Some(thing) = eval(body.clone(), &mut funcmap) {
+                            println!("{thing}");
+                        } else {
+                            println!("Running");
+                        }
+                    } else {
+                        panic!("no main to run");
                     }
                 }
                 Err(e) => {

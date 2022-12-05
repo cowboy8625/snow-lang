@@ -1,0 +1,8 @@
+type Int;
+max :: Int -> Int -> Int;
+fn max x y = if x > y then x else y;
+min :: Int -> Int -> Int;
+fn min x y = if x < y then x else y;
+clamp :: Int -> Int -> Int -> Int;
+fn clamp num mx mn = max mn (min num mx);
+fn main = print (clamp 10 9 5);

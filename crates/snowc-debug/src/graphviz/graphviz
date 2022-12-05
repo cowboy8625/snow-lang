@@ -1,0 +1,11 @@
+// let node_tree = output_node_tree(&s);
+// println!("<{dot_file}>\n{node_tree}");
+//     let mut file = OpenOptions::new()
+//     .write(true)
+//     .create(true)
+//     .truncate(true)
+// .open(dot_file)
+//     .unwrap();
+//     file.write_all(node_tree.as_bytes()).unwrap();
+//     let dot_file = format!("{}.dot", filename.split(".").collect::<Vec<_>>()[0]);
+//     let dot_file = format!("{}.dot", filename.split(".").collect::<Vec<_>>()[0]);
