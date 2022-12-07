@@ -1,5 +1,24 @@
 use std::fmt;
 
+macro_rules! is_token {
+    ($i:ident, Eof) => {
+        pub fn $i(&self) -> bool {
+            match self {
+                Self::Eof => true,
+                _ => false,
+            }
+        }
+    };
+    ($i:ident, $t:ident) => {
+        pub fn $i(&self) -> bool {
+            match self {
+                Self::$t(..) => true,
+                _ => false,
+            }
+        }
+    };
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     KeyWord(String),
@@ -20,6 +39,15 @@ impl Token {
             _ => None,
         }
     }
+    is_token!(is_keyword, KeyWord);
+    is_token!(is_id, Id);
+    is_token!(is_op, Op);
+    is_token!(is_int, Int);
+    is_token!(is_float, Float);
+    is_token!(is_string, String);
+    is_token!(is_char, Char);
+    is_token!(is_error, Error);
+    is_token!(is_eof, Eof);
 }
 
 impl fmt::Display for Token {

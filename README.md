@@ -15,10 +15,18 @@ fn main = print "Hello World!";
 
 ###### Error Messages
 - [ ] formated error messages
-- [ ] replace errors struct with error enums
 
 ###### Repl
-- [ ] Greeting Message of the version of snowc
+- [X] Greeting Message of the version of snowc
 
 ###### Running
-- [ ] get a simple ast walker working.
+- [X] get a simple ast walker working.
+- [ ] add passing functions as args
+- [ ] partial function application
+
+###### New Syntax
+- [ ] String
+- [ ] Char
+- [ ] Generics
+- [ ] Type variant access like `Type::Variant` like rust.
+- [ ] List syntax

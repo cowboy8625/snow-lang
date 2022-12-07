@@ -104,6 +104,24 @@ impl<'a> Scanner<'a> {
         self.next()
     }
 
+    fn string(&mut self) -> Option<(Token, Span)> {
+        let mut string = String::new();
+        while let Some(ch) = self.next_if(|c| c != &'"') {
+            string.push(ch);
+        }
+        self.next_char();
+        Some((Token::String(string), self.span()))
+    }
+
+    fn chr(&mut self) -> Option<(Token, Span)> {
+        let mut c = String::new();
+        while let Some(ch) = self.next_if(|c| c != &'\'') {
+            c.push(ch);
+        }
+        self.next_char();
+        Some((Token::Char(c), self.span()))
+    }
+
     fn op_token(&mut self, op: &str) -> (Token, Span) {
         for _ in 0..op.chars().count().saturating_sub(1) {
             self.next_char();
@@ -135,6 +153,8 @@ impl<'a> Iterator for Scanner<'a> {
             '!' if self.matched('=') => Some(self.op_token("!=")),
             ':' if self.matched(':') => Some(self.op_token("::")),
             '|' if self.matched('>') => Some(self.op_token("|>")),
+            '"' => self.string(),
+            '\'' => self.chr(),
             '\\' => Some(self.op_token("\\")),
             '|' => Some(self.op_token("|")),
             '!' => Some(self.op_token("!")),

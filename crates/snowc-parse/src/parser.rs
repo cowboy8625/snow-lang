@@ -23,6 +23,7 @@ impl<'a> Parser<'a> {
     fn peek(&mut self) -> (Token, Span) {
         self.lexer.peek().cloned().unwrap_or((Token::Eof, 0..0))
     }
+
     fn is_end(&mut self) -> bool {
         self.lexer.peek().is_none()
     }
@@ -47,15 +48,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(crate) fn parse(&mut self, bs: bool) -> CResult<Vec<Expr>> {
-        let mut result = vec![];
-        while !self.is_end() {
-            let e = self.declaration(bs)?;
-            result.push(e);
-        }
-        Ok(result)
-    }
-
     fn consume(&mut self, expected: Token, msg: &str) -> CResult<(Token, Span)> {
         let (token, span) = self.peek();
         if token != expected {
@@ -68,6 +60,15 @@ impl<'a> Parser<'a> {
         }
         self.lexer.next();
         Ok((token, span))
+    }
+
+    pub(crate) fn parse(&mut self, bs: bool) -> CResult<Vec<Expr>> {
+        let mut result = vec![];
+        while !self.is_end() {
+            let e = self.declaration(bs)?;
+            result.push(e);
+        }
+        Ok(result)
     }
 
     fn declaration(&mut self, bs: bool) -> CResult<Expr> {
@@ -189,7 +190,7 @@ impl<'a> Parser<'a> {
                         )?;
                         let body = self.closure()?;
                         let f = args.into_iter().rev().fold(body, |last, next| {
-                            Expr::Clouser(Box::new(next), Box::new(last))
+                            Expr::Closure(Box::new(next), Box::new(last))
                         });
                         self.consume(Token::Op(";".into()), "functions end with a ';'")?;
                         Ok(f)
@@ -210,21 +211,21 @@ impl<'a> Parser<'a> {
     pub(crate) fn closure(&mut self) -> CResult<Expr> {
         if matches!(self.peek(), (Token::Op(ref op), _) if op == "λ" || op == "\\") {
             self.lexer.next();
-            return Ok(Expr::Clouser(
+            return Ok(Expr::Closure(
                 Box::new(self.expression(Precedence::Fn)?),
                 Box::new(
                     self.closure()
                         .and_then(|mut lhs| {
                             while let Some((Token::Id(_), _)) = self.lexer.peek().cloned()
                             {
-                                lhs = Expr::Clouser(
+                                lhs = Expr::Closure(
                                     Box::new(lhs),
                                     Box::new(self.expression(Precedence::Fn)?),
                                 );
                             }
                             self.consume(Token::Op("->".into()), "lambda expressions")?;
                             let body = self.closure()?;
-                            Ok(Expr::Clouser(Box::new(lhs), Box::new(body)))
+                            Ok(Expr::Closure(Box::new(lhs), Box::new(body)))
                         })
                         .or_else(|_| {
                             self.consume(Token::Op("->".into()), "lambda expressions")?;
@@ -336,6 +337,20 @@ impl<'a> Parser<'a> {
             Token::Id(ref id) => {
                 self.lexer.next();
                 Expr::Atom(Atom::Id(id.into()))
+            }
+            Token::String(ref string) => {
+                self.lexer.next();
+                Expr::Atom(Atom::String(string.into()))
+            }
+            Token::Char(ref c) => {
+                self.lexer.next();
+                if c.chars().count() > 1 {
+                    bail!(start_span, "bad char '{c}'");
+                }
+                let Some(c) = c.chars().nth(0) else {
+                    bail!(start_span, "char type can not be empty");
+                };
+                Expr::Atom(Atom::Char(c))
             }
             Token::Op(ref op) => self.prefix_op(op, start_span.clone())?,
             t => bail!(start_span, "bad token: {:?}", t),

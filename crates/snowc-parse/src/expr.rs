@@ -1,12 +1,25 @@
 use super::Op;
 use std::fmt;
 
+macro_rules! is_expr {
+    ($i:ident, $t:ident) => {
+        pub fn $i(&self) -> bool {
+            match self {
+                Self::$t(..) => true,
+                _ => false,
+            }
+        }
+    };
+}
+
 #[derive(Debug, Clone, Hash)]
 pub enum Atom {
     Int(i32),
     Float(String),
     Id(String),
     Bool(bool),
+    String(String),
+    Char(char),
 }
 
 impl fmt::Display for Atom {
@@ -16,6 +29,8 @@ impl fmt::Display for Atom {
             Self::Float(i) => write!(f, "{i}"),
             Self::Id(id) => write!(f, "{id}"),
             Self::Bool(b) => write!(f, "{b}"),
+            Self::String(s) => write!(f, "{s}"),
+            Self::Char(s) => write!(f, "{s}"),
         }
     }
 }
@@ -26,11 +41,23 @@ pub enum Expr {
     Unary(Op, Box<Self>),
     Binary(Op, Box<Self>, Box<Self>),
     IfElse(Box<Self>, Box<Self>, Box<Self>),
-    Clouser(Box<Self>, Box<Self>),
+    Closure(Box<Self>, Box<Self>),
     Func(String, Box<Self>),
     App(Box<Self>, Vec<Self>),
     Type(String, Vec<(String, Vec<String>)>),
     TypeDec(String, Vec<String>),
+}
+
+impl Expr {
+    is_expr!(is_atom, Atom);
+    is_expr!(is_unary, Unary);
+    is_expr!(is_binary, Binary);
+    is_expr!(is_if_else, IfElse);
+    is_expr!(is_clouser, Closure);
+    is_expr!(is_func, Func);
+    is_expr!(is_app, App);
+    is_expr!(is_type, Type);
+    is_expr!(is_type_dec, TypeDec);
 }
 
 impl fmt::Display for Expr {
@@ -42,7 +69,7 @@ impl fmt::Display for Expr {
             Self::IfElse(condition, branch1, branch2) => {
                 write!(f, "(if ({condition}) then {branch1} else {branch2})")
             }
-            Self::Clouser(head, tail) => {
+            Self::Closure(head, tail) => {
                 write!(f, "(\\{head} -> {tail})")
             }
             Self::Func(name, clouser) => {

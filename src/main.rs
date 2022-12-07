@@ -21,11 +21,10 @@ fn main() {
                     if let Some(Function { body, .. }) = funcmap.get("main") {
                         if let Some(thing) = eval(body.clone(), &mut funcmap) {
                             println!("{thing}");
-                        } else {
-                            println!("Running");
                         }
                     } else {
-                        panic!("no main to run");
+                        eprintln!("ERROR: file is missing main function");
+                        std::process::exit(1);
                     }
                 }
                 Err(e) => {
