@@ -17,7 +17,7 @@ pub fn eval(expr: Expr, funcs: &mut FuncMap) -> Option<Atom> {
         Expr::Binary(op, lhs, rhs) => binary(op, *lhs, *rhs, funcs),
         Expr::IfElse(cond, b1, b2) => if_else(*cond, *b1, *b2, funcs),
         Expr::App(head, args) => app(*head, &args, funcs),
-        Expr::Closure(head, tail) => closure(*head, *tail, funcs),
+        // Expr::Closure(head, tail) => closure(*head, *tail, funcs),
         Expr::Func(name, body) => function(&name, *body, funcs),
         // Self::Type(String, Vec<(String, Vec<String>)>),
         // Self::TypeDec(String, Vec<String>),
@@ -47,7 +47,6 @@ fn get_closure_arg_body(expr: Expr) -> Option<(String, Expr)> {
 
 fn atom_look_up(name: &str, funcs: &mut FuncMap) -> Option<Atom> {
     let Some(Function { body, .. }) = funcs.get(name) else {
-        eprintln!("can not find '{name}' in scope\r");
         return None;
     };
     eval(body.clone(), funcs)
@@ -197,10 +196,7 @@ fn app_print(args: &[Expr], funcs: &mut FuncMap) -> Option<Atom> {
     None
 }
 
-fn app_call(name: &str, args: &[Expr], funcs: &mut FuncMap) -> Option<Atom> {
-    let Some(Function { params, body }) = funcs.get(name) else {
-        panic!("this should return an error");
-    };
+fn app_args(args: &[Expr], params: &[String], funcs: &FuncMap) -> FuncMap {
     let mut local = funcs.clone();
     for (param, arg) in params.iter().zip(args) {
         local.insert(
@@ -211,6 +207,21 @@ fn app_call(name: &str, args: &[Expr], funcs: &mut FuncMap) -> Option<Atom> {
             },
         );
     }
+    local
+}
+
+fn app_call(name: &str, args: &[Expr], funcs: &mut FuncMap) -> Option<Atom> {
+    if let Some(Function {
+        body: Expr::Atom(Atom::Id(name)),
+        ..
+    }) = funcs.get(name).cloned()
+    {
+        return app_call(&name, args, funcs);
+    }
+    let Some(Function { params, body }) = funcs.get(name) else {
+        panic!("this should return an error");
+    };
+    let mut local = app_args(args, &params, &funcs);
     eval(body.clone(), &mut local)
 }
 
@@ -220,18 +231,9 @@ fn app(head: Expr, args: &[Expr], funcs: &mut FuncMap) -> Option<Atom> {
         Expr::Atom(Atom::Id(name)) => app_call(&name, args, funcs),
         Expr::Closure(_head, _tail) => todo!("closure calls in app"),
         _ => {
-            let mut local = funcs.clone();
             let (params, body) = seperate_args_from_body(head);
-            for (param, arg) in params.iter().zip(args) {
-                local.insert(
-                    format!("{param}"),
-                    Function {
-                        params: vec![],
-                        body: arg.clone(),
-                    },
-                );
-            }
-            return eval(body, &mut local);
+            let mut local = app_args(args, &params, &funcs);
+            eval(body, &mut local)
         }
     }
 }
@@ -244,7 +246,7 @@ fn if_else(cond: Expr, b1: Expr, b2: Expr, funcs: &mut FuncMap) -> Option<Atom> 
     })
 }
 
-fn closure(_head: Expr, _tail: Expr, _funcs: &mut FuncMap) -> Option<Atom> {
+fn _closure(_head: Expr, _tail: Expr, _funcs: &mut FuncMap) -> Option<Atom> {
     todo!()
 }
 
