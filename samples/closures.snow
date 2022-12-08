@@ -2,6 +2,7 @@ fn add = λ x -> λ y -> x + y;
 fn max = λ x y -> if x > y then x else y;
 fn sub = \ x -> \ y -> x - y;
 fn min = \ x y -> if x < y then x else y;
+fn main = print "closures";
 -- fn captured x =
 --     let f
 --     let y
