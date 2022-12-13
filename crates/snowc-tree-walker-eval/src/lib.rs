@@ -211,15 +211,16 @@ fn app_args(args: &[Expr], params: &[String], funcs: &FuncMap) -> FuncMap {
 }
 
 fn app_call(name: &str, args: &[Expr], funcs: &mut FuncMap) -> Option<Atom> {
-    if let Some(Function {
-        body: Expr::Atom(Atom::Id(name)),
-        ..
-    }) = funcs.get(name).cloned()
-    {
-        return app_call(&name, args, funcs);
-    }
+    // if let Some(Function {
+    //     body: Expr::Atom(Atom::Id(name)),
+    //     ..
+    // }) = funcs.get(name).cloned()
+    // {
+    //     eprintln!("flattening: {name}");
+    //     return app_call(&name, args, funcs);
+    // }
     let Some(Function { params, body }) = funcs.get(name) else {
-        panic!("this should return an error");
+        panic!("this should return an error for '{name}' app call");
     };
     let mut local = app_args(args, &params, &funcs);
     eval(body.clone(), &mut local)

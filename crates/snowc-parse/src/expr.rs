@@ -49,6 +49,19 @@ pub enum Expr {
 }
 
 impl Expr {
+    // fn span(&self) -> Span {
+    //     match self {
+    //         Self::Atom(.., span) => span.clone(),
+    //         Self::Unary(.., span) => span.clone(),
+    //         Self::Binary(.., span) => span.clone(),
+    //         Self::IfElse(.., span) => span.clone(),
+    //         Self::Closure(.., span) => span.clone(),
+    //         Self::Func(.., span) => span.clone(),
+    //         Self::App(.., span) => span.clone(),
+    //         Self::Type(.., span) => span.clone(),
+    //         Self::TypeDec(.., span) => span.clone(),
+    //     }
+    // }
     is_expr!(is_atom, Atom);
     is_expr!(is_unary, Unary);
     is_expr!(is_binary, Binary);

@@ -1,175 +1,179 @@
-use super::{parser::Parser, precedence::Precedence, Scanner};
-use snowc_errors::CResult;
+use super::{precedence::Precedence, ParserBuilder};
 
 #[test]
-fn expression() -> CResult<()> {
-    let lexer = Scanner::new("1").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
-    assert_eq!(left, "1");
+fn expression() {
+    let src = "1";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
+    assert_eq!(left, src);
 
-    let lexer = Scanner::new("1.2").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
-    assert_eq!(left, "1.2");
+    let src = "1.2";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
+    assert_eq!(left, src);
 
-    let lexer = Scanner::new("a").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
-    assert_eq!(left, "a");
-
-    Ok(())
+    let src = "a";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
+    assert_eq!(left, src);
 }
 #[test]
-fn unary() -> CResult<()> {
-    let lexer = Scanner::new("-1").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
+fn unary() {
+    let src = "-1";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(- 1)");
 
-    // let lexer = Scanner::new("--1").peekable();
-    // let mut parser = Parser::new(lexer);
-    // let left = parser.expression(Precedence::None)?.to_string();
-    // assert_eq!(left, "(- (- 1))");
-
-    let lexer = Scanner::new("(- 1.2)").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
+    let src = "(- 1.2)";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(- 1.2)");
 
-    let lexer = Scanner::new("-a").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
+    let src = "-a";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(- a)");
-
-    Ok(())
 }
 
 #[test]
-fn binary() -> CResult<()> {
-    let lexer = Scanner::new("1 + 2 * 3").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
+fn binary() {
+    let src = "1 + 2 * 3";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(+ 1 (* 2 3))");
-    Ok(())
 }
 
 #[test]
-fn binary_ids() -> CResult<()> {
-    let lexer = Scanner::new("a + b * c * d + e").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
+fn binary_ids() {
+    let src = "a + b * c * d + e";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(+ (+ a (* (* b c) d)) e)");
 
-    let lexer = Scanner::new("a + b").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
+    let src = "a + b";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(+ a b)");
-    Ok(())
 }
 
 #[test]
-fn changing_precedence() -> CResult<()> {
-    let lexer = Scanner::new("(-1 + 2) * 3 - -4").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
+fn changing_precedence() {
+    let src = "(-1 + 2) * 3 - -4";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(- (* (+ (- 1) 2) 3) (- 4))");
 
-    let lexer = Scanner::new("(((a)))").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.expression(Precedence::None)?.to_string();
+    let src = "(((a)))";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "a");
-    Ok(())
 }
 
 #[test]
 fn calling_operator() {
-    let lexer = Scanner::new("(+) 1 2;").peekable();
-    let mut parser = Parser::new(lexer);
-    match parser.parse(true) {
-        Ok(e) => {
-            let mut e = e.iter();
-            assert_eq!(
-                e.next()
-                    .map(ToString::to_string)
-                    .unwrap_or("NONE".to_string()),
-                "<(+): (1, 2)>"
-            );
-        }
-        Err(e) => {
-            dbg!(e);
-            assert!(false);
-        }
-    }
+    let src = "(+) 1 2;";
+    let left = ParserBuilder::default()
+        .out_of_main(true)
+        .build(src)
+        .parse()
+        .unwrap()[0]
+        .to_string();
+    assert_eq!(left, "<(+): (1, 2)>");
 }
 
 #[test]
-fn call() -> CResult<()> {
-    let lexer = Scanner::new("add 1 2").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.call(Precedence::None)?.to_string();
+fn call() {
+    let src = "add 1 2";
+    let left = ParserBuilder::default()
+        .out_of_main(true)
+        .build(src)
+        .call(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "<add: (1, 2)>");
-    Ok(())
 }
 
 #[test]
-fn pipe_call() -> CResult<()> {
-    let lexer = Scanner::new("2 |> add 1").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.call(Precedence::None)?.to_string();
+fn pipe_call() {
+    let src = "2 |> add 1";
+    let left = ParserBuilder::default()
+        .out_of_main(true)
+        .build(src)
+        .call(Precedence::None)
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(|> 2 <add: (1)>)");
-    Ok(())
 }
 
 #[test]
-fn conditional() -> CResult<()> {
-    let lexer = Scanner::new("if x > y then x else y").peekable();
-    let mut parser = Parser::new(lexer);
-    let left = parser.conditional()?.to_string();
+fn conditional() {
+    let src = "if x > y then x else y;";
+    let left = ParserBuilder::default()
+        .out_of_main(true)
+        .build(src)
+        .conditional()
+        .unwrap()
+        .to_string();
     assert_eq!(left, "(if ((> x y)) then x else y)");
-    Ok(())
 }
 
 #[test]
-fn function_def() -> CResult<()> {
-    let lexer = Scanner::new("fn add x y = x + y;").peekable();
-    let mut p = Parser::new(lexer);
-    p.lexer.next();
-    let left = p.function(0..0)?.to_string();
+fn function_def() {
+    let src = "add x y = x + y;";
+    let left = ParserBuilder::default()
+        .build(src)
+        .function(0..0)
+        .unwrap()
+        .to_string();
     assert_eq!(left, r#"<add: (\x -> (\y -> (+ x y)))>"#);
-    Ok(())
 }
 
 #[test]
 fn super_duper_function_def() {
     let src = "fn main = print (max ((add 1 2) + (sub 1 2)) 20);";
-    let result = "<main: <print: (<max: ((+ <add: (1, 2)> <sub: (1, 2)>), 20)>)>>";
-    let lexer = Scanner::new(src).peekable();
-    let mut p = Parser::new(lexer);
-    match p.parse(false) {
-        Ok(exprs) => {
-            let mut exprs = exprs.iter();
-            assert_eq!(
-                exprs
-                    .next()
-                    .map(|e| e.to_string())
-                    .unwrap_or("FAILED".to_string()),
-                result
-            );
-        }
-        Err(e) => {
-            dbg!(e);
-            assert!(false);
-        }
-    }
+    let right = "<main: <print: (<max: ((+ <add: (1, 2)> <sub: (1, 2)>), 20)>)>>";
+    let left = ParserBuilder::default().build(src).parse().unwrap()[0].to_string();
+    assert_eq!(left, right);
 }
 
 #[test]
 fn multi_function_def() {
-    let lexer = Scanner::new("fn add x y = x + y; fn sub x y = x - y;").peekable();
-    let mut parser = Parser::new(lexer);
-    let exprs = parser.parse(false).unwrap_or(vec![]);
-    let mut e = exprs.iter();
+    let src = "fn add x y = x + y; fn sub x y = x - y;";
+    let left = ParserBuilder::default().build(src).parse().unwrap();
+    let mut e = left.iter();
     assert_eq!(
         e.next().unwrap().to_string(),
         r#"<add: (\x -> (\y -> (+ x y)))>"#
@@ -182,64 +186,39 @@ fn multi_function_def() {
 
 #[test]
 fn closures() {
-    let lexer = Scanner::new("fn add = (λx -> (λy -> x + y));").peekable();
-    let mut parser = Parser::new(lexer);
-    match parser.parse(false) {
-        Ok(e) => {
-            let mut e = e.iter();
-            assert_eq!(
-                e.next()
-                    .map(ToString::to_string)
-                    .unwrap_or("NONE".to_string()),
-                "<add: x -> y -> (+ x y)>"
-            );
-        }
-        Err(e) => {
-            dbg!(e);
-            assert!(false);
-        }
-    }
+    let src = "fn add = (λx -> (λy -> x + y));";
+    let right = r#"<add: (\x -> (\y -> (+ x y)))>"#;
+    let left = ParserBuilder::default().build(src).parse().unwrap()[0].to_string();
+    assert_eq!(left, right);
 
-    let lexer = Scanner::new(r#"fn add = (\x -> (\y -> x + y));"#).peekable();
-    let mut parser = Parser::new(lexer);
-    match parser.parse(false) {
-        Ok(e) => {
-            let mut e = e.iter();
-            assert_eq!(
-                e.next()
-                    .map(ToString::to_string)
-                    .unwrap_or("NONE".to_string()),
-                "<add: x -> y -> (+ x y)>"
-            );
-        }
-        Err(e) => {
-            dbg!(e);
-            assert!(false);
-        }
-    }
+    let src = r#"fn add = (\x -> (\y -> x + y));"#;
+    let right = r#"<add: (\x -> (\y -> (+ x y)))>"#;
+    let left = ParserBuilder::default().build(src).parse().unwrap()[0].to_string();
+    assert_eq!(left, right);
 }
 
 #[test]
-fn user_type_def() -> CResult<()> {
-    let lexer = Scanner::new("type Option = Some Int | None;").peekable();
-    let mut parser = Parser::new(lexer);
-    let exprs = parser.parse(false)?;
-    let mut e = exprs.iter();
-    assert_eq!(
-        e.next().unwrap().to_string(),
-        "<Option: (Some, [Int]), (None, [])>"
-    );
-
-    Ok(())
+fn user_type_def() {
+    let src = r#"type Option = Some Int | None;"#;
+    let right = r#"<Option: (Some, [Int]), (None, [])>"#;
+    let left = ParserBuilder::default()
+        .out_of_main(true)
+        .build(src)
+        .parse()
+        .unwrap()[0]
+        .to_string();
+    assert_eq!(left, right);
 }
 
 #[test]
-fn type_dec() -> CResult<()> {
-    let lexer = Scanner::new("add :: Int -> Int -> Int;").peekable();
-    let mut parser = Parser::new(lexer);
-    let exprs = parser.parse(false)?;
-    let mut e = exprs.iter();
-    assert_eq!(e.next().unwrap().to_string(), "<add :: Int -> Int -> Int>");
-
-    Ok(())
+fn type_dec() {
+    let src = r#"add :: Int -> Int -> Int;"#;
+    let right = r#"<add :: Int -> Int -> Int>"#;
+    let left = ParserBuilder::default()
+        .out_of_main(true)
+        .build(src)
+        .parse()
+        .unwrap()[0]
+        .to_string();
+    assert_eq!(left, right);
 }

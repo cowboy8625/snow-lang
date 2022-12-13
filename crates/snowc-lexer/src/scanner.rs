@@ -1,4 +1,4 @@
-use super::{Span, Token};
+use super::{LexerDebug, Span, Token};
 use std::{iter::Peekable, ops::Range, str::Chars};
 type Stream<'a> = Peekable<Chars<'a>>;
 
@@ -8,15 +8,17 @@ pub struct Scanner<'a> {
     span: Range<usize>,
     current: Option<char>,
     previous: Option<char>,
+    debug_lexer: LexerDebug,
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(src: &'a str) -> Self {
+    pub fn new(src: &'a str, debug_lexer: LexerDebug) -> Self {
         Self {
             stream: src.chars().peekable(),
             span: 0..0,
             current: None,
             previous: None,
+            debug_lexer,
         }
     }
 
@@ -132,15 +134,24 @@ impl<'a> Scanner<'a> {
     fn err(&mut self, c: char) -> Option<(Token, Span)> {
         Some((Token::Error(c.to_string()), self.span()))
     }
+
+    fn debug_token(&mut self, token: Option<(Token, Span)>) -> (Token, Span) {
+        let token = token.unwrap_or((Token::Eof, self.span()));
+        if let LexerDebug::On = self.debug_lexer {
+            let (kind, span) = &token;
+            eprintln!("{kind:?} @ {span:?}");
+        }
+        token
+    }
 }
 
 impl<'a> Iterator for Scanner<'a> {
     type Item = (Token, Span);
     fn next(&mut self) -> Option<Self::Item> {
         let Some(ch) = self.next_char() else {
-            return None;
+            return Some(self.debug_token(None));
         };
-        match ch {
+        let token = match ch {
             num if num.is_ascii_digit() => Some(self.number()),
             ident if ident.is_ascii_alphabetic() => Some(self.id()),
             '-' if self.matched('-') => self.line_comment(),
@@ -180,6 +191,7 @@ impl<'a> Iterator for Scanner<'a> {
                 self.next()
             }
             c => self.err(c),
-        }
+        };
+        Some(self.debug_token(token))
     }
 }

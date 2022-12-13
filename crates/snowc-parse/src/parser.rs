@@ -3,21 +3,32 @@ use super::{
     expr::{Atom, Expr},
     op::Op,
     precedence::Precedence,
-    CResult, Scanner, Span, Token,
+    CResult, OutOfMain, ParserDebug, Scanner, Span, Token,
 };
 use std::iter::Peekable;
-pub fn parse(input: &str, bs: bool) -> CResult<Vec<Expr>> {
-    let lexer = Scanner::new(input).peekable();
-    let mut parser = Parser::new(lexer);
-    parser.parse(bs)
-}
 
-pub(crate) struct Parser<'a> {
+pub struct Parser<'a> {
     pub(crate) lexer: Peekable<Scanner<'a>>,
+    out_of_main: OutOfMain,
+    debug_parser: ParserDebug,
 }
 impl<'a> Parser<'a> {
-    pub(crate) fn new(lexer: Peekable<Scanner<'a>>) -> Self {
-        Self { lexer }
+    pub fn new(lexer: Peekable<Scanner<'a>>) -> Self {
+        let out_of_main = OutOfMain::Disable;
+        let debug_parser = ParserDebug::Off;
+        Self::new_with_debug(lexer, out_of_main, debug_parser)
+    }
+
+    pub fn new_with_debug(
+        lexer: Peekable<Scanner<'a>>,
+        out_of_main: OutOfMain,
+        debug_parser: ParserDebug,
+    ) -> Self {
+        Self {
+            lexer,
+            out_of_main,
+            debug_parser,
+        }
     }
 
     fn peek(&mut self) -> (Token, Span) {
@@ -25,7 +36,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_end(&mut self) -> bool {
-        self.lexer.peek().is_none()
+        matches!(self.peek(), (Token::Eof, _))
     }
 
     fn advance(&mut self, advance_if: Option<Token>) -> CResult<(Token, Span)> {
@@ -62,16 +73,20 @@ impl<'a> Parser<'a> {
         Ok((token, span))
     }
 
-    pub(crate) fn parse(&mut self, bs: bool) -> CResult<Vec<Expr>> {
-        let mut result = vec![];
+    pub fn parse(mut self) -> CResult<Vec<Expr>> {
+        let Self { debug_parser, .. } = self;
+        let mut ast = vec![];
         while !self.is_end() {
-            let e = self.declaration(bs)?;
-            result.push(e);
+            let e = self.declaration()?;
+            ast.push(e);
         }
-        Ok(result)
+        if let ParserDebug::On = debug_parser {
+            dbg!(&ast);
+        }
+        Ok(ast)
     }
 
-    fn declaration(&mut self, bs: bool) -> CResult<Expr> {
+    fn declaration(&mut self) -> CResult<Expr> {
         match self.peek() {
             (Token::KeyWord(ref k), span) if k == "fn" => {
                 self.lexer.next();
@@ -101,7 +116,7 @@ impl<'a> Parser<'a> {
                     expr
                 }
             }
-            (_, _) if bs => {
+            (_, _) if matches!(self.out_of_main, OutOfMain::Enable) => {
                 let expr = self.closure();
                 if expr.is_ok() {
                     self.consume(
@@ -181,7 +196,7 @@ impl<'a> Parser<'a> {
                 self.expression(Precedence::Fn)
                     .and_then(|lhs| {
                         let mut args = vec![lhs];
-                        while let Some((Token::Id(_), _)) = self.lexer.peek().cloned() {
+                        while let Token::Id(_) = self.peek().0 {
                             args.push(self.expression(Precedence::Fn)?);
                         }
                         self.consume(
@@ -216,8 +231,7 @@ impl<'a> Parser<'a> {
                 Box::new(
                     self.closure()
                         .and_then(|mut lhs| {
-                            while let Some((Token::Id(_), _)) = self.lexer.peek().cloned()
-                            {
+                            while let Token::Id(_) = self.peek().0 {
                                 lhs = Expr::Closure(
                                     Box::new(lhs),
                                     Box::new(self.expression(Precedence::Fn)?),
@@ -263,19 +277,16 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn call(&mut self, min_bp: Precedence) -> CResult<Expr> {
         let mut lhs = self.expression(min_bp)?;
-        if match self.lexer.peek().cloned() {
-            Some((Token::Op(ref op), _)) if op == "(" => true,
-            Some((Token::Op(_), _)) => false,
-            Some((Token::KeyWord(_), _)) => false,
-            None => false,
+        if match self.peek().0 {
+            Token::Op(ref op) if op == "(" => true,
+            Token::Op(_) | Token::KeyWord(_) | Token::Eof => false,
             _ => true,
         } {
             let mut args = vec![];
             loop {
-                match self.lexer.peek().map(|(t, _)| t.clone()) {
-                    Some(Token::Op(ref op)) if op == "(" => {}
-                    Some(Token::Op(_)) => break,
-                    None => break,
+                match self.peek().0 {
+                    Token::Op(ref op) if op == "(" => {}
+                    Token::Op(_) | Token::Eof => break,
                     _ => {}
                 };
                 args.push(self.expression(Precedence::None)?);

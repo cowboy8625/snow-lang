@@ -1,8 +1,8 @@
 [package]
-name = "snowc-error-messages"
+name = "snowc-type-checker"
 version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-crossterm = "0.25.0"
+snowc-parse = { path = "../snowc-parse" }
 snowc-errors = { path = "../snowc-errors" }

@@ -8,7 +8,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
     Result,
 };
-use snowc_parse::Expr;
+use snowc_parse::{Expr, ParserBuilder};
 use snowc_tree_walker_eval::FuncMap;
 use std::time::Duration;
 use trie::Trie;
@@ -31,7 +31,11 @@ fn eval(e: Expr, funcmap: &mut FuncMap) -> String {
 }
 
 fn parse(line: &str) -> (String, Vec<snowc_parse::Expr>) {
-    match snowc_parse::parse(line.trim(), true) {
+    match ParserBuilder::default()
+        .out_of_main(true)
+        .build(line.trim())
+        .parse()
+    {
         Ok(s) => (
             s.iter()
                 .map(|f| {
@@ -44,16 +48,7 @@ fn parse(line: &str) -> (String, Vec<snowc_parse::Expr>) {
                 .collect(),
             s,
         ),
-        Err(e) => {
-            let span = e
-                .downcast_ref::<snowc_parse::error::ParserError>()
-                .map(|i| i.span())
-                .unwrap_or(0..0);
-            (
-                snowc_error_messages::report(line.trim(), span, &e.to_string()),
-                vec![],
-            )
-        }
+        Err(e) => (snowc_error_messages::report(line.trim(), e), vec![]),
     }
 }
 

@@ -1,1 +1,2 @@
-fn main = print "Hello World";
+main :: String;
+fn main = "Hello World";

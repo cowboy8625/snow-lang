@@ -1,4 +1,4 @@
-use super::{Scanner, Token};
+use super::{LexerDebug, Scanner, Token};
 
 // #[cfg(test)]
 // use pretty_assertions::assert_eq;
@@ -13,7 +13,7 @@ macro_rules! setup_test {
         fn $name() {
             use Token::*;
             let src = $input;
-            let mut scanner = Scanner::new(src);
+            let mut scanner = Scanner::new(src, LexerDebug::Off);
             $(
                 assert_eq!(
                     get_next(&mut scanner, src),
