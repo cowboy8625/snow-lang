@@ -10,11 +10,10 @@ fn main() -> CResult<()> {
         return Ok(());
         // return Repl::default().run().map_err(|e| Box::new(e) as Box<dyn std::error::Error>);
     };
-    let src = std::fs::read_to_string(&filename).unwrap_or("".into());
     CompilerBuilder::default()
         .debug_lexer(setting.debug_token)
         .debug_parser(setting.debug_ast)
-        .build(&src)?;
+        .build(&filename)?;
     Ok(())
 }
 

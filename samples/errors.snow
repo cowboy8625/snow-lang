@@ -1,0 +1,9 @@
+
+
+
+
+max :: Int -> Int -> Int;
+fn max x y = if  then x else y;
+
+main :: IO;
+fn main = print_int (max 100 12);
