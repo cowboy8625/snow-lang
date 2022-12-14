@@ -1,4 +1,5 @@
 use super::Op;
+use super::Span;
 use std::fmt;
 
 macro_rules! is_expr {
@@ -37,31 +38,31 @@ impl fmt::Display for Atom {
 
 #[derive(Debug, Clone, Hash)]
 pub enum Expr {
-    Atom(Atom),
-    Unary(Op, Box<Self>),
-    Binary(Op, Box<Self>, Box<Self>),
-    IfElse(Box<Self>, Box<Self>, Box<Self>),
-    Closure(Box<Self>, Box<Self>),
-    Func(String, Box<Self>),
-    App(Box<Self>, Vec<Self>),
-    Type(String, Vec<(String, Vec<String>)>),
-    TypeDec(String, Vec<String>),
+    Atom(Atom, Span),
+    Unary(Op, Box<Self>, Span),
+    Binary(Op, Box<Self>, Box<Self>, Span),
+    IfElse(Box<Self>, Box<Self>, Box<Self>, Span),
+    Closure(Box<Self>, Box<Self>, Span),
+    Func(String, Box<Self>, Span),
+    App(Box<Self>, Vec<Self>, Span),
+    Type(String, Vec<(String, Vec<String>)>, Span),
+    TypeDec(String, Vec<String>, Span),
 }
 
 impl Expr {
-    // fn span(&self) -> Span {
-    //     match self {
-    //         Self::Atom(.., span) => span.clone(),
-    //         Self::Unary(.., span) => span.clone(),
-    //         Self::Binary(.., span) => span.clone(),
-    //         Self::IfElse(.., span) => span.clone(),
-    //         Self::Closure(.., span) => span.clone(),
-    //         Self::Func(.., span) => span.clone(),
-    //         Self::App(.., span) => span.clone(),
-    //         Self::Type(.., span) => span.clone(),
-    //         Self::TypeDec(.., span) => span.clone(),
-    //     }
-    // }
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Atom(.., span) => span.clone(),
+            Self::Unary(.., span) => span.clone(),
+            Self::Binary(.., span) => span.clone(),
+            Self::IfElse(.., span) => span.clone(),
+            Self::Closure(.., span) => span.clone(),
+            Self::Func(.., span) => span.clone(),
+            Self::App(.., span) => span.clone(),
+            Self::Type(.., span) => span.clone(),
+            Self::TypeDec(.., span) => span.clone(),
+        }
+    }
     is_expr!(is_atom, Atom);
     is_expr!(is_unary, Unary);
     is_expr!(is_binary, Binary);
@@ -76,19 +77,19 @@ impl Expr {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Atom(i) => write!(f, "{i}"),
-            Self::Unary(op, lhs) => write!(f, "({op} {lhs})"),
-            Self::Binary(op, lhs, rhs) => write!(f, "({op} {lhs} {rhs})"),
-            Self::IfElse(condition, branch1, branch2) => {
+            Self::Atom(i, ..) => write!(f, "{i}"),
+            Self::Unary(op, lhs, ..) => write!(f, "({op} {lhs})"),
+            Self::Binary(op, lhs, rhs, ..) => write!(f, "({op} {lhs} {rhs})"),
+            Self::IfElse(condition, branch1, branch2, ..) => {
                 write!(f, "(if ({condition}) then {branch1} else {branch2})")
             }
-            Self::Closure(head, tail) => {
+            Self::Closure(head, tail, ..) => {
                 write!(f, "(\\{head} -> {tail})")
             }
-            Self::Func(name, clouser) => {
+            Self::Func(name, clouser, ..) => {
                 write!(f, "<{name}: {clouser}>")
             }
-            Self::App(name, args) => {
+            Self::App(name, args, ..) => {
                 write!(f, "<{name}: (")?;
                 for (i, arg) in args.iter().enumerate() {
                     write!(f, "{arg}")?;
@@ -99,7 +100,7 @@ impl fmt::Display for Expr {
                 write!(f, ")>")?;
                 Ok(())
             }
-            Self::Type(name, args) => {
+            Self::Type(name, args, ..) => {
                 if args.is_empty() {
                     return write!(f, "<{name}>");
                 }
@@ -122,7 +123,7 @@ impl fmt::Display for Expr {
                 );
                 write!(f, "{fstring}>")
             }
-            Self::TypeDec(name, type_list) => {
+            Self::TypeDec(name, type_list, ..) => {
                 let types = type_list.iter().fold("".to_string(), |fstring, item| {
                     if fstring == "" {
                         format!("{item}")

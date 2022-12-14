@@ -1,12 +1,14 @@
 use clap::{crate_description, crate_name, crate_version, Arg, ColorChoice, Command};
-use snowc::{CResult, CompilerBuilder, Repl};
+use snowc::{CResult, CompilerBuilder};
 fn main() -> CResult<()> {
     let setting = cargs();
     if setting.debug_graph {
         unimplemented!("graphviz is not working just yet");
     }
     let Some(filename) = setting.filename else {
-        return Repl::default().run().map_err(|e| Box::new(e) as Box<dyn std::error::Error>);
+        eprintln!("No file given");
+        return Ok(());
+        // return Repl::default().run().map_err(|e| Box::new(e) as Box<dyn std::error::Error>);
     };
     let src = std::fs::read_to_string(&filename).unwrap_or("".into());
     CompilerBuilder::default()
