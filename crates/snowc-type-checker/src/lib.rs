@@ -247,86 +247,86 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use snowc_parse::ParserBuilder;
-    #[test]
-    fn string() {
-        let src = r#"foo :: String;fn foo = "Hello";"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok())
-    }
-
-    #[test]
-    fn atom() {
-        let src = r#"foo :: Int;fn foo = 12321321;"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok());
-
-        let src = r#"foo :: Float;fn foo = 12321.321;"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok());
-
-        let src = r#"foo :: Char;fn foo = 'c';"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok());
-
-        let src = r#"foo :: Bool;fn foo = true;"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok());
-
-        let src = r#"foo :: Bool;fn foo = false;"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok())
-    }
-
-    #[test]
-    fn unary() {
-        let src = r#"bar :: Int;fn bar = -123;"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok())
-    }
-
-    #[test]
-    fn binary() {
-        let src = r#"add :: Int -> Int -> Int;fn add x y = x + y;"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok())
-    }
-
-    #[test]
-    fn conditional() {
-        let src = r#"max :: Int -> Int -> Int;
-fn max x y = if x > y then x else y;"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok())
-    }
-
-    #[test]
-    fn func_dec_matches_func_two_args_return_int() {
-        let src = r#"add :: Int -> Int -> Int;fn add x y = x + y;"#;
-        let ast = ParserBuilder::default().build(src).parse().unwrap();
-        let t = type_check(&ast);
-        dbg!(&t);
-        assert!(t.is_ok())
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use snowc_parse::ParserBuilder;
+//     #[test]
+//     fn string() {
+//         let src = r#"foo :: String;fn foo = "Hello";"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok())
+//     }
+//
+//     #[test]
+//     fn atom() {
+//         let src = r#"foo :: Int;fn foo = 12321321;"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok());
+//
+//         let src = r#"foo :: Float;fn foo = 12321.321;"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok());
+//
+//         let src = r#"foo :: Char;fn foo = 'c';"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok());
+//
+//         let src = r#"foo :: Bool;fn foo = true;"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok());
+//
+//         let src = r#"foo :: Bool;fn foo = false;"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok())
+//     }
+//
+//     #[test]
+//     fn unary() {
+//         let src = r#"bar :: Int;fn bar = -123;"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok())
+//     }
+//
+//     #[test]
+//     fn binary() {
+//         let src = r#"add :: Int -> Int -> Int;fn add x y = x + y;"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok())
+//     }
+//
+//     #[test]
+//     fn conditional() {
+//         let src = r#"max :: Int -> Int -> Int;
+// fn max x y = if x > y then x else y;"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok())
+//     }
+//
+//     #[test]
+//     fn func_dec_matches_func_two_args_return_int() {
+//         let src = r#"add :: Int -> Int -> Int;fn add x y = x + y;"#;
+//         let ast = ParserBuilder::default().build(src).parse().unwrap();
+//         let t = type_check(&ast);
+//         dbg!(&t);
+//         assert!(t.is_ok())
+//     }
+// }

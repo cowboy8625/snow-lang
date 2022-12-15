@@ -4,4 +4,4 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-crossterm = "0.25.0"
+annotate-snippets = { version = "0.9.1", features = ["color"] }

@@ -1,0 +1,2 @@
+main :: String;
+fn main = if then "Then" else "Else";

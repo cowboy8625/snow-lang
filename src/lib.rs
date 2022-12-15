@@ -1,4 +1,6 @@
+// use annotate_snippets::snippets::*;
 pub use snowc_code_gen::*;
+pub use snowc_error_messages::*;
 pub use snowc_parse::*;
 pub use snowc_type_checker::*;
 
@@ -44,11 +46,7 @@ impl CompilerBuilder {
         let ast = match result_ast {
             Ok(ast) => ast,
             Err(errors) => {
-                for error in errors {
-                    eprintln!("id: {}", error.id);
-                    eprintln!("label: {}", error.label);
-                    eprintln!("location: {:?}", &src[error.span]);
-                }
+                report(&filename, &src, &errors);
                 std::process::exit(1);
             }
         };

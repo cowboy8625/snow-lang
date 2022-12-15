@@ -2,16 +2,9 @@ use super::{
     expr::{Atom, Expr},
     op::Op,
     precedence::Precedence,
-    ParserDebug, Scanner, Span, Token,
+    Error, ParserDebug, Scanner, Span, Token,
 };
 use std::iter::Peekable;
-
-#[derive(Debug)]
-pub struct Error {
-    pub id: String,
-    pub label: String,
-    pub span: Span,
-}
 
 pub struct Parser<'a> {
     pub(crate) lexer: Peekable<Scanner<'a>>,
@@ -53,20 +46,13 @@ impl<'a> Parser<'a> {
         matches!(self.peek(), (Token::Eof, _))
     }
 
-    fn consume(
-        &mut self,
-        expected: Token,
-        msg: &str,
-    ) -> Result<(Token, Span), (String, Span)> {
+    fn consume(&mut self, expected: Token) -> Option<(Token, Span)> {
         let (token, span) = self.peek();
         if token != expected {
-            return Err((
-                format!("{msg}\r\nexpected '{:?}' but found '{:?}'", expected, token),
-                span,
-            ));
+            return None;
         }
         self.lexer.next();
-        Ok((token, span))
+        Some((token, span))
     }
 
     fn report(&mut self, id: &str, label: &str, span: Span) -> Expr {
@@ -104,7 +90,9 @@ impl<'a> Parser<'a> {
     }
 
     fn type_dec(&mut self, name: &str, start: Span) -> Expr {
-        let _ = self.consume(Token::Op("::".into()), "");
+        let Some((_, _)) = self.consume(Token::Op("::".into())) else {
+            return self.report("", "", start);
+        };
         let mut types = vec![];
         while let Some((t, _)) = self
             .lexer
@@ -123,9 +111,11 @@ impl<'a> Parser<'a> {
             types.push(type_name);
         }
 
-        let (_, end) = self
-            .consume(Token::Op(";".into()), "type declaration's end with a ';'")
-            .unwrap();
+        let Some((_, end)) = self
+            .consume(Token::Op(";".into())) else {
+                let span = self.peek().1;
+                return self.report("E10", "type declaration's end with a ';'", span);
+            };
         let span = start.start..end.end;
         Expr::TypeDec(name.into(), types, span)
     }
@@ -136,26 +126,25 @@ impl<'a> Parser<'a> {
         };
 
         let mut variants = vec![];
-        match self.consume(Token::Op("=".into()), "expected '=' but found") {
-            Ok(_) => {
-                while let Some((Token::Id(name), _)) = self.lexer.next() {
-                    let mut type_list = vec![];
-                    while let Some((Token::Id(type_id), _)) =
-                        self.lexer.next_if(|(t, _)| matches!(t, Token::Id(_)))
-                    {
-                        type_list.push(type_id);
-                    }
-                    variants.push((name, type_list));
-                    if let None = self.next_if(|t| t == Token::Op("|".into())) {
-                        break;
-                    }
+        if let Some(_) = self.consume(Token::Op("=".into())) {
+            while let Some((Token::Id(name), _)) = self.lexer.next() {
+                let mut type_list = vec![];
+                while let Some((Token::Id(type_id), _)) =
+                    self.lexer.next_if(|(t, _)| matches!(t, Token::Id(_)))
+                {
+                    type_list.push(type_id);
+                }
+                variants.push((name, type_list));
+                if let None = self.next_if(|t| t == Token::Op("|".into())) {
+                    break;
                 }
             }
-            Err(_) => {}
         }
-        let (_, end) = self
-            .consume(Token::Op(";".into()), "type's end with a ';'")
-            .unwrap();
+        let Some((_, end)) = self
+            .consume(Token::Op(";".into())) else {
+                let span = self.peek().1;
+                return self.report("E10", "type declaration's end with a ';'", span);
+            };
         let span = start.start..end.end;
         Expr::Type(name.into(), variants, span)
     }
@@ -171,8 +160,10 @@ impl<'a> Parser<'a> {
                 while let Token::Id(_) = self.peek().0 {
                     args.push(self.expression(Precedence::Fn));
                 }
-                self.consume(Token::Op("=".into()), "After args '=' then function body")
-                    .unwrap();
+                let Some(_) = self.consume(Token::Op("=".into())) else {
+                    let span = self.peek().1;
+                    return self.report("E13", "After args '=' then function body", span);
+                };
                 let body = self.closure();
                 let f = args.into_iter().rev().fold(body, |last, next| {
                     let span = start.start..last.span().end;
@@ -180,16 +171,19 @@ impl<'a> Parser<'a> {
                 });
                 f
             })
-            .or_else(|_| {
-                self.errors.pop();
-                self.consume(Token::Op("=".into()), "After args '=' then function body")
-                    .unwrap();
-                let lhs = self.closure();
-                lhs
-            });
-        let (_, end) = self
-            .consume(Token::Op(";".into()), "functions end with a ';'")
-            .unwrap();
+        .or_else(|_| {
+            self.errors.pop();
+            let Some(_) = self.consume(Token::Op("=".into())) else {
+                let span = self.peek().1;
+                return self.report("E11", "function requires '=' after name or params", span);
+            };
+            let lhs = self.closure();
+            lhs
+        });
+        let Some((_, end)) = self.consume(Token::Op(";".into())) else {
+            let span = self.peek().1;
+            return self.report("E10", "functions end with a ';'", span);
+        };
         let span = start.start..end.end;
         let func = Expr::Func(name, Box::new(body), span);
         func
@@ -201,25 +195,29 @@ impl<'a> Parser<'a> {
             let head = Box::new(self.expression(Precedence::Fn));
             let tail = Box::new(
                 self.closure()
-                    .and_then(|mut lhs| {
-                        while let Token::Id(_) = self.peek().0 {
-                            let tail = Box::new(self.expression(Precedence::Fn));
-                            let span = lhs.span().start..tail.span().end;
-                            lhs = Expr::Closure(Box::new(lhs), tail, span);
-                        }
-                        self.consume(Token::Op("->".into()), "lambda expressions")
-                            .unwrap();
-                        let body = self.closure();
-                        let span = lhs.span().start..body.span().end;
-                        Expr::Closure(Box::new(lhs), Box::new(body), span)
-                    })
-                    .or_else(|_| {
-                        self.errors.pop();
-                        self.consume(Token::Op("->".into()), "lambda expressions")
-                            .unwrap();
-                        self.closure()
-                    }),
-            );
+                .and_then(|mut lhs| {
+                    while let Token::Id(_) = self.peek().0 {
+                        let tail = Box::new(self.expression(Precedence::Fn));
+                        let span = lhs.span().start..tail.span().end;
+                        lhs = Expr::Closure(Box::new(lhs), tail, span);
+                    }
+                    let Some(_) = self.consume(Token::Op("->".into())) else {
+                        let span = self.peek().1;
+                        return self.report("E12", "missing '->' after closure param", span);
+                    };
+                    let body = self.closure();
+                    let span = lhs.span().start..body.span().end;
+                    Expr::Closure(Box::new(lhs), Box::new(body), span)
+                })
+                .or_else(|_| {
+                    self.errors.pop();
+                    let Some(_) = self.consume(Token::Op("->".into())) else {
+                        let span = self.peek().1;
+                        return self.report("E12", "missing '->' after closure param", span);
+                    };
+                    self.closure()
+                }),
+                );
             let span = head.span().start..tail.span().end;
             return Expr::Closure(head, tail, span);
         }
@@ -228,19 +226,22 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn conditional(&mut self) -> Expr {
         if matches!(self.peek(), (Token::KeyWord(ref k), _) if k == "if") {
-            let (_, start) = self.consume(Token::KeyWord("if".into()), "WHAT").unwrap();
+            let Some((_, _)) = self.consume(Token::KeyWord("if".into())) else {
+                let span = self.peek().1;
+                return self.report("E13", "missing if keyword", span);
+            };
             let condition = self.expression(Precedence::None);
-            self.consume(
-                Token::KeyWord("then".into()),
-                "else keyword is required with an if expression",
-            )
-            .unwrap();
+            // some how check if condition is valid
+            // is_error should work
+            let Some((_, start)) = self.consume(Token::KeyWord("then".into())) else {
+                let span = self.peek().1;
+                return self.report("E13", "missing then keyword after if condition", span);
+            };
             let branch1 = self.closure();
-            self.consume(
-                Token::KeyWord("else".into()),
-                "else keyword is required with an if expression",
-            )
-            .unwrap();
+            let Some(_) = self.consume(Token::KeyWord("else".into())) else {
+                let span = self.peek().1;
+                return self.report("E13", "missing else keyword after then branch", span);
+            };
             let branch2 = self.closure();
             let span = start.start..branch2.span().end;
             return Expr::IfElse(
@@ -284,8 +285,10 @@ impl<'a> Parser<'a> {
             "(" => {
                 self.lexer.next();
                 let lhs = self.closure();
-                self.consume(Token::Op(")".into()), "closing ')' missing")
-                    .unwrap();
+                let Some(_) = self.consume(Token::Op(")".into())) else {
+                    let span = self.peek().1;
+                    return self.report("E13", "closing ')' missing", span);
+                };
                 lhs
             }
             o @ ("-" | "!") => {

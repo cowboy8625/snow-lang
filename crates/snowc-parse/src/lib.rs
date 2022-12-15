@@ -1,13 +1,12 @@
-pub mod error;
 pub mod expr;
 pub mod op;
 pub mod parser;
-pub use error::ParserError;
 pub use expr::{Atom, Expr};
 pub use op::Op;
 mod precedence;
 #[cfg(test)]
 mod tests;
+use snowc_error_messages::Error;
 pub use snowc_lexer::{LexerDebug, Scanner, Token};
 
 type Span = std::ops::Range<usize>;
