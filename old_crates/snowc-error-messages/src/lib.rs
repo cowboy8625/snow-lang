@@ -1,14 +1,9 @@
 use crossterm::style::{Color, Stylize};
-use snowc_errors::CompilerError;
 use std::error::Error;
 use std::ops::Range;
 
 pub type Span = Range<usize>;
-pub fn report(src: &str, error: Box<dyn Error>) -> String {
-    let span = error
-        .downcast_ref::<CompilerError>()
-        .map(|i| i.span())
-        .unwrap_or(0..1);
+pub fn report(src: &str, _errors: Box<dyn Error>) -> String {
     let mut start = 0;
     let mut end = 0;
     for (_, line) in src.lines().enumerate() {

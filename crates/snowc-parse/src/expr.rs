@@ -47,10 +47,24 @@ pub enum Expr {
     App(Box<Self>, Vec<Self>, Span),
     Type(String, Vec<(String, Vec<String>)>, Span),
     TypeDec(String, Vec<String>, Span),
-    Error(String, Span),
+    Error,
 }
 
 impl Expr {
+    pub fn and_then<F: FnOnce(Self) -> Self>(self, op: F) -> Self {
+        match self {
+            expr @ Self::Error => expr,
+            expr => op(expr),
+        }
+    }
+
+    pub fn or_else<F: FnOnce(Self) -> Self>(self, op: F) -> Self {
+        match self {
+            expr @ Self::Error => op(expr),
+            expr => expr,
+        }
+    }
+
     pub fn span(&self) -> Span {
         match self {
             Self::Atom(.., span) => span.clone(),
@@ -62,7 +76,7 @@ impl Expr {
             Self::App(.., span) => span.clone(),
             Self::Type(.., span) => span.clone(),
             Self::TypeDec(.., span) => span.clone(),
-            Self::Error(.., span) => span.clone(),
+            Self::Error => 0..0,
         }
     }
     is_expr!(is_atom, Atom);
@@ -74,7 +88,12 @@ impl Expr {
     is_expr!(is_app, App);
     is_expr!(is_type, Type);
     is_expr!(is_type_dec, TypeDec);
-    is_expr!(is_error, Error);
+    pub fn is_error(&self) -> bool {
+        match self {
+            Self::Error => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Expr {
@@ -136,9 +155,7 @@ impl fmt::Display for Expr {
                 });
                 write!(f, "<{name} :: {types}>")
             }
-            Self::Error(error, span) => {
-                write!(f, "{}:{} error {}", span.start, span.end, error)
-            }
+            Self::Error => write!(f, "Error"),
         }
     }
 }

@@ -1,138 +1,110 @@
 use super::{
-    bail,
     expr::{Atom, Expr},
     op::Op,
     precedence::Precedence,
-    CResult, OutOfMain, ParserDebug, Scanner, Span, Token,
+    ParserDebug, Scanner, Span, Token,
 };
 use std::iter::Peekable;
 
+#[derive(Debug)]
+pub struct Error {
+    pub id: String,
+    pub label: String,
+    pub span: Span,
+}
+
 pub struct Parser<'a> {
     pub(crate) lexer: Peekable<Scanner<'a>>,
-    out_of_main: OutOfMain,
+    errors: Vec<Error>,
     debug_parser: ParserDebug,
 }
 impl<'a> Parser<'a> {
     pub fn new(lexer: Peekable<Scanner<'a>>) -> Self {
-        let out_of_main = OutOfMain::Disable;
         let debug_parser = ParserDebug::Off;
-        Self::new_with_debug(lexer, out_of_main, debug_parser)
+        Self::new_with_debug(lexer, debug_parser)
     }
 
     pub fn new_with_debug(
         lexer: Peekable<Scanner<'a>>,
-        out_of_main: OutOfMain,
         debug_parser: ParserDebug,
     ) -> Self {
         Self {
             lexer,
-            out_of_main,
+            errors: vec![],
             debug_parser,
         }
     }
 
+    fn next_if<F: FnOnce(Token) -> bool>(&mut self, func: F) -> Option<(Token, Span)> {
+        let token = self.peek().0;
+        if func(token) {
+            return Some(self.next());
+        }
+        None
+    }
+    fn next(&mut self) -> (Token, Span) {
+        self.lexer.next().unwrap()
+    }
     fn peek(&mut self) -> (Token, Span) {
-        self.lexer.peek().cloned().unwrap_or((Token::Eof, 0..0))
+        self.lexer.peek().cloned().unwrap()
     }
 
     fn is_end(&mut self) -> bool {
         matches!(self.peek(), (Token::Eof, _))
     }
 
-    fn advance(&mut self, advance_if: Option<Token>) -> CResult<(Token, Span)> {
-        let (token, span) = self.peek();
-        match advance_if {
-            Some(maybe_token) if maybe_token == token => {
-                self.lexer.next();
-                Ok((token, span))
-            }
-            Some(maybe_token) => bail!(
-                span,
-                "fail to advance do to not matching next expected token {:?} {:?}",
-                maybe_token,
-                token
-            ),
-            None => {
-                self.lexer.next();
-                Ok((token, span))
-            }
-        }
-    }
-
-    fn consume(&mut self, expected: Token, msg: &str) -> CResult<(Token, Span)> {
+    fn consume(
+        &mut self,
+        expected: Token,
+        msg: &str,
+    ) -> Result<(Token, Span), (String, Span)> {
         let (token, span) = self.peek();
         if token != expected {
-            bail!(
+            return Err((
+                format!("{msg}\r\nexpected '{:?}' but found '{:?}'", expected, token),
                 span,
-                "{msg}\r\nexpected '{:?}' but found '{:?}'",
-                expected,
-                token
-            );
+            ));
         }
         self.lexer.next();
         Ok((token, span))
     }
 
-    pub fn parse(mut self) -> CResult<Vec<Expr>> {
+    fn report(&mut self, id: &str, label: &str, span: Span) -> Expr {
+        let id = id.into();
+        let label = label.into();
+        self.errors.push(Error { id, label, span });
+        Expr::Error
+    }
+
+    pub fn parse(mut self) -> Result<Vec<Expr>, Vec<Error>> {
         let Self { debug_parser, .. } = self;
         let mut ast = vec![];
         while !self.is_end() {
-            let e = self.declaration()?;
+            let e = self.declaration();
             ast.push(e);
         }
         if let ParserDebug::On = debug_parser {
             dbg!(&ast);
         }
+        if !self.errors.is_empty() {
+            return Err(self.errors);
+        }
         Ok(ast)
     }
 
-    fn declaration(&mut self) -> CResult<Expr> {
-        match self.peek() {
-            (Token::KeyWord(ref k), span) if k == "fn" => {
-                self.lexer.next();
-                self.function(span)
-            }
-            (Token::KeyWord(ref k), span) if k == "type" => {
-                self.lexer.next();
-                self.user_type_def(span)
-            }
-            (Token::Id(_), _) => {
-                let mut l = self.lexer.clone();
-                l.next();
-                if matches!(l.next(), Some((Token::Op(ref op), _)) if op == "::") {
-                    let Some((Token::Id(ref id), span)) = self.lexer.next() else {
-                        panic!("not to sure what went wrong at this point");
-                    };
-                    self.consume(Token::Op("::".into()), "")?;
-                    self.type_dec(id, span)
-                } else {
-                    let expr = self.call(Precedence::None);
-                    if expr.is_ok() {
-                        self.consume(
-                            Token::Op(";".into()),
-                            "expressions need to be terminated with ';'",
-                        )?;
-                    }
-                    expr
-                }
-            }
-            (_, _) if matches!(self.out_of_main, OutOfMain::Enable) => {
-                let expr = self.closure();
-                if expr.is_ok() {
-                    self.consume(
-                        Token::Op(";".into()),
-                        "expressions need to be terminated with ';'",
-                    )?;
-                }
-                expr
-            }
-            (t, span) => {
-                bail!(span, "'{:?}' are not allowed in global scope", t)
+    fn declaration(&mut self) -> Expr {
+        match self.next() {
+            (Token::KeyWord(ref k), span) if k == "fn" => self.function(span),
+            (Token::KeyWord(ref k), span) if k == "type" => self.user_type_def(span),
+            (Token::Id(id), span) => self.type_dec(&id, span),
+            (_, span) => {
+                self.report("E0", "expressions not allowed in global scope", span)
             }
         }
     }
 
-    fn type_dec(&mut self, name: &str, start: Span) -> CResult<Expr> {
+    fn type_dec(&mut self, name: &str, start: Span) -> Expr {
+        let _ = self.consume(Token::Op("::".into()), "");
         let mut types = vec![];
         while let Some((t, _)) = self
             .lexer
@@ -151,18 +123,16 @@ impl<'a> Parser<'a> {
             types.push(type_name);
         }
 
-        let (_, end) =
-            self.consume(Token::Op(";".into()), "type declaration's end with a ';'")?;
+        let (_, end) = self
+            .consume(Token::Op(";".into()), "type declaration's end with a ';'")
+            .unwrap();
         let span = start.start..end.end;
-        Ok(Expr::TypeDec(name.into(), types, span))
+        Expr::TypeDec(name.into(), types, span)
     }
 
-    fn user_type_def(&mut self, start: Span) -> CResult<Expr> {
-        let Some((Token::Id(name), _name_span)) = self.lexer.next() else {
-            bail!(
-                start,
-                "expected '{:?}' but found 'NONE'",
-                Token::Id("<name>".into()));
+    fn user_type_def(&mut self, start: Span) -> Expr {
+        let Some((Token::Id(name), _)) = self.lexer.next() else {
+            return self.report("E1", "missing identifier", start);
         };
 
         let mut variants = vec![];
@@ -176,105 +146,115 @@ impl<'a> Parser<'a> {
                         type_list.push(type_id);
                     }
                     variants.push((name, type_list));
-                    if self.advance(Some(Token::Op("|".into()))).is_err() {
+                    if let None = self.next_if(|t| t == Token::Op("|".into())) {
                         break;
                     }
                 }
             }
             Err(_) => {}
         }
-        let (_, end) = self.consume(Token::Op(";".into()), "type's end with a ';'")?;
+        let (_, end) = self
+            .consume(Token::Op(";".into()), "type's end with a ';'")
+            .unwrap();
         let span = start.start..end.end;
-        Ok(Expr::Type(name.into(), variants, span))
+        Expr::Type(name.into(), variants, span)
     }
 
-    pub(crate) fn function(&mut self, start: Span) -> CResult<Expr> {
+    pub(crate) fn function(&mut self, start: Span) -> Expr {
         let Some((Token::Id(name), _span)) = self.lexer.next() else {
-            bail!(start, "expected a identifier <name>");
+            return self.report("E1", "missing identifier", start);
         };
         let body = self
             .expression(Precedence::Fn)
             .and_then(|lhs| {
                 let mut args = vec![lhs];
                 while let Token::Id(_) = self.peek().0 {
-                    args.push(self.expression(Precedence::Fn)?);
+                    args.push(self.expression(Precedence::Fn));
                 }
-                self.consume(Token::Op("=".into()), "After args '=' then function body")?;
-                let body = self.closure()?;
+                self.consume(Token::Op("=".into()), "After args '=' then function body")
+                    .unwrap();
+                let body = self.closure();
                 let f = args.into_iter().rev().fold(body, |last, next| {
                     let span = start.start..last.span().end;
                     Expr::Closure(Box::new(next), Box::new(last), span)
                 });
-                Ok(f)
+                f
             })
             .or_else(|_| {
-                self.consume(Token::Op("=".into()), "After args '=' then function body")?;
-                let lhs = self.closure()?;
-                Ok::<Expr, Box<dyn std::error::Error>>(lhs)
-            })?;
-        let (_, end) = self.consume(Token::Op(";".into()), "functions end with a ';'")?;
+                self.errors.pop();
+                self.consume(Token::Op("=".into()), "After args '=' then function body")
+                    .unwrap();
+                let lhs = self.closure();
+                lhs
+            });
+        let (_, end) = self
+            .consume(Token::Op(";".into()), "functions end with a ';'")
+            .unwrap();
         let span = start.start..end.end;
         let func = Expr::Func(name, Box::new(body), span);
-        Ok(func)
+        func
     }
 
-    pub(crate) fn closure(&mut self) -> CResult<Expr> {
+    pub(crate) fn closure(&mut self) -> Expr {
         if matches!(self.peek(), (Token::Op(ref op), _) if op == "λ" || op == "\\") {
             self.lexer.next();
-            let head = Box::new(self.expression(Precedence::Fn)?);
+            let head = Box::new(self.expression(Precedence::Fn));
             let tail = Box::new(
                 self.closure()
                     .and_then(|mut lhs| {
                         while let Token::Id(_) = self.peek().0 {
-                            let tail = Box::new(self.expression(Precedence::Fn)?);
+                            let tail = Box::new(self.expression(Precedence::Fn));
                             let span = lhs.span().start..tail.span().end;
                             lhs = Expr::Closure(Box::new(lhs), tail, span);
                         }
-                        self.consume(Token::Op("->".into()), "lambda expressions")?;
-                        let body = self.closure()?;
+                        self.consume(Token::Op("->".into()), "lambda expressions")
+                            .unwrap();
+                        let body = self.closure();
                         let span = lhs.span().start..body.span().end;
-                        Ok(Expr::Closure(Box::new(lhs), Box::new(body), span))
+                        Expr::Closure(Box::new(lhs), Box::new(body), span)
                     })
                     .or_else(|_| {
-                        self.consume(Token::Op("->".into()), "lambda expressions")?;
-                        let lhs = self.closure()?;
-                        Ok::<Expr, Box<dyn std::error::Error>>(lhs)
-                    })?,
+                        self.errors.pop();
+                        self.consume(Token::Op("->".into()), "lambda expressions")
+                            .unwrap();
+                        self.closure()
+                    }),
             );
             let span = head.span().start..tail.span().end;
-            let c = Expr::Closure(head, tail, span);
-            return Ok(c);
+            return Expr::Closure(head, tail, span);
         }
         self.conditional()
     }
 
-    pub(crate) fn conditional(&mut self) -> CResult<Expr> {
+    pub(crate) fn conditional(&mut self) -> Expr {
         if matches!(self.peek(), (Token::KeyWord(ref k), _) if k == "if") {
-            let (_, start) = self.consume(Token::KeyWord("if".into()), "WHAT")?;
-            let condition = self.expression(Precedence::None)?;
+            let (_, start) = self.consume(Token::KeyWord("if".into()), "WHAT").unwrap();
+            let condition = self.expression(Precedence::None);
             self.consume(
                 Token::KeyWord("then".into()),
                 "else keyword is required with an if expression",
-            )?;
-            let branch1 = self.closure()?;
+            )
+            .unwrap();
+            let branch1 = self.closure();
             self.consume(
                 Token::KeyWord("else".into()),
                 "else keyword is required with an if expression",
-            )?;
-            let branch2 = self.closure()?;
+            )
+            .unwrap();
+            let branch2 = self.closure();
             let span = start.start..branch2.span().end;
-            return Ok(Expr::IfElse(
+            return Expr::IfElse(
                 Box::new(condition),
                 Box::new(branch1),
                 Box::new(branch2),
                 span,
-            ));
+            );
         }
         self.call(Precedence::None)
     }
 
-    pub(crate) fn call(&mut self, min_bp: Precedence) -> CResult<Expr> {
-        let mut lhs = self.expression(min_bp)?;
+    pub(crate) fn call(&mut self, min_bp: Precedence) -> Expr {
+        let mut lhs = self.expression(min_bp);
         if match self.peek().0 {
             Token::Op(ref op) if op == "(" => true,
             Token::Op(_) | Token::KeyWord(_) | Token::Eof => false,
@@ -291,46 +271,47 @@ impl<'a> Parser<'a> {
                     }
                     (_, _) => {}
                 };
-                args.push(self.expression(Precedence::None)?);
+                args.push(self.expression(Precedence::None));
             }
             let span = lhs.span().start..last.unwrap_or(lhs.span()).end;
             lhs = Expr::App(Box::new(lhs), args, span);
         }
-        Ok(lhs)
+        lhs
     }
 
-    fn prefix_op(&mut self, op: &str, span: Span) -> CResult<Expr> {
+    fn prefix_op(&mut self, op: &str, span: Span) -> Expr {
         match op {
             "(" => {
                 self.lexer.next();
-                let lhs = self.closure()?;
-                self.consume(Token::Op(")".into()), "closing ')' missing")?;
-                Ok(lhs)
+                let lhs = self.closure();
+                self.consume(Token::Op(")".into()), "closing ')' missing")
+                    .unwrap();
+                lhs
             }
             o @ ("-" | "!") => {
                 self.lexer.next();
-                let op = Op::try_from(o)?;
-                let lhs = self.expression(Precedence::Unary)?;
+                let op = Op::try_from(o).unwrap();
+                let lhs = self.expression(Precedence::Unary);
                 let span = span.start..lhs.span().end;
-                Ok(Expr::Unary(op, Box::new(lhs), span))
+                Expr::Unary(op, Box::new(lhs), span)
             }
-            c => {
+            _ => {
                 let mut l = self.lexer.clone();
                 l.next();
                 let peek = l.peek().map(|(t, _)| t.clone()).unwrap_or(Token::Eof);
                 if Op::try_from(op).is_ok() && matches!(peek, Token::Op(op) if op == ")")
                 {
                     self.lexer = l;
-                    let op = Op::try_from(op)?;
-                    Ok(Expr::Atom(Atom::Id(format!("({op})")), span))
+                    let op = Op::try_from(op).unwrap();
+                    Expr::Atom(Atom::Id(format!("({op})")), span)
                 } else {
-                    bail!(span, "unknown op char: {}", c)
+                    return self.report("E2", "unknown op char", span);
                 }
             }
         }
     }
 
-    pub(crate) fn expression(&mut self, min_bp: Precedence) -> CResult<Expr> {
+    pub(crate) fn expression(&mut self, min_bp: Precedence) -> Expr {
         let (token, start_span) = self.peek();
         let mut lhs = match token {
             Token::KeyWord(ref b) if b == "true" => {
@@ -360,20 +341,22 @@ impl<'a> Parser<'a> {
             Token::Char(ref c) => {
                 self.lexer.next();
                 if c.chars().count() > 1 {
-                    bail!(start_span, "bad char '{c}'");
+                    return self.report("E3", "invalid op char", start_span);
                 }
                 let Some(c) = c.chars().nth(0) else {
-                    bail!(start_span, "char type can not be empty");
+                    return self.report("E4", "invalid char definition", start_span);
                 };
                 Expr::Atom(Atom::Char(c), start_span.clone())
             }
-            Token::Op(ref op) => self.prefix_op(op, start_span.clone())?,
-            t => bail!(start_span, "bad token: {:?}", t),
+            Token::Op(ref op) => self.prefix_op(op, start_span.clone()),
+            _ => {
+                return self.report("E5", "invalid token", start_span.clone());
+            }
         };
         loop {
             let (token, span) = self.peek();
             let cbp: Precedence = match token.clone() {
-                Token::Op(_) => Precedence::try_from(token.clone())?,
+                Token::Op(_) => Precedence::try_from(token.clone()).unwrap(),
                 _ => break,
             };
             if cbp <= min_bp {
@@ -386,9 +369,9 @@ impl<'a> Parser<'a> {
                 | Precedence::Comparison
                 | Precedence::Equality => {
                     let _ = self.lexer.next();
-                    let rhs = self.expression(cbp)?;
+                    let rhs = self.expression(cbp);
                     lhs = Expr::Binary(
-                        Op::try_from(&token)?,
+                        Op::try_from(&token).unwrap(),
                         Box::new(lhs),
                         Box::new(rhs),
                         span,
@@ -397,17 +380,19 @@ impl<'a> Parser<'a> {
                 Precedence::Assignment | Precedence::None => break,
                 Precedence::Pipe => {
                     let _ = self.lexer.next();
-                    let rhs = self.call(cbp)?;
+                    let rhs = self.call(cbp);
                     lhs = Expr::Binary(
-                        Op::try_from(&token)?,
+                        Op::try_from(&token).unwrap(),
                         Box::new(lhs),
                         Box::new(rhs),
                         span,
                     );
                 }
-                _ => bail!(span, "cbp: {cbp:?}, token: {token}"),
+                _ => {
+                    lhs = self.report("E5", "invalid token", span);
+                }
             }
         }
-        Ok(lhs)
+        lhs
     }
 }

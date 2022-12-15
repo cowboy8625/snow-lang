@@ -1,20 +1,18 @@
 use clap::{crate_description, crate_name, crate_version, Arg, ColorChoice, Command};
-use snowc::{CResult, CompilerBuilder};
-fn main() -> CResult<()> {
+use snowc::CompilerBuilder;
+fn main() {
     let setting = cargs();
     if setting.debug_graph {
         unimplemented!("graphviz is not working just yet");
     }
     let Some(filename) = setting.filename else {
         eprintln!("No file given");
-        return Ok(());
-        // return Repl::default().run().map_err(|e| Box::new(e) as Box<dyn std::error::Error>);
+        return;
     };
     CompilerBuilder::default()
         .debug_lexer(setting.debug_token)
         .debug_parser(setting.debug_ast)
-        .build(&filename)?;
-    Ok(())
+        .build(&filename);
 }
 
 #[derive(Debug, Default)]

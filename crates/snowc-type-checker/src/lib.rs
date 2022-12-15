@@ -1,4 +1,3 @@
-use snowc_errors::{bail, CResult, CompilerError};
 use snowc_parse::{Atom, Expr, Op};
 
 type Types = std::collections::HashMap<String, TypedFunc>;
@@ -15,7 +14,7 @@ pub enum Type {
 }
 
 impl TryFrom<&String> for Type {
-    type Error = Box<dyn std::error::Error>;
+    type Error = String;
     fn try_from(t: &String) -> Result<Self, Self::Error> {
         match t.as_str() {
             "Int" => Ok(Self::Int),
@@ -24,7 +23,7 @@ impl TryFrom<&String> for Type {
             "String" => Ok(Self::String),
             "Char" => Ok(Self::Char),
             "IO" => Ok(Self::IO),
-            _ => bail!(0..0, "unknown type '{t}'"),
+            _ => Err(format!("unknown type '{t}'")),
         }
     }
 }
@@ -62,12 +61,12 @@ impl TypedFunc {
     }
 }
 
-fn lookup(func_name: &str, env: &Types, id: &str) -> CResult<Type> {
+fn lookup(func_name: &str, env: &Types, id: &str) -> Type {
     match env.get(id) {
-        Some(type_func) => Ok(type_func.return_type),
+        Some(type_func) => type_func.return_type,
         None => match env.get(func_name).map(|i| i.lookup(id)).flatten() {
-            Some(t) => Ok(t),
-            None => bail!(0..0, "unbound error '{id}' has never been created"),
+            Some(t) => t,
+            None => panic!("unbound error '{id}' has never been created"),
         },
     }
 }
@@ -78,23 +77,20 @@ fn type_check_binary<'a>(
     op: &'a Op,
     lhs: &'a Expr,
     rhs: &'a Expr,
-) -> CResult<Type> {
-    let t1 = type_of(func_name, env, lhs)?;
-    let t2 = type_of(func_name, env, rhs)?;
+) -> Type {
+    let t1 = type_of(func_name, env, lhs);
+    let t2 = type_of(func_name, env, rhs);
     if t1 != t2 {
-        bail!(
-            0..0,
-            "type miss matched '{op:?}' lhs: '{t1:?}', rhs: '{t2:?}'"
-        );
+        panic!("type miss matched '{op:?}' lhs: '{t1:?}', rhs: '{t2:?}'");
     }
     match op {
-        Op::Plus | Op::Minus | Op::Mult | Op::Div => Ok(t1),
+        Op::Plus | Op::Minus | Op::Mult | Op::Div => t1,
         Op::Grt | Op::Les | Op::GrtEq | Op::LesEq | Op::Eq | Op::Neq | Op::Not => {
-            Ok(Type::Bool)
+            Type::Bool
         }
         Op::Equals | Op::Pipe => {
-            let span = lhs.span().start..rhs.span().end;
-            bail!(span, "not yet implemented for assignment or pipe")
+            let _span = lhs.span().start..rhs.span().end;
+            panic!("not yet implemented for assignment or pipe")
         }
     }
 }
@@ -105,20 +101,19 @@ fn type_check_if_else<'a>(
     c: &'a Expr,
     b1: &'a Expr,
     b2: &'a Expr,
-) -> CResult<Type> {
-    let tc = type_of(func_name, env, c)?;
+) -> Type {
+    let tc = type_of(func_name, env, c);
     let Type::Bool = tc else {
-        bail!(c.span(),  "if condition found '{tc:?}' but expected 'Bool' Type");
+        // c.span(),
+        panic!("if condition found '{tc:?}' but expected 'Bool' Type");
     };
-    let t1 = type_of(func_name, env, b1)?;
-    let t2 = type_of(func_name, env, b2)?;
+    let t1 = type_of(func_name, env, b1);
+    let t2 = type_of(func_name, env, b2);
     if t1 != t2 {
-        bail!(
-            b1.span().start..b2.span().end,
-            "branch types do not match, expected '{t1:?}' but found '{t2:?}'"
-        );
+        // b1.span().start..b2.span().end,
+        panic!("branch types do not match, expected '{t1:?}' but found '{t2:?}'");
     }
-    Ok(t1)
+    t1
 }
 
 fn type_check_app<'a>(
@@ -126,45 +121,48 @@ fn type_check_app<'a>(
     env: &Types,
     name: &'a Expr,
     args: &[Expr],
-    span: &Span,
-) -> CResult<Type> {
-    let t = type_of(func_name, env, name)?;
+    _span: &Span,
+) -> Type {
+    let t = type_of(func_name, env, name);
     let Expr::Atom(Atom::Id(name), _) = name else {
-        return Ok(t);
+        return t;
     };
     let Some(tfunc) = env.get(name) else {
-        bail!(span.clone(),  "undefined '{name}'");
+        // span.clone(),
+        panic!("undefined '{name}'");
     };
     if args.len() > tfunc.args.len() {
-        bail!(span.clone(), "to many args given to '{name}'");
+        // span.clone(),
+        panic!("to many args given to '{name}'");
     }
     for (idx, arg) in args.iter().enumerate() {
-        let t = type_of(func_name, env, arg)?;
+        let t = type_of(func_name, env, arg);
         let (arg_name, pt) = &tfunc.args[idx];
         if pt != &t {
-            bail!(
-                arg.span(),
+            // arg.span(),
+            panic!(
                 "expected '{pt:?}' for {} but found '{t:?}'",
                 arg_name.clone().unwrap_or("<name>".to_string())
             );
         }
     }
-    Ok(t)
+    t
 }
 
-fn type_of<'a>(func_name: &str, env: &Types, e: &'a Expr) -> CResult<Type> {
+fn type_of<'a>(func_name: &str, env: &Types, e: &'a Expr) -> Type {
     match e {
-        Expr::Atom(Atom::Int(_), _) => Ok(Type::Int),
-        Expr::Atom(Atom::Float(_), _) => Ok(Type::Float),
-        Expr::Atom(Atom::Bool(_), _) => Ok(Type::Bool),
-        Expr::Atom(Atom::String(_), _) => Ok(Type::String),
-        Expr::Atom(Atom::Char(_), _) => Ok(Type::Char),
+        Expr::Atom(Atom::Int(_), _) => Type::Int,
+        Expr::Atom(Atom::Float(_), _) => Type::Float,
+        Expr::Atom(Atom::Bool(_), _) => Type::Bool,
+        Expr::Atom(Atom::String(_), _) => Type::String,
+        Expr::Atom(Atom::Char(_), _) => Type::Char,
         Expr::Atom(Atom::Id(id), _) => lookup(func_name, env, id),
         Expr::Unary(_, rhs, _) => type_of(func_name, env, rhs),
         Expr::Binary(op, lhs, rhs, _) => type_check_binary(func_name, env, op, lhs, rhs),
         Expr::IfElse(c, b1, b2, _) => type_check_if_else(func_name, env, c, b1, b2),
         Expr::App(name, args, span) => type_check_app(func_name, env, name, args, span),
-        _ => bail!(e.span(), "not implemented yet for expr: '{e:?}'"),
+        // e.span(),
+        _ => panic!("not implemented yet for expr: '{e:?}'"),
     }
 }
 
@@ -172,15 +170,17 @@ fn pair_up_params<'a>(
     func_name: String,
     type_func: &mut TypedFunc,
     expr: &'a Expr,
-) -> CResult<&'a Expr> {
+) -> &'a Expr {
     if !expr.is_clouser() {
-        return Ok(expr);
+        return expr;
     }
     let Expr::Closure(head, tail, _) = expr else {
-        bail!(expr.span(), "unimplemented yet for '{expr}'");
+        // expr.span(), 
+        panic!("unimplemented yet for '{expr}'");
     };
     let Expr::Atom(Atom::Id(name), _) = &**head else {
-        bail!(head.span(), "unimplemented yet for '{expr}'");
+        // head.span(), 
+        panic!("unimplemented yet for '{expr}'");
     };
     type_func.push_arg(name);
     pair_up_params(func_name, type_func, &tail)
@@ -201,45 +201,50 @@ fn default_types() -> Types {
     env
 }
 
-pub fn type_check<'a>(ast: &'a [Expr]) -> CResult<&'a [Expr]> {
+pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
     let mut env = default_types();
+    let errors = Vec::new();
     for def in ast.iter() {
         match def {
-            Expr::Func(name, body, span) => {
+            Expr::Func(name, body, _) => {
                 let Some(type_func) = env.get_mut(name) else {
-                    bail!(
-                        span.clone(),
+                    // span.clone(),
+                    panic!(
                         "function '{name}' missing type declaration"
                     );
                 };
-                let body = pair_up_params(name.into(), type_func, body)?;
+                let body = pair_up_params(name.into(), type_func, body);
                 let dec_return_type = type_func.return_type.clone();
-                let return_type = type_of(&name, &env, body)?;
+                let return_type = type_of(&name, &env, body);
                 if return_type != dec_return_type {
-                    bail!(
-                        body.span(),
+                    // body.span(),
+                    panic!(
                         "miss matched return types: found '{return_type:?}' \
                         but expected '{dec_return_type:?}'"
                     );
                 }
             }
-            Expr::TypeDec(name, body, span) => {
+            Expr::TypeDec(name, body, _) => {
                 let mut body = body.clone();
                 let Some(t) = body.pop() else {
-                    bail!(span.clone(), "missing return type from type declaration '{name}'");
+                    // span.clone(),
+                    panic!("missing return type from type declaration '{name}'");
                 };
                 let mut args = vec![];
                 for string_type in body.iter() {
-                    args.push((None, Type::try_from(string_type)?));
+                    args.push((None, Type::try_from(string_type).unwrap()));
                 }
-                let return_type = Type::try_from(&t)?;
+                let return_type = Type::try_from(&t).unwrap();
                 let typed_func = TypedFunc::new_with_args(return_type, args);
                 env.insert(name.into(), typed_func);
             }
             _ => unimplemented!("for '{def}'"),
         }
     }
-    Ok(ast)
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+    Ok(())
 }
 
 #[cfg(test)]

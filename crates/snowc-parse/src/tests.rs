@@ -6,7 +6,6 @@ fn expression() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, src);
 
@@ -14,7 +13,6 @@ fn expression() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, src);
 
@@ -22,7 +20,6 @@ fn expression() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, src);
 }
@@ -32,7 +29,6 @@ fn unary() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "(- 1)");
 
@@ -40,7 +36,6 @@ fn unary() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "(- 1.2)");
 
@@ -48,7 +43,6 @@ fn unary() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "(- a)");
 }
@@ -59,7 +53,6 @@ fn binary() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "(+ 1 (* 2 3))");
 }
@@ -70,7 +63,6 @@ fn binary_ids() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "(+ (+ a (* (* b c) d)) e)");
 
@@ -78,7 +70,6 @@ fn binary_ids() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "(+ a b)");
 }
@@ -89,7 +80,6 @@ fn changing_precedence() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "(- (* (+ (- 1) 2) 3) (- 4))");
 
@@ -97,19 +87,16 @@ fn changing_precedence() {
     let left = ParserBuilder::default()
         .build(src)
         .expression(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "a");
 }
 
 #[test]
 fn calling_operator() {
-    let src = "(+) 1 2;";
+    let src = "(+) 1 2";
     let left = ParserBuilder::default()
-        .out_of_main(true)
         .build(src)
-        .parse()
-        .unwrap()[0]
+        .call(Precedence::None)
         .to_string();
     assert_eq!(left, "<(+): (1, 2)>");
 }
@@ -118,10 +105,8 @@ fn calling_operator() {
 fn call() {
     let src = "add 1 2";
     let left = ParserBuilder::default()
-        .out_of_main(true)
         .build(src)
         .call(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "<add: (1, 2)>");
 }
@@ -130,10 +115,8 @@ fn call() {
 fn pipe_call() {
     let src = "2 |> add 1";
     let left = ParserBuilder::default()
-        .out_of_main(true)
         .build(src)
         .call(Precedence::None)
-        .unwrap()
         .to_string();
     assert_eq!(left, "(|> 2 <add: (1)>)");
 }
@@ -142,10 +125,8 @@ fn pipe_call() {
 fn conditional() {
     let src = "if x > y then x else y;";
     let left = ParserBuilder::default()
-        .out_of_main(true)
         .build(src)
         .conditional()
-        .unwrap()
         .to_string();
     assert_eq!(left, "(if ((> x y)) then x else y)");
 }
@@ -156,7 +137,6 @@ fn function_def() {
     let left = ParserBuilder::default()
         .build(src)
         .function(0..0)
-        .unwrap()
         .to_string();
     assert_eq!(left, r#"<add: (\x -> (\y -> (+ x y)))>"#);
 }
@@ -201,12 +181,7 @@ fn closures() {
 fn user_type_def() {
     let src = r#"type Option = Some Int | None;"#;
     let right = r#"<Option: (Some, [Int]), (None, [])>"#;
-    let left = ParserBuilder::default()
-        .out_of_main(true)
-        .build(src)
-        .parse()
-        .unwrap()[0]
-        .to_string();
+    let left = ParserBuilder::default().build(src).parse().unwrap()[0].to_string();
     assert_eq!(left, right);
 }
 
@@ -214,11 +189,6 @@ fn user_type_def() {
 fn type_dec() {
     let src = r#"add :: Int -> Int -> Int;"#;
     let right = r#"<add :: Int -> Int -> Int>"#;
-    let left = ParserBuilder::default()
-        .out_of_main(true)
-        .build(src)
-        .parse()
-        .unwrap()[0]
-        .to_string();
+    let left = ParserBuilder::default().build(src).parse().unwrap()[0].to_string();
     assert_eq!(left, right);
 }
