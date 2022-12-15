@@ -1,0 +1,25 @@
+{
+    "name": "snow",
+    "displayName": "snow",
+    "description": "Snack Programming Language",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.64.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "snow",
+            "aliases": ["Snack", "snow"],
+            "extensions": [".snow"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "snow",
+            "scopeName": "source.snow",
+            "path": "./syntaxes/snow.tmLanguage.json"
+        }]
+    }
+}

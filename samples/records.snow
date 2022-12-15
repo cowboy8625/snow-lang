@@ -1,4 +1,0 @@
-type Option a = Some a | None;
-
-data record = { one = Option::Some 1, two = Option::None };
-record.one;
