@@ -1,2 +1,2 @@
 main :: Int;
-fn main = if 10 > 0 then 10 else 0
+fn main = if true then 10 else 0

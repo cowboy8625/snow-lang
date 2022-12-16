@@ -36,7 +36,8 @@ impl<'a> Parser<'a> {
         None
     }
     fn next(&mut self) -> (Token, Span) {
-        self.lexer.next().unwrap()
+        let (t, s) = self.lexer.next().unwrap();
+        (t, s)
     }
     fn peek(&mut self) -> (Token, Span) {
         self.lexer.peek().cloned().unwrap()
@@ -47,19 +48,27 @@ impl<'a> Parser<'a> {
     }
 
     fn consume(&mut self, expected: Token) -> Option<(Token, Span)> {
-        let (token, span) = self.peek();
-        if token != expected {
+        if self.peek().0 != expected {
             return None;
         }
-        self.lexer.next();
-        Some((token, span))
+        Some(self.next())
     }
 
     fn report(&mut self, id: &str, label: &str, span: Span) -> Expr {
         let id = id.into();
         let label = label.into();
+        let s = span.clone();
         self.errors.push(Error { id, label, span });
-        Expr::Error
+        Expr::Error(s)
+    }
+
+    fn recover(&mut self, deliminators: &[Token]) {
+        while let Some(_) = self.next_if(|t| !deliminators.contains(&t)) {
+            if self.is_end() {
+                break;
+            }
+        }
+        self.next();
     }
 
     pub fn parse(mut self) -> Result<Vec<Expr>, Vec<Error>> {
@@ -80,9 +89,27 @@ impl<'a> Parser<'a> {
 
     fn declaration(&mut self) -> Expr {
         match self.next() {
-            (Token::KeyWord(ref k), span) if k == "fn" => self.function(span),
-            (Token::KeyWord(ref k), span) if k == "type" => self.user_type_def(span),
-            (Token::Id(id), span) => self.type_dec(&id, span),
+            (Token::KeyWord(ref k), span) if k == "fn" => {
+                let expr = self.function(span);
+                if expr.is_error() {
+                    self.recover(&[Token::Op(";".into())]);
+                }
+                expr
+            }
+            (Token::KeyWord(ref k), span) if k == "type" => {
+                let expr = self.user_type_def(span);
+                if expr.is_error() {
+                    self.recover(&[Token::Op(";".into())]);
+                }
+                expr
+            }
+            (Token::Id(id), span) => {
+                let expr = self.type_dec(&id, span);
+                if expr.is_error() {
+                    self.recover(&[Token::Op(";".into())]);
+                }
+                expr
+            }
             (_, span) => {
                 self.report("E0", "expressions not allowed in global scope", span)
             }
@@ -100,11 +127,14 @@ impl<'a> Parser<'a> {
         {
             let type_name = match t {
                 Token::Id(id) => id.to_string(),
-                t => unreachable!("found: {t:?}"),
+                _ => {
+                    let span = self.peek().1;
+                    return self.report("E10", "type declaration's end with a ';'", span);
+                }
             };
             match self.peek().0 {
                 Token::Op(ref op) if op == "->" => {
-                    self.lexer.next();
+                    self.next();
                 }
                 _ => {}
             }
@@ -121,16 +151,16 @@ impl<'a> Parser<'a> {
     }
 
     fn user_type_def(&mut self, start: Span) -> Expr {
-        let Some((Token::Id(name), _)) = self.lexer.next() else {
+        let Token::Id(name) = self.next().0 else {
             return self.report("E1", "missing identifier", start);
         };
 
         let mut variants = vec![];
         if let Some(_) = self.consume(Token::Op("=".into())) {
-            while let Some((Token::Id(name), _)) = self.lexer.next() {
+            while let Token::Id(name) = self.next().0 {
                 let mut type_list = vec![];
                 while let Some((Token::Id(type_id), _)) =
-                    self.lexer.next_if(|(t, _)| matches!(t, Token::Id(_)))
+                    self.next_if(|t| matches!(t, Token::Id(_)))
                 {
                     type_list.push(type_id);
                 }
@@ -150,7 +180,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn function(&mut self, start: Span) -> Expr {
-        let Some((Token::Id(name), _span)) = self.lexer.next() else {
+        let Token::Id(name) = self.next().0 else {
             return self.report("E1", "missing identifier", start);
         };
         let body = self
@@ -231,8 +261,14 @@ impl<'a> Parser<'a> {
                 return self.report("E13", "missing if keyword", span);
             };
             let condition = self.expression(Precedence::None);
-            // some how check if condition is valid
-            // is_error should work
+            if condition.is_error() {
+                self.errors.pop();
+                return self.report(
+                    "E20",
+                    "expected a condition for if statement",
+                    condition.span(),
+                );
+            }
             let Some((_, start)) = self.consume(Token::KeyWord("then".into())) else {
                 let span = self.peek().1;
                 return self.report("E13", "missing then keyword after if condition", span);
@@ -283,7 +319,7 @@ impl<'a> Parser<'a> {
     fn prefix_op(&mut self, op: &str, span: Span) -> Expr {
         match op {
             "(" => {
-                self.lexer.next();
+                self.next();
                 let lhs = self.closure();
                 let Some(_) = self.consume(Token::Op(")".into())) else {
                     let span = self.peek().1;
@@ -292,7 +328,7 @@ impl<'a> Parser<'a> {
                 lhs
             }
             o @ ("-" | "!") => {
-                self.lexer.next();
+                self.next();
                 let op = Op::try_from(o).unwrap();
                 let lhs = self.expression(Precedence::Unary);
                 let span = span.start..lhs.span().end;
@@ -318,31 +354,31 @@ impl<'a> Parser<'a> {
         let (token, start_span) = self.peek();
         let mut lhs = match token {
             Token::KeyWord(ref b) if b == "true" => {
-                self.lexer.next();
+                self.next();
                 Expr::Atom(Atom::Bool(true), start_span.clone())
             }
             Token::KeyWord(ref b) if b == "false" => {
-                self.lexer.next();
+                self.next();
                 Expr::Atom(Atom::Bool(false), start_span.clone())
             }
             Token::Int(int) => {
-                self.lexer.next();
+                self.next();
                 Expr::Atom(Atom::Int(int.parse().unwrap()), start_span.clone())
             }
             Token::Float(float) => {
-                self.lexer.next();
+                self.next();
                 Expr::Atom(Atom::Float(float.parse().unwrap()), start_span.clone())
             }
             Token::Id(ref id) => {
-                self.lexer.next();
+                self.next();
                 Expr::Atom(Atom::Id(id.into()), start_span.clone())
             }
             Token::String(ref string) => {
-                self.lexer.next();
+                self.next();
                 Expr::Atom(Atom::String(string.into()), start_span.clone())
             }
             Token::Char(ref c) => {
-                self.lexer.next();
+                self.next();
                 if c.chars().count() > 1 {
                     return self.report("E3", "invalid op char", start_span);
                 }
@@ -371,7 +407,7 @@ impl<'a> Parser<'a> {
                 | Precedence::Factor
                 | Precedence::Comparison
                 | Precedence::Equality => {
-                    let _ = self.lexer.next();
+                    let _ = self.next();
                     let rhs = self.expression(cbp);
                     lhs = Expr::Binary(
                         Op::try_from(&token).unwrap(),
@@ -382,7 +418,7 @@ impl<'a> Parser<'a> {
                 }
                 Precedence::Assignment | Precedence::None => break,
                 Precedence::Pipe => {
-                    let _ = self.lexer.next();
+                    let _ = self.next();
                     let rhs = self.call(cbp);
                     lhs = Expr::Binary(
                         Op::try_from(&token).unwrap(),

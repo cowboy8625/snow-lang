@@ -22,13 +22,16 @@ pub fn report(filename: &str, src: &str, errors: &[Error]) {
     });
     let snippets = errors
         .iter()
-        .filter_map(|error| {
+        .map(|error| {
             lines
                 .iter()
                 .find(|(_, span)| span.contains(&error.span.start))
-                .map(|(idx, _)| (idx, error))
+                .map_or_else(
+                    || (lines.last().unwrap().0, error),
+                    |(idx, _)| (*idx, error),
+                )
         })
-        .map(|(line, error)| snippet_builder(filename, *line, src, error))
+        .map(|(line, error)| snippet_builder(filename, line, src, error))
         .collect::<Vec<Snippet>>();
 
     for snippet in snippets {
@@ -43,6 +46,14 @@ fn snippet_builder<'a>(
     src: &'a str,
     error: &'a Error,
 ) -> Snippet<'a> {
+    let span = if error.span.end > src.len() {
+        (
+            error.span.start.saturating_sub(1),
+            error.span.end.saturating_sub(1),
+        )
+    } else {
+        (error.span.start, error.span.end)
+    };
     Snippet {
         title: Some(Annotation {
             label: Some(&error.label),
@@ -59,7 +70,7 @@ fn snippet_builder<'a>(
                 SourceAnnotation {
                     label: "",
                     annotation_type: AnnotationType::Error,
-                    range: (error.span.start, error.span.end),
+                    range: span,
                 },
                 // SourceAnnotation {
                 //     label: "while parsing this struct",

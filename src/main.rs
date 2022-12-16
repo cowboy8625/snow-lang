@@ -12,7 +12,8 @@ fn main() {
     CompilerBuilder::default()
         .debug_lexer(setting.debug_token)
         .debug_parser(setting.debug_ast)
-        .build(&filename);
+        .filename(filename)
+        .build();
 }
 
 #[derive(Debug, Default)]

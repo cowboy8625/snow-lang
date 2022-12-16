@@ -8,6 +8,8 @@ pub use snowc_type_checker::*;
 pub struct CompilerBuilder {
     debug_lexer: bool,
     debug_parser: bool,
+    filename: Option<String>,
+    src: Option<String>,
 }
 
 impl CompilerBuilder {
@@ -21,19 +23,41 @@ impl CompilerBuilder {
         self
     }
 
-    pub fn build(self, filename: impl Into<String>) -> Compiler {
+    pub fn filename(mut self, filename: impl Into<String>) -> Self {
+        self.filename = Some(filename.into());
+        self
+    }
+
+    pub fn src(mut self, src: impl Into<String>) -> Self {
+        self.src = Some(src.into());
+        self
+    }
+
+    pub fn build(mut self) -> Compiler {
         let Self {
             debug_lexer,
             debug_parser,
+            ..
         } = self;
 
-        let filename = filename.into();
+        let filename = if let Some(filename) = self.filename {
+            self.src = Some(
+                std::fs::read_to_string(&filename)
+                    .expect("failed to read file to string"),
+            );
+            filename
+        } else {
+            "no name".into()
+        };
+
         let msg = format_compiler_message("Compiling:");
         let msg = format!("{msg} {filename}");
-        println!("{}", msg);
+        eprintln!("{}", msg);
 
-        let src =
-            std::fs::read_to_string(&filename).expect("failed to read file to string");
+        let Some(src) = self.src else {
+            eprintln!("no src code to compile");
+            std::process::exit(1);
+        };
 
         let result_ast = timer("Parsing:", || {
             ParserBuilder::default()
