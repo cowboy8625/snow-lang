@@ -16,7 +16,7 @@ members = [
 ]
 
 [[bin]]
-name = "main"
+name = "snowc"
 path = "src/main.rs"
 
 [lib]
