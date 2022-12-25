@@ -21,15 +21,15 @@ impl TryFrom<Token> for Precedence {
     type Error = String;
     fn try_from(value: Token) -> Result<Self, Self::Error> {
         match value {
-            Token::Int(_)
-            | Token::Float(_)
-            | Token::String(_)
-            | Token::Char(_)
-            | Token::Id(_) => Ok(Self::Primary),
-            Token::KeyWord(ref b) if b == "true" || b == "false" => Ok(Self::Primary),
-            Token::KeyWord(_) => Ok(Self::None),
-            Token::Eof => Ok(Self::None),
-            Token::Op(ref op) => match op.as_str() {
+            Token::Int(..)
+            | Token::Float(..)
+            | Token::String(..)
+            | Token::Char(..)
+            | Token::Id(..) => Ok(Self::Primary),
+            Token::KeyWord(ref b, ..) if b == "true" || b == "false" => Ok(Self::Primary),
+            Token::KeyWord(..) => Ok(Self::None),
+            Token::Eof(..) => Ok(Self::None),
+            Token::Op(ref op, ..) => match op.as_str() {
                 "+" | "-" => Ok(Precedence::Term),
                 "*" | "/" => Ok(Precedence::Factor),
                 ">" | "<" | ">=" | "<=" => Ok(Precedence::Comparison),
@@ -38,7 +38,7 @@ impl TryFrom<Token> for Precedence {
                 "|>" => Ok(Precedence::Pipe),
                 _ => Ok(Precedence::None),
             },
-            Token::Error(c) => Err(format!("Unknown char {c}")),
+            Token::Error(c, ..) => Err(format!("Unknown char {c}")),
         }
     }
 }

@@ -1,11 +1,7 @@
-use super::{LexerDebug, Scanner, Token};
+use snowc_lexer::{LexerDebug, Scanner, Token};
 
-// #[cfg(test)]
-// use pretty_assertions::assert_eq;
-
-fn get_next<'a>(scanner: &mut Scanner, src: &'a str) -> Option<(Token, &'a str)> {
-    scanner.next().map(|(t, s)| (t, dbg!(&src[dbg!(s)])))
-}
+#[cfg(test)]
+use pretty_assertions::assert_eq;
 
 macro_rules! setup_test {
     ($name:ident, $input:expr $(, ($token:ident, $output:expr))* $(,)?) => {
@@ -15,10 +11,17 @@ macro_rules! setup_test {
             let src = $input;
             let mut scanner = Scanner::new(src, LexerDebug::Off);
             $(
-                assert_eq!(
-                    get_next(&mut scanner, src),
-                    Some(($token($output.into()), $output)), "{src}");
-            ) *
+                let (tok, found) = scanner.next().map(|t| {
+                    let span = t.span().range();
+                    (t, &src[span])
+                }).unwrap();
+
+                let span = tok.span();
+                let value = tok.value().to_string();
+                assert_eq!($token(value, span), tok, "token vs. token");
+                assert_eq!(tok.value(), $output, "captured in token");
+                assert_eq!(found, $output, "span in source");
+            )*
         }
     };
 }

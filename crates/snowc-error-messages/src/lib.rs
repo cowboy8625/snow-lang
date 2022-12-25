@@ -2,36 +2,38 @@ use annotate_snippets::{
     display_list::{DisplayList, FormatOptions},
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
+use snowc_lexer::Span;
 
 #[derive(Debug)]
 pub struct Error {
     pub id: String,
     pub label: String,
-    pub span: std::ops::Range<usize>,
+    pub span: Span,
 }
 
 pub fn report(filename: &str, src: &str, errors: &[Error]) {
-    let lines = src.lines().enumerate().fold(vec![], |mut acc, (idx, n)| {
-        let line_count = n.chars().count() + 1;
-        let Some((_, span)) = acc.last() else {
-            acc.push((idx, 0..line_count));
-            return acc;
-        };
-        acc.push((idx, span.end..span.end + line_count));
-        acc
-    });
+    // let lines = src.lines().enumerate().fold(vec![], |mut acc, (idx, n)| {
+    //     let line_count = n.chars().count() + 1;
+    //     let Some((_, span)) = acc.last() else {
+    //         acc.push((idx, 0..line_count));
+    //         return acc;
+    //     };
+    //     acc.push((idx, span.end..span.end + line_count));
+    //     acc
+    // });
     let snippets = errors
         .iter()
-        .map(|error| {
-            lines
-                .iter()
-                .find(|(_, span)| span.contains(&error.span.start))
-                .map_or_else(
-                    || (lines.last().unwrap().0, error),
-                    |(idx, _)| (*idx, error),
-                )
-        })
-        .map(|(line, error)| snippet_builder(filename, line, src, error))
+        // .map(|error| {
+        //     lines
+        //         .iter()
+        //         .find(|(_, span)| span.contains(&error.span.start))
+        //         .map_or_else(
+        //             || (lines.last().unwrap().0, error),
+        //             |(idx, _)| (*idx, error),
+        //         )
+        // })
+        // .map(|(line, error)| snippet_builder(filename, line, src, error))
+        .map(|error| snippet_builder(filename, src, error))
         .collect::<Vec<Snippet>>();
 
     for snippet in snippets {
@@ -42,7 +44,6 @@ pub fn report(filename: &str, src: &str, errors: &[Error]) {
 
 fn snippet_builder<'a>(
     filename: &'a str,
-    line: usize,
     src: &'a str,
     error: &'a Error,
 ) -> Snippet<'a> {
@@ -63,7 +64,7 @@ fn snippet_builder<'a>(
         footer: vec![],
         slices: vec![Slice {
             source: src,
-            line_start: line,
+            line_start: error.span.line,
             origin: Some(filename),
             fold: true,
             annotations: vec![

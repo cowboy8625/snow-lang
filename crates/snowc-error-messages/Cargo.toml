@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 annotate-snippets = { version = "0.9.1", features = ["color"] }
+snowc-lexer = { path = "../snowc-lexer" }

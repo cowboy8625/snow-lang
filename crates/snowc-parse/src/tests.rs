@@ -1,5 +1,7 @@
-use super::{precedence::Precedence, ParserBuilder};
+use super::{precedence::Precedence, ParserBuilder, Span};
 use snowc_error_messages::report;
+
+use pretty_assertions::assert_eq;
 
 fn parse_or_report(test_name: &str, src: &str) -> Vec<String> {
     let result = ParserBuilder::default()
@@ -7,6 +9,7 @@ fn parse_or_report(test_name: &str, src: &str) -> Vec<String> {
         .build(src)
         .parse();
     let Ok(ast) = result else {
+        eprintln!("{:?}", result);
         if let Err(errors) = result {
             report(test_name, src, &errors);
         }
@@ -151,7 +154,7 @@ fn function_def() {
     let src = "add x y = x + y;";
     let left = ParserBuilder::default()
         .build(src)
-        .function(0..0)
+        .function(Span::default())
         .to_string();
     assert_eq!(left, r#"<add: (\x -> (\y -> (+ x y)))>"#);
 }

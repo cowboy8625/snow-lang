@@ -22,7 +22,7 @@ impl TryFrom<&Token> for Op {
     type Error = &'static str;
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
         match token {
-            Token::Op(ref op) => Self::try_from(op),
+            Token::Op(ref op, ..) => Self::try_from(op),
             _ => Err("not a operator"),
         }
     }

@@ -2,8 +2,9 @@ mod scanner;
 #[cfg(test)]
 mod test;
 mod token;
+mod span;
 
-pub type Span = std::ops::Range<usize>;
+pub use span::Span;
 
 pub use crate::scanner::Scanner;
 pub use crate::token::Token;

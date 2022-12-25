@@ -1,7 +1,6 @@
-use snowc_parse::{Atom, Expr, Op};
+use snowc_parse::{Atom, Expr, Op, Span};
 
 type Types = std::collections::HashMap<String, TypedFunc>;
-type Span = std::ops::Range<usize>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Type {

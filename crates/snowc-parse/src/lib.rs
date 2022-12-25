@@ -7,9 +7,7 @@ mod precedence;
 #[cfg(test)]
 mod tests;
 use snowc_error_messages::Error;
-pub use snowc_lexer::{LexerDebug, Scanner, Token};
-
-type Span = std::ops::Range<usize>;
+pub use snowc_lexer::{LexerDebug, Scanner, Token, Span};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ParserDebug {
