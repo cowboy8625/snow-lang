@@ -78,10 +78,17 @@ impl<'a> Parser<'a> {
         Ok(ast)
     }
 
+    fn is_function(&mut self, token: &Token) -> bool {
+        (token.is_id() && self.peek().is_op_a("=")) ||
+            (token.is_id() && self.peek().is_id())
+    }
+
     fn declaration(&mut self) -> Expr {
         let token = self.next();
-        if token.is_keyword_a("fn") {
-            let expr = self.function(token.span());
+        // if token.is_keyword_a("fn") {
+        eprintln!("is {} a funciton? '{}'", self.is_function(&token), token.value());
+        if self.is_function(&token) {
+            let expr = self.function(&token);
             if expr.is_error() {
                 self.recover(&[Token::Op(";".into(), token.span())]);
             }
@@ -92,17 +99,20 @@ impl<'a> Parser<'a> {
                 self.recover(&[Token::Op(";".into(), token.span())]);
             }
             return expr;
-        } else if let Token::Id(id, span) = token {
-            let expr = self.type_dec(&id, span);
+        } else if token.is_id() && self.peek().is_op_a("::") {
+        // } else if let Token::Id(id, span) = token {
+            let expr = self.type_dec(&token);
             if expr.is_error() {
-                self.recover(&[Token::Op(";".into(), span)]);
+                self.recover(&[Token::Op(";".into(), token.span())]);
             }
             return expr;
         }
         self.report("E0", "expressions not allowed in global scope", token.span())
     }
 
-    fn type_dec(&mut self, name: &str, start: Span) -> Expr {
+    fn type_dec(&mut self, token: &Token) -> Expr {
+        let name = token.value();
+        let start = token.span();
         if !self.next().is_op_a("::") {
             return self.report("", "", start);
         }
@@ -119,7 +129,7 @@ impl<'a> Parser<'a> {
             let start = last_type_span.end;
             let end = tok.span().start;
             let span = Span::new(line, start, end);
-                    return self.report("E10", "type declaration's end with a ':'", span);
+                    return self.report("E10", "type declaration's end with a ';'", span);
                 }
             };
             match self.peek() {
@@ -172,10 +182,12 @@ impl<'a> Parser<'a> {
         Expr::Type(name.into(), variants, span)
     }
 
-    pub(crate) fn function(&mut self, start: Span) -> Expr {
-        let Token::Id(name, ..) = self.next() else {
-            return self.report("E1", "missing identifier", start);
-        };
+    pub(crate) fn function(&mut self, token: &Token) -> Expr {
+        let start = token.span();
+        let name = token.value();
+        // let Token::Id(name, ..) = self.next() else {
+        //     return self.report("E1", "missing identifier", start);
+        // };
         let body = self
             .expression(Precedence::Fn)
             .and_then(|lhs| {
@@ -212,7 +224,7 @@ impl<'a> Parser<'a> {
         }
         let end = self.next().span().end;
         let span = Span::new(start.line, start.start, end);
-        let func = Expr::Func(name, Box::new(body), span);
+        let func = Expr::Func(name.into(), Box::new(body), span);
         func
     }
 

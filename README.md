@@ -5,7 +5,15 @@ Snow is a pure functional language with a lot of inspiration from Haskall and OC
 # Syntax
 
 ```
-fn main = print "Hello World!";
+-- match statement
+main :: IO;
+main = print (fib 10);
+
+-- match statement
+fib :: Integer -> Integer
+fib 0 = 0
+fib 1 = 1
+fib n = fib (n-1) + fib (n-2)
 ```
 
 ### Todo

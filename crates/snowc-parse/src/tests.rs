@@ -1,4 +1,4 @@
-use super::{precedence::Precedence, ParserBuilder, Span};
+use super::{precedence::Precedence, ParserBuilder, Span, Token};
 use snowc_error_messages::report;
 
 use pretty_assertions::assert_eq;
@@ -151,17 +151,17 @@ fn conditional() {
 
 #[test]
 fn function_def() {
-    let src = "add x y = x + y;";
+    let src = "x y = x + y;";
     let left = ParserBuilder::default()
         .build(src)
-        .function(Span::default())
+        .function(&Token::Id("add".into(), Span::default()))
         .to_string();
     assert_eq!(left, r#"<add: (\x -> (\y -> (+ x y)))>"#);
 }
 
 #[test]
 fn super_duper_function_def() {
-    let src = "fn main = print (max ((add 1 2) + (sub 1 2)) 20);";
+    let src = "main = print (max ((add 1 2) + (sub 1 2)) 20);";
     let right = vec!["<main: <print: (<max: ((+ <add: (1, 2)> <sub: (1, 2)>), 20)>)>>"];
     let left = parse_or_report("super_duper_function_def", src);
     assert_eq!(left, right);
@@ -169,7 +169,7 @@ fn super_duper_function_def() {
 
 #[test]
 fn multi_function_def() {
-    let src = "fn add x y = x + y; fn sub x y = x - y;";
+    let src = "add x y = x + y; sub x y = x - y;";
     let right = vec![
         r#"<add: (\x -> (\y -> (+ x y)))>"#,
         r#"<sub: (\x -> (\y -> (- x y)))>"#,
@@ -180,12 +180,12 @@ fn multi_function_def() {
 
 #[test]
 fn closures() {
-    let src = "fn add = (λx -> (λy -> x + y));";
+    let src = "add = (λx -> (λy -> x + y));";
     let right = vec![r#"<add: (\x -> (\y -> (+ x y)))>"#];
     let left = parse_or_report("closures 1", src);
     assert_eq!(left, right);
 
-    let src = r#"fn add = (\x -> (\y -> x + y));"#;
+    let src = r#"add = (\x -> (\y -> x + y));"#;
     let right = vec![r#"<add: (\x -> (\y -> (+ x y)))>"#];
     let left = parse_or_report("closures 2", src);
     assert_eq!(left, right);
