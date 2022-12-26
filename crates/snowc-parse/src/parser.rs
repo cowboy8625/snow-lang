@@ -106,12 +106,20 @@ impl<'a> Parser<'a> {
         if !self.next().is_op_a("::") {
             return self.report("", "", start);
         }
+        // FIXME:[1](cowboy) types need to currently are only string.
+        //          Moving to a Ident { String, Span } could be
+        //          nice for error messages.
         let mut types = vec![];
-        while let Some(tok) = self.next_if(|t| !t.is_op_a(";")) {
+        let mut last_type_span = start;
+        while let Some(ref tok) = self.next_if(|t| !t.is_op_a(";")) {
             let type_name = match tok {
                 Token::Id(id, ..) => id.to_string(),
                 _ => {
-                    return self.report("E10", "type declaration's end with a ':'", tok.span());
+            let line = last_type_span.line;
+            let start = last_type_span.end;
+            let end = tok.span().start;
+            let span = Span::new(line, start, end);
+                    return self.report("E10", "type declaration's end with a ':'", span);
                 }
             };
             match self.peek() {
@@ -121,10 +129,15 @@ impl<'a> Parser<'a> {
                 _ => {}
             }
             types.push(type_name);
+            last_type_span = tok.span();
         }
 
         if !self.peek().is_op_a(";") {
-            let span = self.peek().span();
+            // setting up span
+            let line = last_type_span.line;
+            let start = last_type_span.start;
+            let end = self.peek().span().start;
+            let span = Span::new(line, start, end);
             return self.report("E10", "type declaration's end with a ';'", span);
         }
         let end = self.next().span().end;
