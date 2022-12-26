@@ -11,28 +11,51 @@ pub struct Error {
     pub span: Span,
 }
 
-pub fn report(filename: &str, src: &str, errors: &[Error]) {
-    // let lines = src.lines().enumerate().fold(vec![], |mut acc, (idx, n)| {
-    //     let line_count = n.chars().count() + 1;
-    //     let Some((_, span)) = acc.last() else {
-    //         acc.push((idx, 0..line_count));
-    //         return acc;
-    //     };
-    //     acc.push((idx, span.end..span.end + line_count));
-    //     acc
-    // });
-    let snippets = errors
+#[derive(Debug, Default)]
+pub struct Errors {
+    errors: Vec<Error>,
+}
+
+impl Errors {
+    pub fn push(&mut self, error: Error) {
+        self.errors.push(error)
+    }
+
+    pub fn pop_then_push(&mut self, error: Error) {
+        self.errors.pop();
+        self.errors.push(error)
+    }
+
+    pub fn pop(&mut self) -> Option<Error> {
+        self.errors.pop()
+    }
+
+    pub fn len(&self) -> usize {
+        self.errors.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    pub fn is_last_err_code(&self, codes: &[&str]) -> bool {
+        let Some(code) = self.last_err_code() else {
+            return false;
+        };
+        codes.contains(&code.as_str())
+    }
+
+    pub fn last_err_code(&self) -> Option<&String> {
+        let Some(error) = self.errors.last() else {
+            return None;
+        };
+        Some(&error.id)
+    }
+}
+
+pub fn report(filename: &str, src: &str, errors: &Errors) {
+    let snippets = errors.errors
         .iter()
-        // .map(|error| {
-        //     lines
-        //         .iter()
-        //         .find(|(_, span)| span.contains(&error.span.start))
-        //         .map_or_else(
-        //             || (lines.last().unwrap().0, error),
-        //             |(idx, _)| (*idx, error),
-        //         )
-        // })
-        // .map(|(line, error)| snippet_builder(filename, line, src, error))
         .map(|error| snippet_builder(filename, src, error))
         .collect::<Vec<Snippet>>();
 

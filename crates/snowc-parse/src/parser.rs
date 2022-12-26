@@ -2,13 +2,13 @@ use super::{
     expr::{Atom, Expr},
     op::Op,
     precedence::Precedence,
-    Error, ParserDebug, Scanner, Span, Token,
+    Error, Errors, ParserDebug, Scanner, Span, Token,
 };
 use std::iter::Peekable;
 
 pub struct Parser<'a> {
     pub(crate) lexer: Peekable<Scanner<'a>>,
-    errors: Vec<Error>,
+    errors: Errors,
     debug_parser: ParserDebug,
 }
 impl<'a> Parser<'a> {
@@ -23,7 +23,7 @@ impl<'a> Parser<'a> {
     ) -> Self {
         Self {
             lexer,
-            errors: vec![],
+            errors: Errors::default(),
             debug_parser,
         }
     }
@@ -62,7 +62,7 @@ impl<'a> Parser<'a> {
         self.next();
     }
 
-    pub fn parse(mut self) -> Result<Vec<Expr>, Vec<Error>> {
+    pub fn parse(mut self) -> Result<Vec<Expr>, Errors> {
         let Self { debug_parser, .. } = self;
         let mut ast = vec![];
         while !self.is_end() {
@@ -190,6 +190,9 @@ impl<'a> Parser<'a> {
             let lhs = self.closure();
             lhs
         });
+        if self.errors.is_last_err_code(&["E20"]) {
+            return Expr::Error(Span::default());
+        }
         if !self.peek().is_op_a(";") {
             let span = self.peek().span();
             return self.report("E10", "functions end with a ';'", span);
@@ -252,10 +255,14 @@ impl<'a> Parser<'a> {
             let condition = self.expression(Precedence::None);
             if condition.is_error() {
                 self.errors.pop();
+                let line = start.line;
+                let start = start.end;
+                let end = condition.span().start;
+                let span = Span::new(line, start, end);
                 return self.report(
                     "E20",
                     "expected a condition for if statement",
-                    condition.span(),
+                    span,
                 );
             }
             if self.next_if(|t| t.is_keyword_a("then")).is_none() {
