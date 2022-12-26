@@ -1,3 +1,7 @@
+// TODO:[1] (cowboy) move error messages to be a enum of error codes
+//          Error::E10 or Error::NoClosesSimiColon or
+//          self.report(Error::E10(last_token, token_found));
+//
 use super::{
     expr::{Atom, Expr},
     op::Op,
@@ -79,14 +83,18 @@ impl<'a> Parser<'a> {
     }
 
     fn is_function(&mut self, token: &Token) -> bool {
-        (token.is_id() && self.peek().is_op_a("=")) ||
-            (token.is_id() && self.peek().is_id())
+        (token.is_id() && self.peek().is_op_a("="))
+            || (token.is_id() && self.peek().is_id())
     }
 
     fn declaration(&mut self) -> Expr {
         let token = self.next();
         // if token.is_keyword_a("fn") {
-        eprintln!("is {} a funciton? '{}'", self.is_function(&token), token.value());
+        eprintln!(
+            "is {} a funciton? '{}'",
+            self.is_function(&token),
+            token.value()
+        );
         if self.is_function(&token) {
             let expr = self.function(&token);
             if expr.is_error() {
@@ -100,14 +108,18 @@ impl<'a> Parser<'a> {
             }
             return expr;
         } else if token.is_id() && self.peek().is_op_a("::") {
-        // } else if let Token::Id(id, span) = token {
+            // } else if let Token::Id(id, span) = token {
             let expr = self.type_dec(&token);
             if expr.is_error() {
                 self.recover(&[Token::Op(";".into(), token.span())]);
             }
             return expr;
         }
-        self.report("E0", "expressions not allowed in global scope", token.span())
+        self.report(
+            "E0",
+            "expressions not allowed in global scope",
+            token.span(),
+        )
     }
 
     fn type_dec(&mut self, token: &Token) -> Expr {
@@ -125,10 +137,12 @@ impl<'a> Parser<'a> {
             let type_name = match tok {
                 Token::Id(id, ..) => id.to_string(),
                 _ => {
-            let line = last_type_span.line;
-            let start = last_type_span.end;
-            let end = tok.span().start;
-            let span = Span::new(line, start, end);
+                    // FIXME:[2](cowboy) E10 for user type declarartions
+                    // not reporting correct spot for ';' placement.
+                    let line = last_type_span.line;
+                    let start = last_type_span.end;
+                    let end = tok.span().start;
+                    let span = Span::new(line, start, end);
                     return self.report("E10", "type declaration's end with a ';'", span);
                 }
             };
@@ -174,8 +188,12 @@ impl<'a> Parser<'a> {
             }
         }
         if !self.peek().is_op_a(";") {
-                let span = self.peek().span();
-                return self.report("E10", "type declaration's end with a ';'", span);
+            // let span = self.peek().span();
+            let line = start.line;
+            let start = start.end;
+            let end = self.peek().span().start;
+            let span = Span::new(line, start, end);
+            return self.report("E10", "type declaration's end with a ';'", span);
         }
         let end = self.next().span().end;
         let span = Span::new(start.line, start.start, end);
@@ -206,15 +224,19 @@ impl<'a> Parser<'a> {
                 });
                 f
             })
-        .or_else(|_| {
-            self.errors.pop();
-            if self.next_if(|t| t.is_op_a("=")).is_none() {
-                let span = self.peek().span();
-                return self.report("E11", "function requires '=' after name or params", span);
-            };
-            let lhs = self.closure();
-            lhs
-        });
+            .or_else(|_| {
+                self.errors.pop();
+                if self.next_if(|t| t.is_op_a("=")).is_none() {
+                    let span = self.peek().span();
+                    return self.report(
+                        "E11",
+                        "function requires '=' after name or params",
+                        span,
+                    );
+                };
+                let lhs = self.closure();
+                lhs
+            });
         if self.errors.is_last_err_code(&["E20"]) {
             return Expr::Error(Span::default());
         }
@@ -229,41 +251,52 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn closure(&mut self) -> Expr {
-        if self.next_if(|t| t.is_op_a("λ") || t.is_op_a("\\")).is_some() {
+        if self
+            .next_if(|t| t.is_op_a("λ") || t.is_op_a("\\"))
+            .is_some()
+        {
             let head = Box::new(self.expression(Precedence::Fn));
             let tail = Box::new(
                 self.closure()
-                .and_then(|mut lhs| {
-                    while let Token::Id(..) = self.peek() {
-                        let tail = Box::new(self.expression(Precedence::Fn));
+                    .and_then(|mut lhs| {
+                        while let Token::Id(..) = self.peek() {
+                            let tail = Box::new(self.expression(Precedence::Fn));
+                            let s = lhs.span();
+                            let line = s.line;
+                            let start = s.start;
+                            let end = tail.span().end;
+                            let span = Span::new(line, start, end);
+                            lhs = Expr::Closure(Box::new(lhs), tail, span);
+                        }
+                        if self.next_if(|t| t.is_op_a("->")).is_none() {
+                            let span = self.peek().span();
+                            return self.report(
+                                "E12",
+                                "missing '->' after closure param",
+                                span,
+                            );
+                        };
+                        let body = self.closure();
                         let s = lhs.span();
                         let line = s.line;
                         let start = s.start;
-                        let end = tail.span().end;
+                        let end = body.span().end;
                         let span = Span::new(line, start, end);
-                        lhs = Expr::Closure(Box::new(lhs), tail, span);
-                    }
-                    if self.next_if(|t| t.is_op_a("->")).is_none() {
-                        let span = self.peek().span();
-                        return self.report("E12", "missing '->' after closure param", span);
-                    };
-                    let body = self.closure();
-                    let s = lhs.span();
-                    let line = s.line;
-                    let start = s.start;
-                    let end = body.span().end;
-                    let span = Span::new(line, start, end);
-                    Expr::Closure(Box::new(lhs), Box::new(body), span)
-                })
-                .or_else(|_| {
-                    self.errors.pop();
-                    if self.next_if(|t| t.is_op_a("->")).is_none() {
-                        let span = self.peek().span();
-                        return self.report("E12", "missing '->' after closure param", span);
-                    };
-                    self.closure()
-                }),
-                );
+                        Expr::Closure(Box::new(lhs), Box::new(body), span)
+                    })
+                    .or_else(|_| {
+                        self.errors.pop();
+                        if self.next_if(|t| t.is_op_a("->")).is_none() {
+                            let span = self.peek().span();
+                            return self.report(
+                                "E12",
+                                "missing '->' after closure param",
+                                span,
+                            );
+                        };
+                        self.closure()
+                    }),
+            );
             let s = head.span();
             let line = s.line;
             let start = s.start;
@@ -284,20 +317,24 @@ impl<'a> Parser<'a> {
                 let start = start.end;
                 let end = condition.span().start;
                 let span = Span::new(line, start, end);
-                return self.report(
-                    "E20",
-                    "expected a condition for if statement",
-                    span,
-                );
+                return self.report("E20", "expected a condition for if statement", span);
             }
             if self.next_if(|t| t.is_keyword_a("then")).is_none() {
                 let span = self.peek().span();
-                return self.report("E13", "missing then keyword after if condition", span);
+                return self.report(
+                    "E13",
+                    "missing then keyword after if condition",
+                    span,
+                );
             }
             let branch1 = self.closure();
             if self.next_if(|t| t.is_keyword_a("else")).is_none() {
                 let span = self.peek().span();
-                return self.report("E13", "missing else keyword after then branch", span);
+                return self.report(
+                    "E13",
+                    "missing else keyword after then branch",
+                    span,
+                );
             }
             let branch2 = self.closure();
             let span = Span::new(start.line, start.start, branch2.span().end);
@@ -360,7 +397,9 @@ impl<'a> Parser<'a> {
             _ => {
                 let mut l = self.lexer.clone();
                 l.next();
-                if Op::try_from(op).is_ok() && l.peek().map(|t| t.is_op_a(")")).unwrap_or(false) {
+                if Op::try_from(op).is_ok()
+                    && l.peek().map(|t| t.is_op_a(")")).unwrap_or(false)
+                {
                     self.lexer = l;
                     let op = Op::try_from(op).unwrap();
                     Expr::Atom(Atom::Id(format!("({op})")), span)

@@ -54,7 +54,8 @@ impl Errors {
 }
 
 pub fn report(filename: &str, src: &str, errors: &Errors) {
-    let snippets = errors.errors
+    let snippets = errors
+        .errors
         .iter()
         .map(|error| snippet_builder(filename, src, error))
         .collect::<Vec<Snippet>>();
@@ -65,11 +66,7 @@ pub fn report(filename: &str, src: &str, errors: &Errors) {
     }
 }
 
-fn snippet_builder<'a>(
-    filename: &'a str,
-    src: &'a str,
-    error: &'a Error,
-) -> Snippet<'a> {
+fn snippet_builder<'a>(filename: &'a str, src: &'a str, error: &'a Error) -> Snippet<'a> {
     let span = if error.span.end > src.len() {
         (
             error.span.start.saturating_sub(1),

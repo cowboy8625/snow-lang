@@ -1,2 +1,2 @@
 main :: String
-fn main = if true then "Then" else "Else"
+main = if true then "Then" else "Else"

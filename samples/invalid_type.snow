@@ -1,2 +1,2 @@
 main :: Int;
-fn main = "Sring";
+main = "Sring";

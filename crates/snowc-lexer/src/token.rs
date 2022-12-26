@@ -79,7 +79,7 @@ impl Token {
             Self::Float(.., span) => *span,
             Self::String(.., span) => *span,
             Self::Char(.., span) => *span,
-            Self::Error(.., span)=> *span,
+            Self::Error(.., span) => *span,
             Self::Eof(span) => *span,
         }
     }

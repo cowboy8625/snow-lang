@@ -1,8 +1,9 @@
+// TODO:[2](cowboy) move scanner over to its own
+//              stream type to support peeking
+//              at nth none destructively.
 mod scanner;
-#[cfg(test)]
-mod test;
-mod token;
 mod span;
+mod token;
 
 pub use span::Span;
 

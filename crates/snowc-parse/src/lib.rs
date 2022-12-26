@@ -6,8 +6,8 @@ pub use op::Op;
 mod precedence;
 #[cfg(test)]
 mod tests;
-use snowc_error_messages::{Errors, Error};
-pub use snowc_lexer::{LexerDebug, Scanner, Token, Span};
+use snowc_error_messages::{Error, Errors};
+pub use snowc_lexer::{LexerDebug, Scanner, Span, Token};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ParserDebug {
