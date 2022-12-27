@@ -1,8 +1,8 @@
 use snowc_parse::{Atom, Expr, Op, Span};
 
-type Types = std::collections::HashMap<String, TypedFunc>;
+type Types = std::collections::HashMap<String, Item>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Int,
     Float,
@@ -10,11 +10,12 @@ pub enum Type {
     String,
     Char,
     IO,
+    Custom(String),
 }
 
-impl TryFrom<&String> for Type {
+impl TryFrom<(&String, &Types)> for Type {
     type Error = String;
-    fn try_from(t: &String) -> Result<Self, Self::Error> {
+    fn try_from((t, types): (&String, &Types)) -> Result<Self, Self::Error> {
         match t.as_str() {
             "Int" => Ok(Self::Int),
             "Float" => Ok(Self::Float),
@@ -22,8 +23,49 @@ impl TryFrom<&String> for Type {
             "String" => Ok(Self::String),
             "Char" => Ok(Self::Char),
             "IO" => Ok(Self::IO),
-            _ => Err(format!("unknown type '{t}'")),
+            _ => match types.get(t.as_str()) {
+                Some(ref item) => Ok(item.ret_type()),
+                None => Err(format!("unknown type '{t}'")),
+            },
         }
+    }
+}
+
+enum Item {
+    Func(TypedFunc),
+    Enum(TypedEnum),
+}
+
+impl Item {
+    fn ret_type(&self) -> Type {
+        match self {
+            Self::Func(typed_func) => typed_func.return_type.clone(),
+            Self::Enum(typed_enum) => typed_enum.ret_type(),
+        }
+    }
+    fn lookup(&self, name: impl Into<String>) -> Option<Type> {
+        match self {
+            Self::Func(typed_func) => typed_func.lookup(name),
+            _ => panic!("unbounded variable"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Hash)]
+struct Variant {
+    name: String,
+    memebers: Vec<Type>,
+}
+
+#[derive(Debug, Clone, Hash)]
+struct TypedEnum {
+    return_type: Type,
+    variants: Vec<Variant>,
+}
+
+impl TypedEnum {
+    fn ret_type(&self) -> Type {
+        self.return_type.clone()
     }
 }
 
@@ -62,7 +104,7 @@ impl TypedFunc {
 
 fn lookup(func_name: &str, env: &Types, id: &str) -> Type {
     match env.get(id) {
-        Some(type_func) => type_func.return_type,
+        Some(type_func) => type_func.ret_type(),
         None => match env.get(func_name).map(|i| i.lookup(id)).flatten() {
             Some(t) => t,
             None => panic!("unbound error '{id}' has never been created"),
@@ -126,7 +168,7 @@ fn type_check_app<'a>(
     let Expr::Atom(Atom::Id(name), _) = name else {
         return t;
     };
-    let Some(tfunc) = env.get(name) else {
+    let Some(Item::Func(tfunc)) = env.get(name) else {
         // span.clone(),
         panic!("undefined '{name}'");
     };
@@ -187,15 +229,30 @@ fn pair_up_params<'a>(
 
 fn default_types() -> Types {
     let mut env = Types::new();
-    let func = TypedFunc::new_with_args(Type::IO, vec![(Some("x".into()), Type::String)]);
+    let func = Item::Func(TypedFunc::new_with_args(
+        Type::IO,
+        vec![(Some("x".into()), Type::String)],
+    ));
     env.insert("print_str".into(), func);
-    let func = TypedFunc::new_with_args(Type::IO, vec![(Some("x".into()), Type::Int)]);
+    let func = Item::Func(TypedFunc::new_with_args(
+        Type::IO,
+        vec![(Some("x".into()), Type::Int)],
+    ));
     env.insert("print_int".into(), func);
-    let func = TypedFunc::new_with_args(Type::IO, vec![(Some("x".into()), Type::Float)]);
+    let func = Item::Func(TypedFunc::new_with_args(
+        Type::IO,
+        vec![(Some("x".into()), Type::Float)],
+    ));
     env.insert("print_float".into(), func);
-    let func = TypedFunc::new_with_args(Type::IO, vec![(Some("x".into()), Type::Char)]);
+    let func = Item::Func(TypedFunc::new_with_args(
+        Type::IO,
+        vec![(Some("x".into()), Type::Char)],
+    ));
     env.insert("print_char".into(), func);
-    let func = TypedFunc::new_with_args(Type::IO, vec![(Some("x".into()), Type::Bool)]);
+    let func = Item::Func(TypedFunc::new_with_args(
+        Type::IO,
+        vec![(Some("x".into()), Type::Bool)],
+    ));
     env.insert("print_bool".into(), func);
     env
 }
@@ -206,7 +263,7 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
     for def in ast.iter() {
         match def {
             Expr::Func(name, body, _) => {
-                let Some(type_func) = env.get_mut(name) else {
+                let Some(Item::Func(type_func)) = env.get_mut(name) else {
                     // span.clone(),
                     panic!(
                         "function '{name}' missing type declaration"
@@ -231,11 +288,30 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
                 };
                 let mut args = vec![];
                 for string_type in body.iter() {
-                    args.push((None, Type::try_from(string_type).unwrap()));
+                    args.push((None, Type::try_from((string_type, &env)).unwrap()));
                 }
-                let return_type = Type::try_from(&t).unwrap();
+                let return_type = Type::try_from((&t, &env)).unwrap();
                 let typed_func = TypedFunc::new_with_args(return_type, args);
-                env.insert(name.into(), typed_func);
+                env.insert(name.into(), Item::Func(typed_func));
+            }
+            Expr::Type(name, var, _) => {
+                let mut variants = vec![];
+                for (name, memb) in var.iter() {
+                    variants.push(Variant {
+                        name: name.to_string(),
+                        memebers: memb
+                            .iter()
+                            .map(|i| {
+                                Type::try_from((i, &env)).expect("failed to get type")
+                            })
+                            .collect(),
+                    })
+                }
+                let typed_enum = TypedEnum {
+                    return_type: Type::Custom(name.to_string()),
+                    variants,
+                };
+                env.insert(name.into(), Item::Enum(typed_enum));
             }
             _ => unimplemented!("for '{def}'"),
         }

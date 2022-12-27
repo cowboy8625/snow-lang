@@ -12,6 +12,7 @@ use std::iter::Peekable;
 
 pub struct Parser<'a> {
     pub(crate) lexer: Peekable<Scanner<'a>>,
+    token_stream: Vec<Token>,
     errors: Errors,
     debug_parser: ParserDebug,
 }
@@ -27,6 +28,7 @@ impl<'a> Parser<'a> {
     ) -> Self {
         Self {
             lexer,
+            token_stream: vec![],
             errors: Errors::default(),
             debug_parser,
         }
@@ -38,11 +40,19 @@ impl<'a> Parser<'a> {
         }
         None
     }
+
     fn next(&mut self) -> Token {
-        self.lexer.next().unwrap()
+        let token = self.lexer.next().unwrap();
+        self.token_stream.push(token.clone());
+        token
     }
+
     fn peek(&mut self) -> Token {
         self.lexer.peek().cloned().unwrap()
+    }
+
+    fn previous(&self) -> Option<&Token> {
+        self.token_stream.last()
     }
 
     fn is_end(&mut self) -> bool {
@@ -57,13 +67,24 @@ impl<'a> Parser<'a> {
         Expr::Error(s)
     }
 
+    // FIXME: This is broken
     fn recover(&mut self, deliminators: &[Token]) {
-        while let Some(_) = self.next_if(|t| !deliminators.contains(&t)) {
+        if self.errors.is_last_err_code(&["E10"]) {
+            return;
+        }
+        let mut last_span = self.previous().map(|t| t.span()).unwrap_or(Span::default());
+        println!("recovering");
+        while let Some(tok) = self.next_if(|t| !deliminators.contains(&t)) {
+            if tok.span().line > last_span.line {
+                break;
+            }
+            last_span = tok.span();
             if self.is_end() {
                 break;
             }
         }
         self.next();
+        dbg!(self.peek());
     }
 
     pub fn parse(mut self) -> Result<Vec<Expr>, Errors> {
@@ -89,20 +110,14 @@ impl<'a> Parser<'a> {
 
     fn declaration(&mut self) -> Expr {
         let token = self.next();
-        // if token.is_keyword_a("fn") {
-        eprintln!(
-            "is {} a funciton? '{}'",
-            self.is_function(&token),
-            token.value()
-        );
         if self.is_function(&token) {
             let expr = self.function(&token);
             if expr.is_error() {
                 self.recover(&[Token::Op(";".into(), token.span())]);
             }
             return expr;
-        } else if token.is_keyword_a("type") {
-            let expr = self.user_type_def(token.span());
+        } else if token.is_keyword_a("enum") {
+            let expr = self.enum_def(token.span());
             if expr.is_error() {
                 self.recover(&[Token::Op(";".into(), token.span())]);
             }
@@ -137,11 +152,11 @@ impl<'a> Parser<'a> {
             let type_name = match tok {
                 Token::Id(id, ..) => id.to_string(),
                 _ => {
-                    // FIXME:[2](cowboy) E10 for user type declarartions
-                    // not reporting correct spot for ';' placement.
-                    let line = last_type_span.line;
-                    let start = last_type_span.end;
-                    let end = tok.span().start;
+                    let idx = self.token_stream.len().saturating_sub(3);
+                    let last_token = &self.token_stream[idx];
+                    let line = last_token.span().line;
+                    let start = last_token.span().end;
+                    let end = last_type_span.start;
                     let span = Span::new(line, start, end);
                     return self.report("E10", "type declaration's end with a ';'", span);
                 }
@@ -169,7 +184,7 @@ impl<'a> Parser<'a> {
         Expr::TypeDec(name.into(), types, span)
     }
 
-    fn user_type_def(&mut self, start: Span) -> Expr {
+    fn enum_def(&mut self, start: Span) -> Expr {
         let Token::Id(name, ..) = self.next() else {
             return self.report("E1", "missing identifier", start);
         };
