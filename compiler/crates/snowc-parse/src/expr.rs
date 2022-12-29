@@ -45,7 +45,7 @@ pub enum Expr {
     Closure(Box<Self>, Box<Self>, Span),
     Func(String, Box<Self>, Span),
     App(Box<Self>, Vec<Self>, Span),
-    Type(String, Vec<(String, Vec<String>)>, Span),
+    Enum(String, Vec<(String, Vec<String>)>, Span),
     TypeDec(String, Vec<String>, Span),
     Error(Span),
 }
@@ -74,7 +74,7 @@ impl Expr {
             Self::Closure(.., span) => span.clone(),
             Self::Func(.., span) => span.clone(),
             Self::App(.., span) => span.clone(),
-            Self::Type(.., span) => span.clone(),
+            Self::Enum(.., span) => span.clone(),
             Self::TypeDec(.., span) => span.clone(),
             Self::Error(span) => span.clone(),
         }
@@ -86,7 +86,7 @@ impl Expr {
     is_expr!(is_clouser, Closure);
     is_expr!(is_func, Func);
     is_expr!(is_app, App);
-    is_expr!(is_type, Type);
+    is_expr!(is_type, Enum);
     is_expr!(is_type_dec, TypeDec);
     is_expr!(is_error, Error);
 }
@@ -117,7 +117,7 @@ impl fmt::Display for Expr {
                 write!(f, ")>")?;
                 Ok(())
             }
-            Self::Type(name, args, ..) => {
+            Self::Enum(name, args, ..) => {
                 if args.is_empty() {
                     return write!(f, "<{name}>");
                 }

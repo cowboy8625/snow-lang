@@ -6,7 +6,7 @@ pub use op::Op;
 mod precedence;
 #[cfg(test)]
 mod tests;
-use snowc_error_messages::{Error, Errors};
+use snowc_error_messages::{ErrorCode, Error};
 pub use snowc_lexer::{LexerDebug, Scanner, Span, Token};
 
 #[derive(Debug, Clone, Copy)]

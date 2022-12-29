@@ -1,23 +1,27 @@
 [package]
-name = "snowc"
+name = "compiler"
 version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+snowc-parse = { path="./crates/snowc-parse" }
+snowc-type-checker = { path="./crates/snowc-type-checker" }
+snowc-code-gen = { path="./crates/snowc-code-gen" }
+snowc-error-messages = { path = "./crates/snowc-error-messages" }
 clap = { version = "4.0.29", features = ["cargo"] }
 
-# [workspace]
-# members = [
-#     "./crates/*",
-# ]
+[workspace]
+members = [
+    "./crates/*",
+]
 
-# [[bin]]
-# name = "snowc"
-# path = "src/main.rs"
-#
-# [lib]
-# name = "snowc"
-# path = "src/lib.rs"
+[[bin]]
+name = "snowc"
+path = "src/main.rs"
+
+[lib]
+name = "snowc"
+path = "src/lib.rs"
 
 [profile.release]
 opt-level = 'z'     # Optimize for size.

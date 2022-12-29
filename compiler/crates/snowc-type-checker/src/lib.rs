@@ -294,7 +294,7 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
                 let typed_func = TypedFunc::new_with_args(return_type, args);
                 env.insert(name.into(), Item::Func(typed_func));
             }
-            Expr::Type(name, var, _) => {
+            Expr::Enum(name, var, _) => {
                 let mut variants = vec![];
                 for (name, memb) in var.iter() {
                     variants.push(Variant {
