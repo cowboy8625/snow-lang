@@ -1,19 +1,15 @@
+mod args;
 use vm::{Machine, parse, debug_program};
 
 
 fn main() {
-    let src = r#"
-main:
-        load %1 1
-        load %2 10
-loop:
-        add %0 %1 %0
-        eq %0 %2
-        jne loop
-        hlt
-"#;
-    println!("{src}\n");
-    let program = parse(src);
+    let settings = args::cargs();
+    let Some(filename) = settings.filename else {
+        eprintln!("expected a filename");
+        return;
+    };
+    let src = std::fs::read_to_string(filename).expect(&format!("failed to open file '{}'", filename));
+    let program = parse(&src);
     debug_program(&program);
 
     let mut vm = Machine::new(program);
