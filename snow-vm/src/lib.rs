@@ -438,16 +438,18 @@ pub struct Machine {
     pc: usize,
     running: bool,
     compare: bool,
+    debug: bool,
 }
 
 impl Machine {
-    pub fn new(program: Vec<u8>) -> Self {
+    pub fn new(program: Vec<u8>, debug: bool) -> Self {
     Self {
         program,
         registers: [0; 32],
         pc: 0,
         compare: false,
         running: true,
+        debug,
     }
     }
     fn get_next_u8(&mut self) -> u8 {
@@ -527,15 +529,38 @@ impl Machine {
     fn inc(&mut self) {
         let des = self.get_next_u8() as usize;
         self.registers[des] += 1;
+        self.get_next_u8();
+        self.get_next_u8();
     }
 
     fn dec(&mut self) {
         let des = self.get_next_u8() as usize;
         self.registers[des] -= 1;
+        self.get_next_u8();
+        self.get_next_u8();
     }
 
     fn hlt(&mut self) {
         self.running = false;
+    }
+
+    fn debug(&self) {
+        debug_program(&self.program);
+        for regs in self.registers.chunks(8) {
+            let r = regs.iter().map(|r| format!("r{r:<4}")).collect::<String>();
+            eprintln!("{r}");
+        }
+
+        for regs in self.program.chunks(4) {
+            let r = regs.iter().map(|r| format!("{:<6}", format!("{r:#04X}"))).collect::<String>();
+            eprintln!("{r}");
+        }
+    }
+
+    fn get_opcode(&mut self) -> OpCode {
+        let opcode = OpCode::from(self.program[self.pc]);
+        self.pc += 1;
+        opcode
     }
 
     pub fn run_once(&mut self) {
@@ -545,14 +570,7 @@ impl Machine {
             self.hlt();
             return;
         }
-        let opcode = (program[*pc]).try_into();
-        let Ok(opcode) = opcode else {
-            eprintln!("encountered unknown byte code");
-            self.hlt();
-            return;
-        };
-        self.pc += 1;
-        match opcode {
+        match self.get_opcode() {
             OpCode::Load => self.load(),
             OpCode::Add => self.add(),
             OpCode::Sub => self.sub(),
@@ -573,15 +591,9 @@ impl Machine {
         while self.running {
             self.run_once();
         }
-        // eprintln!("pc: {} program len: {}", &self.pc, self.program.len());
-        for regs in self.registers.chunks(8) {
-            let r = regs.iter().map(|r| format!("r{r:<4}")).collect::<String>();
-            eprintln!("{r}");
-        }
+        if self.debug {
+            self.debug();
 
-        for regs in self.program.chunks(4) {
-            let r = regs.iter().map(|r| format!("{:<6}", format!("{r:#04X}"))).collect::<String>();
-            eprintln!("{r}");
         }
     }
 }
@@ -745,6 +757,10 @@ fn vm_hlt() {
     let program = parse(src);
     let mut vm = Machine::new(program);
     assert!(vm.running);
+    vm.run_once();
+    vm.run_once();
+    vm.run_once();
+    vm.run_once();
     vm.run_once();
     assert!(!vm.running);
 }

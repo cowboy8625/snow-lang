@@ -1,0 +1,6 @@
+load %1 20
+loop:
+    inc %0
+    eq %0 %1
+    jne loop
+    hlt
