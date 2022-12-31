@@ -5,7 +5,6 @@ type Stream<'a> = Peekable<Chars<'a>>;
 #[derive(Debug, Clone)]
 pub struct Scanner<'a> {
     stream: Stream<'a>,
-    char_stream: Vec<char>,
     span: Span,
     current: Option<char>,
     previous: Option<char>,
@@ -15,8 +14,7 @@ pub struct Scanner<'a> {
 impl<'a> Scanner<'a> {
     pub fn new(src: &'a str, debug_lexer: LexerDebug) -> Self {
         Self {
-            stream: src.clone().chars().peekable(),
-            char_stream: src.chars().collect(),
+            stream: src.chars().peekable(),
             span: Span::default(),
             current: None,
             previous: None,
@@ -24,15 +22,6 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn next_char2(&mut self) -> char {
-        let idx = self.span.end;
-        self.span.shift_right();
-        self.char_stream[idx]
-    }
-
-    fn previous() -> char {
-        todo!()
-    }
     fn advance(&mut self) {
         match self.current {
             Some(c) => {
