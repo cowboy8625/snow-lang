@@ -7,6 +7,7 @@ mod opcode;
 
 pub use assembler::{SymbolTable, Assembler};
 pub use debug::{debug_opcode, hex_dump, debug_program};
+pub use machine::Machine;
 
 // #[test]
 // fn parse_test() {
