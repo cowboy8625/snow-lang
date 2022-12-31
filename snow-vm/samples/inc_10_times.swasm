@@ -1,3 +1,7 @@
+.entry main
+.data
+.text
+main:
   load %1 10
 loop:
   inc %0 

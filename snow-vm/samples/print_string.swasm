@@ -1,0 +1,7 @@
+.entry main
+.data
+name: .ascii  "hello world!"
+.text
+main:
+  prts name
+  hlt

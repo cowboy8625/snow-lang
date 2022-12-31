@@ -27,8 +27,6 @@ pub fn cargs() -> Settings {
     if let Some(filename) = matches.get_one::<String>("filename") {
         settings.filename = Some(filename.to_string());
     }
-    settings.debug = *matches
-        .get_one::<bool>("debug")
-        .expect("debug failed");
+    settings.debug = *matches.get_one::<bool>("debug").expect("debug failed");
     settings
 }
