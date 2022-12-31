@@ -36,7 +36,6 @@ impl From<&TokenOp> for OpCode {
             TokenOp::Dec(..) => Self::Dec,
             TokenOp::Eq(..) => Self::Eq,
             TokenOp::Hlt => Self::Hlt,
-            _ => unimplemented!("{:?}", value),
         }
     }
 }
