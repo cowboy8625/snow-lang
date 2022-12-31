@@ -20,7 +20,7 @@ impl FromStr for Entry {
         if head.trim() != ".entry" {
             return Err(Error::Unexpected(head.into(), ".entry".into()));
         }
-        let (head, tail) = tail.split_once('\n').unwrap_or((s, ""));
+        let (head, _tail) = tail.split_once('\n').unwrap_or((s, ""));
         Ok(Self {
             name: head.to_string(),
         })

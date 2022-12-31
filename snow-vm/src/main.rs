@@ -1,5 +1,5 @@
 mod args;
-use vm::{debug_program, Assembler, Machine};
+use vm::{Assembler, Machine};
 
 fn main() {
     let settings = args::cargs();
@@ -8,7 +8,7 @@ fn main() {
         return;
     };
     let src = std::fs::read_to_string(filename)
-        .expect(&format!("failed to open file '{}'", filename));
+        .unwrap_or_else(|_| panic!("failed to open file '{}'", filename));
     match Assembler::new(&src).assemble() {
         Ok(program) => {
             let mut vm = Machine::new(program, settings.debug);

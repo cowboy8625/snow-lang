@@ -7,13 +7,6 @@ pub struct Data {
     pub directive: Directive,
 }
 
-impl Data {
-    pub fn len(&self) -> usize {
-        let Self { name, directive } = self;
-        format!("{name}: ").len() + directive.len()
-    }
-}
-
 impl FromStr for Data {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {

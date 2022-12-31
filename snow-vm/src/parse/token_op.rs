@@ -16,7 +16,6 @@ pub enum TokenOp {
     Inc(u8),
     Dec(u8),
     Hlt,
-    Ige,
 }
 
 impl TokenOp {
@@ -41,7 +40,6 @@ impl TokenOp {
             Self::Inc(a) => Ok([code, a, 0, 0]),
             Self::Dec(a) => Ok([code, a, 0, 0]),
             Self::Hlt => Ok([code, 0, 0, 0]),
-            Self::Ige => panic!("unknown opcode"),
         }
     }
 }

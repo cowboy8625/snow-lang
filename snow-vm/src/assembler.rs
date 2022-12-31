@@ -35,7 +35,7 @@ impl<'a> Assembler<'a> {
             Ok(entry) => {
                 self.cursor += entry.len();
                 let Entry { name } = entry;
-                self.entry_point = Some(name.into());
+                self.entry_point = Some(name);
                 self.executable.extend_from_slice(&Self::MAGIC_NUMBER);
                 while self.executable.len() < Self::HEADER_SIZE {
                     self.executable.push(0);
@@ -48,7 +48,7 @@ impl<'a> Assembler<'a> {
     fn set_header_text_section(&mut self) {
         let start = self.executable.len() as u32;
         let [a, b, c, d] = start.to_le_bytes();
-        self.executable[Self::TEXT_OFFSET + 0] = a;
+        self.executable[Self::TEXT_OFFSET] = a;
         self.executable[Self::TEXT_OFFSET + 1] = b;
         self.executable[Self::TEXT_OFFSET + 2] = c;
         self.executable[Self::TEXT_OFFSET + 3] = d;
@@ -56,7 +56,7 @@ impl<'a> Assembler<'a> {
 
     fn set_header_entry_point(&mut self, offset: u32) {
         let [a, b, c, d] = offset.to_le_bytes();
-        self.executable[Self::ENTRY_OFFSET + 0] = a;
+        self.executable[Self::ENTRY_OFFSET] = a;
         self.executable[Self::ENTRY_OFFSET + 1] = b;
         self.executable[Self::ENTRY_OFFSET + 2] = c;
         self.executable[Self::ENTRY_OFFSET + 3] = d;
@@ -71,12 +71,12 @@ impl<'a> Assembler<'a> {
             executable,
             ..
         } = self;
-        let (head, tail) = &input[*cursor..].split_once('\n').unwrap_or((input, ""));
+        let (head, _tail) = &input[*cursor..].split_once('\n').unwrap_or((input, ""));
         if head != &".data" {
             return;
         }
         *cursor += head.len() + 1;
-        while let Some((head, tail)) = &input[*cursor..].split_once('\n') {
+        while let Some((head, _tail)) = &input[*cursor..].split_once('\n') {
             if head == &".text" {
                 break;
             }
@@ -86,7 +86,7 @@ impl<'a> Assembler<'a> {
                     let Data { name, directive } = data;
                     self.symbol.insert(name, executable.len() as u32);
                     let bytes = &directive.into_bytes();
-                    executable.extend_from_slice(&bytes);
+                    executable.extend_from_slice(bytes);
                 }
                 Err(e) => {
                     self.errors.push(e);
@@ -141,7 +141,7 @@ impl<'a> Assembler<'a> {
         for line in input[*cursor..].lines() {
             let line = line.trim();
             if let Ok(opcode) = line.parse::<TokenOp>() {
-                match opcode.into_bytes(&symbol) {
+                match opcode.into_bytes(symbol) {
                     Ok(code) => {
                         executable.extend_from_slice(&code);
                     }

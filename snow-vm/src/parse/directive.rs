@@ -7,12 +7,6 @@ pub enum Directive {
 }
 
 impl Directive {
-    pub fn len(&self) -> usize {
-        match self {
-            Self::Ascii(s) => format!(".ascii \"{s}\"").len(),
-        }
-    }
-
     pub fn into_bytes(self) -> Vec<u8> {
         match self {
             Self::Ascii(string) => {
@@ -31,8 +25,8 @@ impl FromStr for Directive {
         match head {
             ".ascii" => {
                 let name = tail
-                    .strip_prefix("\"")
-                    .and_then(|s| s.strip_suffix("\""))
+                    .strip_prefix('\"')
+                    .and_then(|s| s.strip_suffix('\"'))
                     .unwrap_or_default();
                 Ok(Self::Ascii(name.into()))
             }

@@ -157,7 +157,7 @@ impl Machine {
     }
 
     pub fn run_once(&mut self) {
-        let Self { program, pc, .. } = self;
+        let Self { program,  .. } = self;
         if program.is_empty() || !self.running {
             eprintln!("nothing to run");
             return;
