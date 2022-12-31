@@ -24,10 +24,10 @@ impl FromStr for Directive {
         let (head, tail) = s.split_once(' ').unwrap_or((s, ""));
         match head {
             ".ascii" => {
-                let name = tail
-                    .strip_prefix('\"')
-                    .and_then(|s| s.strip_suffix('\"'))
-                    .unwrap_or_default();
+                let Some(name) = tail.trim()
+                    .strip_prefix('\"').and_then(|s| s.strip_suffix("\"")) else {
+                    return Err(Error::DirectiveFormat(tail.into()));
+                };
                 Ok(Self::Ascii(name.into()))
             }
             _ => Err(Error::DirectiveFormat(tail.into())),

@@ -130,6 +130,26 @@ impl Machine {
         self.get_next_u8();
     }
 
+    fn prts(&mut self) {
+        use std::io::Write;
+        let v0 = self.get_next_u8() as u32;
+        let v1 = self.get_next_u8() as u32;
+        let v2 = self.get_next_u8() as u32;
+        let ptr = ((v0 << 8) | (v1 << 4) | v2) as usize;
+        let byte_string = self.program[ptr..]
+            .iter()
+            .take_while(|i| **i!=0)
+            .copied()
+            .collect::<Vec<u8>>();
+        match String::from_utf8(byte_string) {
+            Ok(s)=> {
+                print!("{s}");
+                std::io::stdout().flush().expect("failed to flush");
+            }
+            Err(e) => println!("{e:?}"),
+        }
+    }
+
     fn hlt(&mut self) {
         self.running = false;
     }
@@ -174,6 +194,7 @@ impl Machine {
             OpCode::Eq => self.eq(),
             OpCode::Inc => self.inc(),
             OpCode::Dec => self.dec(),
+            OpCode::Prts => self.prts(),
             OpCode::Hlt => self.hlt(),
             OpCode::Ige => panic!("unknown opcode"),
         }

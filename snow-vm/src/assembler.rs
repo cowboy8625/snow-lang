@@ -174,7 +174,6 @@ name: .ascii "Hello World!"
 main:
 hlt
 "#;
-    let exe = Assembler::new(src).assemble();
-    dbg!(exe);
+    let _exe = Assembler::new(src).assemble().unwrap();
     assert!(false);
 }

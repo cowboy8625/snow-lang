@@ -7,7 +7,7 @@ pub fn debug_opcode(chunk: &[u8]) {
     };
     let opcode = OpCode::from(a);
     let addr = match opcode {
-        OpCode::Jmp | OpCode::Jeq | OpCode::Jne => u32::from_be_bytes([0, b, c, d]),
+        OpCode::Jmp | OpCode::Jeq | OpCode::Jne | OpCode::Prts => u32::from_be_bytes([0, b, c, d]),
         OpCode::Load => u32::from_be_bytes([0, 0, c, d]),
         _ => 0,
     };
@@ -24,6 +24,7 @@ pub fn debug_opcode(chunk: &[u8]) {
         OpCode::Inc => eprintln!("inc %{b}"),
         OpCode::Dec => eprintln!("dec %{b}"),
         OpCode::Hlt => eprintln!("hlt"),
+        OpCode::Prts => eprintln!("prts {addr}"),
         OpCode::Ige => eprintln!("ige {a} {c} {c} {d}"),
     }
 }

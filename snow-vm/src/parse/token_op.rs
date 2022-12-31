@@ -15,6 +15,7 @@ pub enum TokenOp {
     Eq(u8, u8),
     Inc(u8),
     Dec(u8),
+    Prts(Location),
     Hlt,
 }
 
@@ -29,7 +30,8 @@ impl TokenOp {
             Self::Mul(a, b, c) => Ok([code, a, b, c]),
             Self::Jmp(Location(ref name))
             | Self::Jeq(Location(ref name))
-            | Self::Jne(Location(ref name)) => {
+            | Self::Jne(Location(ref name))
+            | Self::Prts(Location(ref name))=> {
                 let Some(value) = labels.get(name) else {
                     return Err(Error::LabelNotDefined(name.into()));
                 };
@@ -60,6 +62,7 @@ impl FromStr for TokenOp {
             "eq" => parse_eq(tail),
             "inc" => parse_inc(tail),
             "dec" => parse_dec(tail),
+            "prts" => parse_prts(tail),
             "hlt" => Ok(TokenOp::Hlt),
             _ => Err(UnrecognizedTokenOpError(tail.into())),
         }
@@ -153,6 +156,13 @@ fn parse_dec(input: &str) -> Result<TokenOp, UnrecognizedTokenOpError> {
         return Err(UnrecognizedTokenOpError(input.into()));
     };
     Ok(TokenOp::Dec(r1))
+}
+
+fn parse_prts(input: &str) -> Result<TokenOp, UnrecognizedTokenOpError> {
+    let TokenOp::Jmp(loc) = parse_jmp(input)? else {
+        return Err(UnrecognizedTokenOpError(input.into()));
+    };
+    Ok(TokenOp::Prts(loc))
 }
 
 #[test]

@@ -119,5 +119,5 @@ fn format_compiler_message(msg: impl Into<String>) -> String {
     let msg = msg.into();
     let w = msg.len() + (15 - msg.len());
     let msg = format!("{:>w$}", msg);
-    format!("{msg}")
+    msg
 }
