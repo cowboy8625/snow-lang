@@ -22,6 +22,7 @@ pub fn debug_opcode(chunk: &[u8]) -> String {
         OpCode::Jeq => format!("jeq {addr}"),
         OpCode::Jne => format!("jne {addr}"),
         OpCode::Eq => format!("eq %{b} {c}"),
+        OpCode::Neq => format!("neq %{b} {c}"),
         OpCode::Inc => format!("inc %{b}"),
         OpCode::Dec => format!("dec %{b}"),
         OpCode::Hlt => format!("hlt"),

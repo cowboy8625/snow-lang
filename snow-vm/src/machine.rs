@@ -116,6 +116,13 @@ impl Machine {
         self.compare = lhs == rhs;
     }
 
+    fn neq(&mut self) {
+        let lhs = self.registers[self.get_next_u8() as usize];
+        let rhs = self.registers[self.get_next_u8() as usize];
+        self.get_next_u8();
+        self.compare = lhs != rhs;
+    }
+
     fn inc(&mut self) {
         let des = self.get_next_u8() as usize;
         self.registers[des] += 1;
@@ -189,6 +196,7 @@ impl Machine {
             OpCode::Jeq => self.jeq(),
             OpCode::Jne => self.jne(),
             OpCode::Eq => self.eq(),
+            OpCode::Neq => self.neq(),
             OpCode::Inc => self.inc(),
             OpCode::Dec => self.dec(),
             OpCode::Prts => self.prts(),

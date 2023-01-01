@@ -17,8 +17,6 @@ fn remove_she_bang_bin(program: &mut Vec<u8>) {
 fn remove_she_bang_src(src: &mut String) {
     if src.starts_with("#!/") {
         let (_head, tail) = src.split_once('\n').unwrap_or_default();
-        println!("{_head:?}");
-        println!("{tail:?}");
         *src = tail.to_string();
     }
 }
