@@ -12,12 +12,12 @@
 |    eq     | reg   | reg  | N/A  |
 |    neq    | reg   | reg  | N/A  |
 |    gt     | reg   | reg  | N/A  |
-|    inc    | reg 2+|     N/A     |
-|    dec    | reg 2+|     N/A     |
-|    jmp  3+|       label name    |
-|    jeq  3+|       label name    |
-|    jne  3+|       label name    |
-|    prts 3+|       label name    |
-|    hlt  3+|         N/A         |
-|    nop  3+|         N/A         |
-|    ige  3+|         N/A         |
+|    inc    | reg |     N/A     |
+|    dec    | reg |     N/A     |
+|    jmp  |       label name    |
+|    jeq  |       label name    |
+|    jne  |       label name    |
+|    prts |       label name    |
+|    hlt  |         N/A         |
+|    nop  |         N/A         |
+|    ige  |         N/A         |
