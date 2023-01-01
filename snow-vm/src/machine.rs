@@ -6,6 +6,7 @@ pub struct Machine {
     pc: usize,
     running: bool,
     compare: bool,
+    remainder: u32,
     debug: bool,
 }
 
@@ -17,6 +18,7 @@ impl Machine {
             pc: 0,
             compare: false,
             running: true,
+            remainder: 0,
             debug,
         }
     }
@@ -74,6 +76,7 @@ impl Machine {
         let rhs = self.registers[self.get_next_u8() as usize];
         let des = self.get_next_u8() as usize;
         self.registers[des] = lhs / rhs;
+        self.remainder = lhs % rhs;
     }
 
     fn mult(&mut self) {
