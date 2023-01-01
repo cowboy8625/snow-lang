@@ -120,13 +120,13 @@ impl Error {
 
 pub fn report(filename: &str, src: &str, error: &Error) {
     let Error { cause, .. } = &error;
-    let snippet = snippet_builder(filename, src, &error);
+    let snippet = snippet_builder(filename, src, error);
     let dl = DisplayList::from(snippet);
     eprintln!("{}", dl);
     let Some(cause) = cause else {
         return;
     };
-    report(filename, src, &cause);
+    report(filename, src, cause);
 }
 
 fn snippet_builder<'a>(filename: &'a str, src: &'a str, error: &'a Error) -> Snippet<'a> {

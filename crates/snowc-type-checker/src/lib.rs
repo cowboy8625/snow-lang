@@ -24,7 +24,7 @@ impl TryFrom<(&String, &Types)> for Type {
             "Char" => Ok(Self::Char),
             "IO" => Ok(Self::IO),
             _ => match types.get(t.as_str()) {
-                Some(ref item) => Ok(item.ret_type()),
+                Some(item) => Ok(item.ret_type()),
                 None => Err(format!("unknown type '{t}'")),
             },
         }
@@ -105,7 +105,7 @@ impl TypedFunc {
 fn lookup(func_name: &str, env: &Types, id: &str) -> Type {
     match env.get(id) {
         Some(type_func) => type_func.ret_type(),
-        None => match env.get(func_name).map(|i| i.lookup(id)).flatten() {
+        None => match env.get(func_name).and_then(|i| i.lookup(id)) {
             Some(t) => t,
             None => panic!("unbound error '{id}' has never been created"),
         },
@@ -183,7 +183,7 @@ fn type_check_app<'a>(
             // arg.span(),
             panic!(
                 "expected '{pt:?}' for {} but found '{t:?}'",
-                arg_name.clone().unwrap_or("<name>".to_string())
+                arg_name.clone().unwrap_or_else(|| "<name>".to_string())
             );
         }
     }
@@ -208,7 +208,7 @@ fn type_of<'a>(func_name: &str, env: &Types, e: &'a Expr) -> Type {
 }
 
 fn pair_up_params<'a>(
-    func_name: String,
+    _func_name: String,
     type_func: &mut TypedFunc,
     expr: &'a Expr,
 ) -> &'a Expr {
@@ -224,7 +224,7 @@ fn pair_up_params<'a>(
         panic!("unimplemented yet for '{expr}'");
     };
     type_func.push_arg(name);
-    pair_up_params(func_name, type_func, &tail)
+    pair_up_params(_func_name, type_func, tail)
 }
 
 fn default_types() -> Types {
@@ -271,7 +271,7 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
                 };
                 let body = pair_up_params(name.into(), type_func, body);
                 let dec_return_type = type_func.return_type.clone();
-                let return_type = type_of(&name, &env, body);
+                let return_type = type_of(name, &env, body);
                 if return_type != dec_return_type {
                     // body.span(),
                     panic!(

@@ -70,7 +70,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn span(&mut self) -> Span {
-        let span = self.span.clone();
+        let span = self.span;
         self.reset_span();
         span
     }
@@ -96,13 +96,13 @@ impl<'a> Scanner<'a> {
             ident.push(ch);
         }
         let span = self.span();
-        Token::lookup(&ident.clone()).map_or(Token::Id(ident.into(), span), |i| {
+        Token::lookup(&ident.clone()).map_or(Token::Id(ident, span), |i| {
             Token::KeyWord(i.into(), span)
         })
     }
 
     fn line_comment(&mut self) -> Option<Token> {
-        while let Some(_) = self.next_if(|c| c != &'\n') {}
+        while self.next_if(|c| c != &'\n').is_some() {}
         self.next()
     }
 
@@ -136,7 +136,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn debug_token(&mut self, token: Option<Token>) -> Token {
-        let token = token.unwrap_or(Token::Eof(self.span()));
+        let token = token.unwrap_or_else(|| Token::Eof(self.span()));
         if let LexerDebug::On = self.debug_lexer {
             let kind = token.value();
             let span = token.span();

@@ -71,7 +71,7 @@ impl<'a> Parser<'a> {
     }
 
     fn report(&mut self, id: ErrorCode, span: Span) -> Expr {
-        let s = span.clone();
+        let s = span;
         let last = self.errors.take();
         let error = Error::new_with_cause(id, span, last);
         self.errors = Some(error);
@@ -85,7 +85,7 @@ impl<'a> Parser<'a> {
                 return;
             }
         }
-        let mut last_span = self.previous().map(|t| t.span()).unwrap_or(Span::default());
+        let mut last_span = self.previous().map(|t| t.span()).unwrap_or_else(Span::default);
         println!("recovering");
         while let Some(tok) = self.next_if(|t| !deliminators.contains(&t)) {
             if tok.span().line > last_span.line {
@@ -219,7 +219,7 @@ impl<'a> Parser<'a> {
         }
         let end = self.next().span().end;
         let span = Span::new(start.line, start.start, end);
-        Expr::Enum(name.into(), variants, span)
+        Expr::Enum(name, variants, span)
     }
 
     pub(crate) fn function(&mut self, token: &Token) -> Expr {
@@ -237,11 +237,10 @@ impl<'a> Parser<'a> {
                     return self.report(ErrorCode::Unknown, span);
                 }
                 let body = self.closure();
-                let f = args.into_iter().rev().fold(body, |last, next| {
+                args.into_iter().rev().fold(body, |last, next| {
                     let span = Span::new(start.line, start.start, last.span().end);
                     Expr::Closure(Box::new(next), Box::new(last), span)
-                });
-                f
+                })
             })
             .or_else(|_| {
                 self.remove_last_error();
@@ -249,8 +248,7 @@ impl<'a> Parser<'a> {
                     let span = self.peek().span();
                     return self.report(ErrorCode::Unknown, span);
                 };
-                let lhs = self.closure();
-                lhs
+                self.closure()
             });
         if let Some(error) = &self.errors {
             if error.get_error_code() == ErrorCode::E0020 {
@@ -263,8 +261,7 @@ impl<'a> Parser<'a> {
         }
         let end = self.next().span().end;
         let span = Span::new(start.line, start.start, end);
-        let func = Expr::Func(name.into(), Box::new(body), span);
-        func
+        Expr::Func(name.into(), Box::new(body), span)
     }
 
     pub(crate) fn closure(&mut self) -> Expr {
@@ -407,7 +404,7 @@ impl<'a> Parser<'a> {
                     Expr::Atom(Atom::Id(format!("({op})")), span)
                 } else {
                     // return self.report("E2", "unknown op char", span);
-                    return self.report(ErrorCode::Unknown, span);
+                    self.report(ErrorCode::Unknown, span)
                 }
             }
         }
@@ -446,7 +443,7 @@ impl<'a> Parser<'a> {
                     // return self.report("E3", "invalid op char", span);
                     return self.report(ErrorCode::Unknown, span);
                 }
-                let Some(c) = c.chars().nth(0) else {
+                let Some(c) = c.chars().next() else {
                     // return self.report("E4", "invalid char definition", span);
                     return self.report(ErrorCode::Unknown, span);
                 };

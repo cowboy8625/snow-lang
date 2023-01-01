@@ -25,7 +25,7 @@ pub enum Token {
     Eof(Span),
 }
 impl Token {
-    pub fn lookup<'a>(id: &'a str) -> Option<&'a str> {
+    pub fn lookup(id: &str) -> Option<&str> {
         match id {
             "enum" | "data" | "type" | "true" | "false" | "return" | "let" | "and"
             | "or" | "not" | "if" | "then" | "else" | "fn" => Some(id),

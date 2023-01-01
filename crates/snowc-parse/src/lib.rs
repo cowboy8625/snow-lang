@@ -56,6 +56,6 @@ impl ParserBuilder {
 macro_rules! bail {
     ($span:expr $(, $arg:expr)* $(,)?) => {{
         let msg = format!($($arg, )*);
-        return Err(Box::new(crate::error::ParserError::new(msg, $span)));
+        return Err(Box::new($crate::error::ParserError::new(msg, $span)));
     }};
 }

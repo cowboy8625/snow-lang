@@ -4,12 +4,6 @@ pub use snowc_error_messages::*;
 pub use snowc_parse::*;
 pub use snowc_type_checker::*;
 
-enum CompilerPhase {
-    Parse,
-    TypeCheck,
-    CodeGen,
-}
-
 #[derive(Debug, Default)]
 pub struct CompilerBuilder {
     debug_lexer: bool,

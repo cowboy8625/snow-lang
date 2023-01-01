@@ -67,16 +67,16 @@ impl Expr {
 
     pub fn span(&self) -> Span {
         match self {
-            Self::Atom(.., span) => span.clone(),
-            Self::Unary(.., span) => span.clone(),
-            Self::Binary(.., span) => span.clone(),
-            Self::IfElse(.., span) => span.clone(),
-            Self::Closure(.., span) => span.clone(),
-            Self::Func(.., span) => span.clone(),
-            Self::App(.., span) => span.clone(),
-            Self::Enum(.., span) => span.clone(),
-            Self::TypeDec(.., span) => span.clone(),
-            Self::Error(span) => span.clone(),
+            Self::Atom(.., span) => *span,
+            Self::Unary(.., span) => *span,
+            Self::Binary(.., span) => *span,
+            Self::IfElse(.., span) => *span,
+            Self::Closure(.., span) => *span,
+            Self::Func(.., span) => *span,
+            Self::App(.., span) => *span,
+            Self::Enum(.., span) => *span,
+            Self::TypeDec(.., span) => *span,
+            Self::Error(span) => *span,
         }
     }
     is_expr!(is_atom, Atom);
@@ -125,8 +125,8 @@ impl fmt::Display for Expr {
                     format!("<{name}: "),
                     |fstring, (i, (name, type_arg))| {
                         let targs = type_arg.iter().fold("".to_string(), |fstring, t| {
-                            if fstring == "" {
-                                format!("{t}")
+                            if fstring.is_empty() {
+                                t.to_string()
                             } else {
                                 format!("{fstring}, {t}")
                             }
@@ -142,8 +142,8 @@ impl fmt::Display for Expr {
             }
             Self::TypeDec(name, type_list, ..) => {
                 let types = type_list.iter().fold("".to_string(), |fstring, item| {
-                    if fstring == "" {
-                        format!("{item}")
+                    if fstring.is_empty() {
+                        item.to_string()
                     } else {
                         format!("{fstring} -> {item}")
                     }
