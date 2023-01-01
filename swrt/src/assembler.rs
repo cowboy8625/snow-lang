@@ -103,7 +103,7 @@ impl<'a> Assembler<'a> {
 
         let (head, _) = input[*cursor..].split_once('\n').unwrap_or((input, ""));
         if head != ".text" {
-            panic!("expected a '.text'");
+            panic!("expected a '.text' found '{}'", head);
         }
         *cursor += head.len() + 1;
         let mut pc = executable.len() as u32;
@@ -137,13 +137,20 @@ impl<'a> Assembler<'a> {
         } = self;
         for line in input[*cursor..].lines() {
             let line = line.trim();
-            if let Ok(opcode) = line.parse::<TokenOp>() {
-                match opcode.into_bytes(symbol) {
-                    Ok(code) => {
-                        executable.extend_from_slice(&code);
+            match line.parse::<TokenOp>() {
+                Ok(opcode) =>  {
+                    match opcode.into_bytes(symbol) {
+                        Ok(code) => {
+                            executable.extend_from_slice(&code);
+                        }
+                        Err(e) => self.errors.push(e),
+                    };
+                }
+                Err(e) => {
+                    if line.parse::<Label>().is_err() {
+                        self.errors.push(e);
                     }
-                    Err(e) => self.errors.push(e),
-                };
+                }
             }
         }
     }

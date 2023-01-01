@@ -7,7 +7,7 @@ mod reg;
 mod token_op;
 
 pub use super::{
-    error::{Error, UnrecognizedTokenOpError},
+    error::Error,
     opcode::OpCode,
     SymbolTable,
 };

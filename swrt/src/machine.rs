@@ -1,12 +1,13 @@
-use super::{debug_program, opcode::OpCode};
+use super::{debug_program, debug_opcode, opcode::OpCode};
 
 pub struct Machine {
-    registers: [u32; 32],
     program: Vec<u8>,
+    registers: [u32; 32],
+    heap: Vec<u8>,
+    stack: Vec<u32>,
     pc: usize,
     running: bool,
     compare: bool,
-    remainder: u32,
     debug: bool,
 }
 
@@ -15,10 +16,11 @@ impl Machine {
         Self {
             program,
             registers: [0; 32],
+            heap: vec![],
+            stack: vec![],
             pc: 0,
             compare: false,
             running: true,
-            remainder: 0,
             debug,
         }
     }
@@ -57,6 +59,41 @@ impl Machine {
         self.registers[des] = value;
     }
 
+    fn push(&mut self) {
+        let src = self.get_next_u8() as usize;
+        let value = self.registers[src];
+        self.stack.push(value);
+        self.get_next_u8();
+        self.get_next_u8();
+    }
+
+    fn pop(&mut self) {
+        let des = self.get_next_u8() as usize;
+        let value = self.stack.pop().unwrap_or_default();
+        self.registers[des] = value;
+        self.get_next_u8();
+        self.get_next_u8();
+    }
+
+    fn aloc(&mut self) {
+        let src = self.get_next_u8() as usize;
+        let value = self.registers[src] as usize;
+        self.heap.resize_with(self.heap.len() + value, Default::default);
+        self.get_next_u8();
+        self.get_next_u8();
+    }
+
+    fn setm(&mut self) {
+        let offset = self.get_next_u8() as usize;
+        let src = self.get_next_u8() as usize;
+        let offset = self.registers[offset] as usize;
+        let src = self.registers[src];
+        for (i, v) in src.to_be_bytes().iter().enumerate() {
+            self.heap[offset + i] = *v;
+        }
+        self.get_next_u8();
+    }
+
     fn add(&mut self) {
         let lhs = self.registers[self.get_next_u8() as usize];
         let rhs = self.registers[self.get_next_u8() as usize];
@@ -76,7 +113,13 @@ impl Machine {
         let rhs = self.registers[self.get_next_u8() as usize];
         let des = self.get_next_u8() as usize;
         self.registers[des] = lhs / rhs;
-        self.remainder = lhs % rhs;
+    }
+
+    fn r#mod(&mut self) {
+        let lhs = self.registers[self.get_next_u8() as usize];
+        let rhs = self.registers[self.get_next_u8() as usize];
+        let des = self.get_next_u8() as usize;
+        self.registers[des] = lhs % rhs;
     }
 
     fn mult(&mut self) {
@@ -133,6 +176,27 @@ impl Machine {
         self.compare = lhs > rhs;
     }
 
+    fn geq(&mut self) {
+        let lhs = self.registers[self.get_next_u8() as usize];
+        let rhs = self.registers[self.get_next_u8() as usize];
+        self.get_next_u8();
+        self.compare = lhs >= rhs;
+    }
+
+    fn lt(&mut self) {
+        let lhs = self.registers[self.get_next_u8() as usize];
+        let rhs = self.registers[self.get_next_u8() as usize];
+        self.get_next_u8();
+        self.compare = lhs < rhs;
+    }
+
+    fn leq(&mut self) {
+        let lhs = self.registers[self.get_next_u8() as usize];
+        let rhs = self.registers[self.get_next_u8() as usize];
+        self.get_next_u8();
+        self.compare = lhs <= rhs;
+    }
+
     fn inc(&mut self) {
         let des = self.get_next_u8() as usize;
         self.registers[des] += 1;
@@ -165,6 +229,14 @@ impl Machine {
             }
             Err(e) => println!("{e:?}"),
         }
+    }
+    
+    fn prti(&mut self) {
+        let src = self.get_next_u8() as usize;
+        let value = self.registers[src];
+        println!("{value}");
+        self.get_next_u8();
+        self.get_next_u8();
     }
 
     fn hlt(&mut self) {
@@ -202,9 +274,14 @@ impl Machine {
         }
         match self.get_opcode() {
             OpCode::Load => self.load(),
+            OpCode::Push => self.push(),
+            OpCode::Pop => self.pop(),
+            OpCode::Aloc => self.aloc(),
+            OpCode::Setm => self.setm(),
             OpCode::Add => self.add(),
             OpCode::Sub => self.sub(),
             OpCode::Div => self.div(),
+            OpCode::Mod => self.r#mod(),
             OpCode::Mul => self.mult(),
             OpCode::Jmp => self.jmp(),
             OpCode::Jeq => self.jeq(),
@@ -212,9 +289,13 @@ impl Machine {
             OpCode::Eq => self.eq(),
             OpCode::Neq => self.neq(),
             OpCode::Gt => self.gt(),
+            OpCode::Geq => self.geq(),
+            OpCode::Lt => self.lt(),
+            OpCode::Leq => self.leq(),
             OpCode::Inc => self.inc(),
             OpCode::Dec => self.dec(),
             OpCode::Prts => self.prts(),
+            OpCode::Prti => self.prti(),
             OpCode::Hlt => self.hlt(),
             OpCode::Nop => {}
             OpCode::Ige => panic!("unknown opcode"),
@@ -224,13 +305,13 @@ impl Machine {
     pub fn run(&mut self) {
         self.read_header();
         while self.running {
-            self.run_once();
-            // let opcode = OpCode::from(self.program[self.pc]);
+            // let a = self.program[self.pc];
             // let b = self.program[self.pc+1];
             // let c = self.program[self.pc+2];
             // let d = self.program[self.pc+3];
-            // eprintln!("{opcode:?} {b} {c} {d}");
+            // eprintln!("{}: {}", self.pc,  debug_opcode(&[a, b, c, d]));
             // std::io::stdin().read_line(&mut "".into()).expect("");
+            self.run_once();
         }
         if self.debug {
             self.debug();

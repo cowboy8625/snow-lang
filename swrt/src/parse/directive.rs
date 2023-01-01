@@ -22,6 +22,7 @@ impl Directive {
                         _ => b.push(c as u8),
                     }
                 }
+                b.push(0);
                 b
             }
         }
