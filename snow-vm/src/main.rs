@@ -1,6 +1,6 @@
 mod args;
-use vm::{Assembler, Machine};
 use std::io::Read;
+use vm::{Assembler, Machine};
 
 fn remove_she_bang_bin(program: &mut Vec<u8>) {
     let [a, b] = program[0..2] else {
@@ -10,7 +10,7 @@ fn remove_she_bang_bin(program: &mut Vec<u8>) {
         let Some(idx) = program.iter().position(|i| i == &b'\n') else {
             panic!("she bang mest up");
         };
-        *program = program[idx+1..].to_vec();
+        *program = program[idx + 1..].to_vec();
     }
 }
 
@@ -30,9 +30,11 @@ fn main() {
     if settings.bin_file {
         let mut file = std::fs::OpenOptions::new()
             .read(true)
-            .open(filename).expect("failed to open file");
+            .open(filename)
+            .expect("failed to open file");
         let mut program = vec![];
-        file.read_to_end(&mut program).expect("filed to read bin file");
+        file.read_to_end(&mut program)
+            .expect("filed to read bin file");
         remove_she_bang_bin(&mut program);
         let mut vm = Machine::new(program, settings.debug);
         vm.run();
@@ -48,7 +50,8 @@ fn main() {
                 .create(true)
                 .write(true)
                 .truncate(true)
-                .open("helloworld").expect("failed to open file");
+                .open("helloworld")
+                .expect("failed to open file");
             file.write_all(&program).expect("failed to write to file");
 
             let mut vm = Machine::new(program, settings.debug);

@@ -23,6 +23,7 @@ pub fn debug_opcode(chunk: &[u8]) -> String {
         OpCode::Jne => format!("jne {addr}"),
         OpCode::Eq => format!("eq %{b} {c}"),
         OpCode::Neq => format!("neq %{b} {c}"),
+        OpCode::Gt => format!("gt %{b} {c}"),
         OpCode::Inc => format!("inc %{b}"),
         OpCode::Dec => format!("dec %{b}"),
         OpCode::Hlt => format!("hlt"),
@@ -33,12 +34,12 @@ pub fn debug_opcode(chunk: &[u8]) -> String {
 }
 
 pub fn hex_dump(i: usize, chunk: &[u8]) -> String {
-        let c = chunk
-            .iter()
-            .map(|r| format!("{:<6}", format!("{r:#04X}")))
-            .collect::<String>();
-        let line_num = i * 4;
-        format!("{line_num:>3} {line_num:#04X}: {c}")
+    let c = chunk
+        .iter()
+        .map(|r| format!("{:<6}", format!("{r:#04X}")))
+        .collect::<String>();
+    let line_num = i * 4;
+    format!("{line_num:>3} {line_num:#04X}: {c}")
 }
 pub fn hex_dump_chunks(program: &[u8]) {
     for (i, chunk) in program.chunks(4).enumerate() {

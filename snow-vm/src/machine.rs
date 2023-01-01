@@ -123,6 +123,13 @@ impl Machine {
         self.compare = lhs != rhs;
     }
 
+    fn gt(&mut self) {
+        let lhs = self.registers[self.get_next_u8() as usize];
+        let rhs = self.registers[self.get_next_u8() as usize];
+        self.get_next_u8();
+        self.compare = lhs > rhs;
+    }
+
     fn inc(&mut self) {
         let des = self.get_next_u8() as usize;
         self.registers[des] += 1;
@@ -165,11 +172,15 @@ impl Machine {
         debug_program(&self.program);
         eprintln!("--- reg ---");
         for (x, regs) in self.registers.chunks(8).enumerate() {
-            let r = regs.iter().enumerate().map(|(i, r)| {
-                let num = (x*8) + i;
-                let reg = format!("%{num}");
-                format!("{reg:>3}<-{r:<2}  ")
-            }).collect::<String>();
+            let r = regs
+                .iter()
+                .enumerate()
+                .map(|(i, r)| {
+                    let num = (x * 8) + i;
+                    let reg = format!("%{num}");
+                    format!("{reg:>3}<-{r:<2}  ")
+                })
+                .collect::<String>();
             eprintln!("{r}");
         }
     }
@@ -197,11 +208,12 @@ impl Machine {
             OpCode::Jne => self.jne(),
             OpCode::Eq => self.eq(),
             OpCode::Neq => self.neq(),
+            OpCode::Gt => self.gt(),
             OpCode::Inc => self.inc(),
             OpCode::Dec => self.dec(),
             OpCode::Prts => self.prts(),
             OpCode::Hlt => self.hlt(),
-            OpCode::Nop => {},
+            OpCode::Nop => {}
             OpCode::Ige => panic!("unknown opcode"),
         }
     }
@@ -227,34 +239,45 @@ impl Machine {
 mod test {
     use super::Machine;
     use crate::assembler::Assembler;
-    // #[test]
-    // fn vm_load() {
-    //     let program = assemble("load %0 123");
-    //     let mut vm = Machine::new(program, true);
-    //     vm.run_once();
-    //     let mut right = [0u32; 32];
-    //     right[0] = 123;
-    //     assert_eq!(&vm.registers, &right);
-    // }
-    //
-    // #[test]
-    // fn vm_add() {
-    //     let src = r#"
-    // load %0 123
-    // load %1 321
-    // add %0 %1 %2
-    // "#;
-    //     let program = assemble(src);
-    //     let mut vm = Machine::new(program, true);
-    //     vm.run_once();
-    //     vm.run_once();
-    //     vm.run_once();
-    //     let mut right = [0u32; 32];
-    //     right[0] = 123;
-    //     right[1] = 321;
-    //     right[2] = 444;
-    //     assert_eq!(&vm.registers, &right);
-    // }
+    #[test]
+    fn vm_load() {
+        let src = r#"
+.entry main
+.text
+main:
+    load %0 123
+"#;
+        let program = Assembler::new(src).assemble().unwrap();
+        let mut vm = Machine::new(program, true);
+        vm.read_header();
+        vm.run_once();
+        let mut right = [0u32; 32];
+        right[0] = 123;
+        assert_eq!(&vm.registers, &right);
+    }
+
+    #[test]
+    fn vm_add() {
+        let src = r#"
+.entry main
+.text
+main:
+    load %0 123
+    load %1 321
+    add %0 %1 %2
+    "#;
+        let program = Assembler::new(src).assemble().unwrap();
+        let mut vm = Machine::new(program, true);
+        vm.read_header();
+        vm.run_once();
+        vm.run_once();
+        vm.run_once();
+        let mut right = [0u32; 32];
+        right[0] = 123;
+        right[1] = 321;
+        right[2] = 444;
+        assert_eq!(&vm.registers, &right);
+    }
     //
     // #[test]
     // fn vm_sub() {

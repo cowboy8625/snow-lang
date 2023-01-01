@@ -14,6 +14,7 @@ pub enum TokenOp {
     Jne(Location),
     Eq(u8, u8),
     Neq(u8, u8),
+    Gt(u8, u8),
     Inc(u8),
     Dec(u8),
     Prts(Location),
@@ -42,6 +43,7 @@ impl TokenOp {
             }
             Self::Eq(a, b) => Ok([code, a, b, 0]),
             Self::Neq(a, b) => Ok([code, a, b, 0]),
+            Self::Gt(a, b) => Ok([code, a, b, 0]),
             Self::Inc(a) => Ok([code, a, 0, 0]),
             Self::Dec(a) => Ok([code, a, 0, 0]),
             Self::Hlt => Ok([code, 0, 0, 0]),
@@ -65,6 +67,7 @@ impl FromStr for TokenOp {
             "jne" => parse_jne(tail),
             "eq" => parse_eq(tail),
             "neq" => parse_neq(tail),
+            "gt" => parse_gt(tail),
             "inc" => parse_inc(tail),
             "dec" => parse_dec(tail),
             "prts" => parse_prts(tail),
@@ -154,6 +157,12 @@ fn parse_neq(input: &str) -> Result<TokenOp, UnrecognizedTokenOpError> {
         return Err(UnrecognizedTokenOpError(input.into()));
     };
     Ok(TokenOp::Neq(r1, r2))
+}
+fn parse_gt(input: &str) -> Result<TokenOp, UnrecognizedTokenOpError> {
+    let TokenOp::Eq(r1, r2) = parse_eq(input)? else {
+        return Err(UnrecognizedTokenOpError(input.into()));
+    };
+    Ok(TokenOp::Gt(r1, r2))
 }
 
 fn parse_inc(input: &str) -> Result<TokenOp, UnrecognizedTokenOpError> {
