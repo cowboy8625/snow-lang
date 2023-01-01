@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use super::UnrecognizedTokenOpError;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Reg(pub u8);

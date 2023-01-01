@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use super::UnrecognizedTokenOpError;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Label(pub String);
@@ -29,4 +29,3 @@ impl FromStr for Label {
         Ok(Self(s[..s.len() - 1].to_string()))
     }
 }
-

@@ -138,11 +138,11 @@ impl Machine {
         let ptr = ((v0 << 8) | (v1 << 4) | v2) as usize;
         let byte_string = self.program[ptr..]
             .iter()
-            .take_while(|i| **i!=0)
+            .take_while(|i| **i != 0)
             .copied()
             .collect::<Vec<u8>>();
         match String::from_utf8(byte_string) {
-            Ok(s)=> {
+            Ok(s) => {
                 print!("{s}");
                 std::io::stdout().flush().expect("failed to flush");
             }
@@ -156,16 +156,13 @@ impl Machine {
 
     fn debug(&self) {
         debug_program(&self.program);
-        for regs in self.registers.chunks(8) {
-            let r = regs.iter().map(|r| format!("r{r:<4}")).collect::<String>();
-            eprintln!("{r}");
-        }
-
-        for regs in self.program.chunks(4) {
-            let r = regs
-                .iter()
-                .map(|r| format!("{:<6}", format!("{r:#04X}")))
-                .collect::<String>();
+        eprintln!("--- reg ---");
+        for (x, regs) in self.registers.chunks(8).enumerate() {
+            let r = regs.iter().enumerate().map(|(i, r)| {
+                let num = (x*8) + i;
+                let reg = format!("%{num}");
+                format!("{reg:>3}<-{r:<2}  ")
+            }).collect::<String>();
             eprintln!("{r}");
         }
     }
@@ -177,7 +174,7 @@ impl Machine {
     }
 
     pub fn run_once(&mut self) {
-        let Self { program,  .. } = self;
+        let Self { program, .. } = self;
         if program.is_empty() || !self.running {
             eprintln!("nothing to run");
             return;
@@ -221,177 +218,177 @@ impl Machine {
 mod test {
     use super::Machine;
     use crate::assembler::Assembler;
-// #[test]
-// fn vm_load() {
-//     let program = assemble("load %0 123");
-//     let mut vm = Machine::new(program, true);
-//     vm.run_once();
-//     let mut right = [0u32; 32];
-//     right[0] = 123;
-//     assert_eq!(&vm.registers, &right);
-// }
-//
-// #[test]
-// fn vm_add() {
-//     let src = r#"
-// load %0 123
-// load %1 321
-// add %0 %1 %2
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     vm.run_once();
-//     vm.run_once();
-//     vm.run_once();
-//     let mut right = [0u32; 32];
-//     right[0] = 123;
-//     right[1] = 321;
-//     right[2] = 444;
-//     assert_eq!(&vm.registers, &right);
-// }
-//
-// #[test]
-// fn vm_sub() {
-//     let src = r#"
-// load %0 321
-// load %1 123
-// sub %0 %1 %2
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     vm.run_once();
-//     vm.run_once();
-//     vm.run_once();
-//     let mut right = [0u32; 32];
-//     right[0] = 321;
-//     right[1] = 123;
-//     right[2] = 198;
-//     assert_eq!(&vm.registers, &right);
-// }
-//
-// #[test]
-// fn vm_mul() {
-//     let src = r#"
-// load %0 321
-// load %1 123
-// mul %0 %1 %2
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     vm.run_once();
-//     vm.run_once();
-//     vm.run_once();
-//     let mut right = [0u32; 32];
-//     right[0] = 321;
-//     right[1] = 123;
-//     right[2] = 39483;
-//     assert_eq!(&vm.registers, &right);
-// }
-//
-// #[test]
-// fn vm_div() {
-//     let src = r#"
-// load %0 321
-// load %1 123
-// div %0 %1 %2
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     vm.run_once();
-//     vm.run_once();
-//     vm.run_once();
-//     let mut right = [0u32; 32];
-//     right[0] = 321;
-//     right[1] = 123;
-//     right[2] = 2;
-//     assert_eq!(&vm.registers, &right);
-// }
-//
-// #[test]
-// fn vm_jmp() {
-//     let src = r#"
-// main:
-//     jmp main
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     assert_eq!(vm.pc, 0, "start");
-//     vm.run_once();
-//     assert_eq!(vm.pc, 0, "after ran once");
-// }
-//
-// #[test]
-// fn vm_jeq() {
-//     let src = r#"
-// main:
-//     eq %0 %1
-//     jeq main
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     assert_eq!(vm.pc, 0, "start");
-//     vm.run_once();
-//     vm.run_once();
-//     assert_eq!(vm.pc, 0, "after ran once");
-// }
-//
-// #[test]
-// fn vm_eq() {
-//     let src = r#"
-// eq %0 %1
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     assert!(!vm.compare);
-//     vm.run_once();
-//     assert!(vm.compare);
-// }
-//
-// #[test]
-// fn vm_inc() {
-//     let src = r#"
-// inc %0
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     vm.run_once();
-//     let mut right = [0u32; 32];
-//     right[0] = 1;
-//     assert_eq!(vm.registers, right);
-// }
-//
-// #[test]
-// fn vm_dec() {
-//     let src = r#"
-// dec %0
-// "#;
-//     let program = assemble(src);
-//     let mut vm = Machine::new(program, true);
-//     vm.registers[0] = 100;
-//     vm.run_once();
-//     let mut right = [0u32; 32];
-//     right[0] = 99;
-//     assert_eq!(vm.registers, right);
-// }
-//
-#[test]
-fn vm_hlt() {
-    let src = r#"
+    // #[test]
+    // fn vm_load() {
+    //     let program = assemble("load %0 123");
+    //     let mut vm = Machine::new(program, true);
+    //     vm.run_once();
+    //     let mut right = [0u32; 32];
+    //     right[0] = 123;
+    //     assert_eq!(&vm.registers, &right);
+    // }
+    //
+    // #[test]
+    // fn vm_add() {
+    //     let src = r#"
+    // load %0 123
+    // load %1 321
+    // add %0 %1 %2
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     vm.run_once();
+    //     vm.run_once();
+    //     vm.run_once();
+    //     let mut right = [0u32; 32];
+    //     right[0] = 123;
+    //     right[1] = 321;
+    //     right[2] = 444;
+    //     assert_eq!(&vm.registers, &right);
+    // }
+    //
+    // #[test]
+    // fn vm_sub() {
+    //     let src = r#"
+    // load %0 321
+    // load %1 123
+    // sub %0 %1 %2
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     vm.run_once();
+    //     vm.run_once();
+    //     vm.run_once();
+    //     let mut right = [0u32; 32];
+    //     right[0] = 321;
+    //     right[1] = 123;
+    //     right[2] = 198;
+    //     assert_eq!(&vm.registers, &right);
+    // }
+    //
+    // #[test]
+    // fn vm_mul() {
+    //     let src = r#"
+    // load %0 321
+    // load %1 123
+    // mul %0 %1 %2
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     vm.run_once();
+    //     vm.run_once();
+    //     vm.run_once();
+    //     let mut right = [0u32; 32];
+    //     right[0] = 321;
+    //     right[1] = 123;
+    //     right[2] = 39483;
+    //     assert_eq!(&vm.registers, &right);
+    // }
+    //
+    // #[test]
+    // fn vm_div() {
+    //     let src = r#"
+    // load %0 321
+    // load %1 123
+    // div %0 %1 %2
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     vm.run_once();
+    //     vm.run_once();
+    //     vm.run_once();
+    //     let mut right = [0u32; 32];
+    //     right[0] = 321;
+    //     right[1] = 123;
+    //     right[2] = 2;
+    //     assert_eq!(&vm.registers, &right);
+    // }
+    //
+    // #[test]
+    // fn vm_jmp() {
+    //     let src = r#"
+    // main:
+    //     jmp main
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     assert_eq!(vm.pc, 0, "start");
+    //     vm.run_once();
+    //     assert_eq!(vm.pc, 0, "after ran once");
+    // }
+    //
+    // #[test]
+    // fn vm_jeq() {
+    //     let src = r#"
+    // main:
+    //     eq %0 %1
+    //     jeq main
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     assert_eq!(vm.pc, 0, "start");
+    //     vm.run_once();
+    //     vm.run_once();
+    //     assert_eq!(vm.pc, 0, "after ran once");
+    // }
+    //
+    // #[test]
+    // fn vm_eq() {
+    //     let src = r#"
+    // eq %0 %1
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     assert!(!vm.compare);
+    //     vm.run_once();
+    //     assert!(vm.compare);
+    // }
+    //
+    // #[test]
+    // fn vm_inc() {
+    //     let src = r#"
+    // inc %0
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     vm.run_once();
+    //     let mut right = [0u32; 32];
+    //     right[0] = 1;
+    //     assert_eq!(vm.registers, right);
+    // }
+    //
+    // #[test]
+    // fn vm_dec() {
+    //     let src = r#"
+    // dec %0
+    // "#;
+    //     let program = assemble(src);
+    //     let mut vm = Machine::new(program, true);
+    //     vm.registers[0] = 100;
+    //     vm.run_once();
+    //     let mut right = [0u32; 32];
+    //     right[0] = 99;
+    //     assert_eq!(vm.registers, right);
+    // }
+    //
+    #[test]
+    fn vm_hlt() {
+        let src = r#"
 .entry main
 .text
 main:
     hlt
 "#;
-    let program = Assembler::new(src).assemble().unwrap();
-    let mut vm = Machine::new(program, true);
-    assert!(vm.running);
-    vm.read_header();
-    vm.run_once();
-    vm.run_once();
-    vm.run_once();
-    vm.run_once();
-    vm.run_once();
-    vm.run_once();
-    assert!(!vm.running);
-}
+        let program = Assembler::new(src).assemble().unwrap();
+        let mut vm = Machine::new(program, true);
+        assert!(vm.running);
+        vm.read_header();
+        vm.run_once();
+        vm.run_once();
+        vm.run_once();
+        vm.run_once();
+        vm.run_once();
+        vm.run_once();
+        assert!(!vm.running);
+    }
 }

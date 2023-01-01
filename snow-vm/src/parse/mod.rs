@@ -1,20 +1,20 @@
+mod data;
+mod directive;
 mod entry;
 mod label;
-mod reg;
-mod directive;
-mod token_op;
-mod data;
 mod location;
+mod reg;
+mod token_op;
 
-pub use entry::Entry;
-pub use label::Label;
-pub use reg::Reg;
-pub use directive::Directive;
-pub use location::Location;
-pub use data::Data;
-pub use token_op::TokenOp;
 pub use super::{
+    error::{Error, UnrecognizedTokenOpError},
     opcode::OpCode,
     SymbolTable,
-    error::{Error, UnrecognizedTokenOpError},
 };
+pub use data::Data;
+pub use directive::Directive;
+pub use entry::Entry;
+pub use label::Label;
+pub use location::Location;
+pub use reg::Reg;
+pub use token_op::TokenOp;

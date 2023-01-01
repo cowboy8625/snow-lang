@@ -61,4 +61,3 @@ impl From<u8> for OpCode {
         }
     }
 }
-

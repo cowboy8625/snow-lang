@@ -1,7 +1,4 @@
-use super::{
-parse::*,
-error::Error,
-};
+use super::{error::Error, parse::*};
 
 pub type SymbolTable = std::collections::HashMap<String, u32>;
 pub struct Assembler<'a> {

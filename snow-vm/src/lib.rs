@@ -1,12 +1,12 @@
 mod assembler;
+mod debug;
 mod error;
 mod machine;
-mod parse;
-mod debug;
 mod opcode;
+mod parse;
 
-pub use assembler::{SymbolTable, Assembler};
-pub use debug::{debug_opcode, hex_dump, debug_program};
+pub use assembler::{Assembler, SymbolTable};
+pub use debug::{debug_opcode, debug_program, hex_dump};
 pub use machine::Machine;
 
 // #[test]
@@ -20,5 +20,3 @@ pub use machine::Machine;
 //     let bytes = assemble(src);
 //     assert_eq!(bytes, vec![0, 0, 0, 100, 1, 0, 1, 0, 5, 0, 0, 0,]);
 // }
-
-

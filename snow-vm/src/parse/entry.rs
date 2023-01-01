@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use super::Error;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
@@ -26,4 +26,3 @@ impl FromStr for Entry {
         })
     }
 }
-

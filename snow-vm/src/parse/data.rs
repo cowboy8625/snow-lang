@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use super::{Directive, Error, Label};
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Data {

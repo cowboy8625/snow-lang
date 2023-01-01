@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use super::UnrecognizedTokenOpError;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Location(pub String);
@@ -25,4 +25,3 @@ impl FromStr for Location {
         Ok(Self(s[..s.len()].to_string()))
     }
 }
-

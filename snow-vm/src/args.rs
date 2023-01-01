@@ -3,6 +3,7 @@ use clap::{crate_description, crate_name, crate_version, Arg, ColorChoice, Comma
 #[derive(Debug, Default)]
 pub struct Settings {
     pub filename: Option<String>,
+    pub bin_file: bool,
     pub debug: bool,
 }
 
@@ -19,7 +20,15 @@ pub fn cargs() -> Settings {
                 .short('d')
                 .required(false)
                 .action(clap::ArgAction::SetTrue)
-                .help("Show Ast"),
+                .help("Debug info output"),
+        )
+        .arg(
+            Arg::new("bin")
+                .long("bin")
+                .short('b')
+                .required(false)
+                .action(clap::ArgAction::SetTrue)
+                .help("input file is a binary file"),
         )
         .get_matches();
 
@@ -28,5 +37,6 @@ pub fn cargs() -> Settings {
         settings.filename = Some(filename.to_string());
     }
     settings.debug = *matches.get_one::<bool>("debug").expect("debug failed");
+    settings.bin_file = *matches.get_one::<bool>("bin").expect("bin failed");
     settings
 }

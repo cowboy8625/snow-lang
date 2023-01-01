@@ -31,7 +31,7 @@ impl TokenOp {
             Self::Jmp(Location(ref name))
             | Self::Jeq(Location(ref name))
             | Self::Jne(Location(ref name))
-            | Self::Prts(Location(ref name))=> {
+            | Self::Prts(Location(ref name)) => {
                 let Some(value) = labels.get(name) else {
                     return Err(Error::LabelNotDefined(name.into()));
                 };
