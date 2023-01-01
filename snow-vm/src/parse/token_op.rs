@@ -17,6 +17,7 @@ pub enum TokenOp {
     Dec(u8),
     Prts(Location),
     Hlt,
+    Nop,
 }
 
 impl TokenOp {
@@ -42,6 +43,7 @@ impl TokenOp {
             Self::Inc(a) => Ok([code, a, 0, 0]),
             Self::Dec(a) => Ok([code, a, 0, 0]),
             Self::Hlt => Ok([code, 0, 0, 0]),
+            Self::Nop => Ok([code, 0, 0, 0]),
         }
     }
 }
@@ -64,6 +66,7 @@ impl FromStr for TokenOp {
             "dec" => parse_dec(tail),
             "prts" => parse_prts(tail),
             "hlt" => Ok(TokenOp::Hlt),
+            "nop" => Ok(TokenOp::Nop),
             _ => Err(UnrecognizedTokenOpError(tail.into())),
         }
     }

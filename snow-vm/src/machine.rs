@@ -193,6 +193,7 @@ impl Machine {
             OpCode::Dec => self.dec(),
             OpCode::Prts => self.prts(),
             OpCode::Hlt => self.hlt(),
+            OpCode::Nop => {},
             OpCode::Ige => panic!("unknown opcode"),
         }
     }

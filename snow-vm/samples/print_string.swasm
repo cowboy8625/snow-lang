@@ -1,6 +1,6 @@
 .entry main
 .data
-name: .ascii  "hello world!"
+name: .ascii  "hello world!\n"
 .text
 main:
   prts name

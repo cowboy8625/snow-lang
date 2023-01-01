@@ -26,6 +26,7 @@ pub fn debug_opcode(chunk: &[u8]) -> String {
         OpCode::Dec => format!("dec %{b}"),
         OpCode::Hlt => format!("hlt"),
         OpCode::Prts => format!("prts {addr}"),
+        OpCode::Nop => format!("nop"),
         OpCode::Ige => format!("ige {a} {c} {c} {d}"),
     }
 }
