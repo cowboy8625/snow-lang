@@ -2,6 +2,7 @@
 
 #### Insturctions Supported
 
+[width=100%, options="header", cols="5*^.^"]
 |instruction| arg1  | arg2 | arg3 |
 |:----------|:-----:|:----:|:----:|
 |    load   | reg   | imm  | N/A  |
