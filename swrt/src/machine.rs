@@ -1,4 +1,4 @@
-use super::{debug_program, debug_opcode, opcode::OpCode};
+use super::{debug_program, opcode::OpCode};
 
 pub struct Machine {
     program: Vec<u8>,
@@ -78,7 +78,8 @@ impl Machine {
     fn aloc(&mut self) {
         let src = self.get_next_u8() as usize;
         let value = self.registers[src] as usize;
-        self.heap.resize_with(self.heap.len() + value, Default::default);
+        self.heap
+            .resize_with(self.heap.len() + value, Default::default);
         self.get_next_u8();
         self.get_next_u8();
     }
@@ -230,7 +231,7 @@ impl Machine {
             Err(e) => println!("{e:?}"),
         }
     }
-    
+
     fn prti(&mut self) {
         let src = self.get_next_u8() as usize;
         let value = self.registers[src];

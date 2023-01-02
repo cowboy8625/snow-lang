@@ -19,11 +19,17 @@ impl FromStr for Label {
             return Err(Error::Unexpected("label has to more then just a ':'".into(), s.into()));
         };
         if !(c.is_ascii_alphabetic() || c == '_') {
-            return Err(Error::Unexpected(format!("unsupported chars '{c}' in label name"), s.into()));
+            return Err(Error::Unexpected(
+                format!("unsupported chars '{c}' in label name"),
+                s.into(),
+            ));
         }
         for c in chars {
             if !(c.is_ascii_alphanumeric() || c == '_') {
-            return Err(Error::Unexpected(format!("unsupported chars '{c}' in label name"), s.into()));
+                return Err(Error::Unexpected(
+                    format!("unsupported chars '{c}' in label name"),
+                    s.into(),
+                ));
             }
         }
         Ok(Self(s[..s.len() - 1].to_string()))

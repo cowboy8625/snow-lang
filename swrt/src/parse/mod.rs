@@ -6,11 +6,7 @@ mod location;
 mod reg;
 mod token_op;
 
-pub use super::{
-    error::Error,
-    opcode::OpCode,
-    SymbolTable,
-};
+pub use super::{error::Error, opcode::OpCode, SymbolTable};
 pub use data::Data;
 pub use directive::Directive;
 pub use entry::Entry;

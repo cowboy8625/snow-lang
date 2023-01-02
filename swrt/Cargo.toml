@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.0.29", features = ["cargo"] }
+rustyline = "10.0.0"
 
 [[bin]]
 name = "swrt"

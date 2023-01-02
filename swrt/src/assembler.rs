@@ -138,7 +138,7 @@ impl<'a> Assembler<'a> {
         for line in input[*cursor..].lines() {
             let line = line.trim();
             match line.parse::<TokenOp>() {
-                Ok(opcode) =>  {
+                Ok(opcode) => {
                     match opcode.into_bytes(symbol) {
                         Ok(code) => {
                             executable.extend_from_slice(&code);

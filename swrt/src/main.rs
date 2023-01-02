@@ -1,4 +1,5 @@
 mod args;
+mod repl;
 use std::io::Read;
 use vm::{Assembler, Machine};
 
@@ -24,7 +25,7 @@ fn remove_she_bang_src(src: &mut String) {
 fn main() {
     let settings = args::cargs();
     let Some(filename) = &settings.filename else {
-        eprintln!("expected a filename");
+        repl::repl().expect("failed to run repl");
         return;
     };
     if settings.bin_file {
