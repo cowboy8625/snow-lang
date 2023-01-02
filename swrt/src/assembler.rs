@@ -168,16 +168,56 @@ impl<'a> Assembler<'a> {
     }
 }
 
-#[test]
-fn test_assembler() {
-    let src = r#"
+#[cfg(test)]
+mod test {
+    fn check_header(program: &[u8]) -> bool {
+        if program.len() < Assembler::HEADER_SIZE {
+            return false;
+        }
+        let end = Assembler::MAGIC_NUMBER.len();
+        let &[0x7F, 0x6e, 0x6f, 0x77] = &program[..end] else {
+            return false;
+        };
+        false
+    }
+
+    fn get_text_section_loc(program: &[u8]) -> usize {
+        let start = Assembler::TEXT_OFFSET;
+        let end = start + 4;
+        let &[a, b, c, d] = &program[start..end] else {
+            panic!("program head incorrect format");
+        };
+        u32::from_le_bytes([a, b, c, d]) as usize
+    }
+
+    fn get_data_section<'a>(program: &'a[u8]) -> &'a[u8] {
+        let data_section_start = Assembler::HEADER_SIZE;
+        let text_section_start = get_text_section_loc(program);
+        &program[data_section_start..text_section_start]
+    }
+
+    fn get_text_section<'a>(program: &'a[u8]) -> &'a[u8] {
+        let start = get_text_section_loc(program);
+        &program[start..]
+    }
+    use super::*;
+    #[test]
+    fn test_assembler() {
+        let src = r#"
 .entry main
 .data
 name: .ascii "Hello World!"
 .text
 main:
 hlt
-"#;
-    let _exe = Assembler::new(src).assemble().unwrap();
-    assert!(false);
+    "#;
+        let program = Assembler::new(src).assemble().unwrap();
+        assert_eq!(get_data_section(&program), &[
+                   0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64, 0x21, 0x00
+        ]);
+        let hlt = OpCode::Hlt as u8;
+        assert_eq!(get_text_section(&program), &[
+                   hlt, 0x00, 0x00, 0x00
+        ]);
+    }
 }

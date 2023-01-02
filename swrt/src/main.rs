@@ -57,14 +57,14 @@ fn main() {
     remove_she_bang_src(&mut src);
     match Assembler::new(&src).assemble() {
         Ok(program) => {
-            use std::io::Write;
-            let mut file = std::fs::OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open("helloworld")
-                .expect("failed to open file");
-            file.write_all(&program).expect("failed to write to file");
+            // use std::io::Write;
+            // let mut file = std::fs::OpenOptions::new()
+            //     .create(true)
+            //     .write(true)
+            //     .truncate(true)
+            //     .open("helloworld")
+            //     .expect("failed to open file");
+            // file.write_all(&program).expect("failed to write to file");
 
             let mut vm = Machine::new(program, settings.debug);
             vm.run();
