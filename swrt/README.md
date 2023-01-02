@@ -7,6 +7,7 @@
 |    load   | reg  |     imm     |
 |    push   | reg  |     N/A     |
 |    pop    | reg  |     N/A     |
+|    aloc   | reg  |     N/A     |
 |    add    | reg  | reg  | reg  |
 |    sub    | reg  | reg  | reg  |
 |    div    | reg  | reg  | reg  |
@@ -17,8 +18,10 @@
 |    geq    | reg  | reg  | N/A  |
 |    lt     | reg  | reg  | N/A  |
 |    leq    | reg  | reg  | N/A  |
+|    setm   | reg  | reg  | N/A  |
 |    inc    | reg  |     N/A     |
 |    dec    | reg  |     N/A     |
+|    prti   | reg  |     N/A     |
 |    jmp    |      label name    |
 |    jeq    |      label name    |
 |    jne    |      label name    |
