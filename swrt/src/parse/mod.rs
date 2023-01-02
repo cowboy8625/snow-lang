@@ -1,3 +1,6 @@
+// TODO:[2] add comment support in swasm source files
+// TODO:[4] make labels and code be on same line
+// TODO:[5] Redo parser so that span can be accounted for
 mod data;
 mod directive;
 mod entry;

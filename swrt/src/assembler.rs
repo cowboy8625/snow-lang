@@ -168,8 +168,10 @@ impl<'a> Assembler<'a> {
     }
 }
 
+// TODO:[1] Add more test to assembler.rs
 #[cfg(test)]
 mod test {
+    use super::*;
     fn check_header(program: &[u8]) -> bool {
         if program.len() < Assembler::HEADER_SIZE {
             return false;
@@ -200,7 +202,7 @@ mod test {
         let start = get_text_section_loc(program);
         &program[start..]
     }
-    use super::*;
+
     #[test]
     fn test_assembler() {
         let src = r#"
@@ -212,6 +214,7 @@ main:
 hlt
     "#;
         let program = Assembler::new(src).assemble().unwrap();
+        assert!(check_header(&program));
         assert_eq!(get_data_section(&program), &[
                    0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64, 0x21, 0x00
         ]);

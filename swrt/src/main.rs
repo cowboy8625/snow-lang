@@ -1,14 +1,3 @@
-// TODO:[1] Fixing Test
-// TODO:[2] add comments
-// TODO:[3] make labels and code be on same line
-// TODO:[4] Redo parser so that span can be accounted for
-// TODO:[5] Make a repl for VM.
-//     - Commands
-//       1. outputing what you wrote to a file.
-//       2. taking a file in and stepping threw it.
-//       3. checking all registers values
-//       4. checking the heap
-//       5. checking the stack
 mod args;
 mod repl;
 use std::io::Read;

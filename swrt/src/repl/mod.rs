@@ -1,3 +1,10 @@
+// TODO:[6] Make a repl for VM.
+//     - Commands
+//       1. outputing what you wrote to a file.
+//       2. taking a file in and stepping threw it.
+//       3. checking all registers values
+//       4. checking the heap
+//       5. checking the stack
 use rustyline::error::ReadlineError;
 use rustyline::{Editor, Result};
 
