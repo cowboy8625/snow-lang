@@ -57,7 +57,6 @@ pub fn hex_dump_chunks(program: &[u8]) {
 }
 
 pub fn debug_program(program: &[u8]) {
-    hex_dump_chunks(program);
     let mut chunks = program[..64].chunks(4);
     // Magin Number
     let Some(&[0x7F, 0x6e, 0x6f, 0x77]) = chunks.next()else  {
@@ -70,7 +69,7 @@ pub fn debug_program(program: &[u8]) {
     };
     let text_start = u32::from_le_bytes([a, b, c, d]) as usize;
     eprintln!("--- header ---");
-    hex_dump_chunks(&program[64..text_start]);
+    hex_dump_chunks(&program[..64]);
     eprintln!("--- .data  ---");
     hex_dump_chunks(&program[64..text_start]);
     eprintln!("--- .text  ---");

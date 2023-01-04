@@ -9,16 +9,41 @@ pub struct Scanner<'a> {
     current: Option<char>,
     previous: Option<char>,
     debug_lexer: LexerDebug,
+    keywords: Vec<&'a str>,
+    line_comment: (char, Option<char>),
 }
 
 impl<'a> Scanner<'a> {
     pub fn new(src: &'a str, debug_lexer: LexerDebug) -> Self {
+        let keywords = vec![
+            "enum", "data", "type", "true", "false", "return", "let", "and", "or", "not",
+            "if", "then", "else", "fn",
+        ];
         Self {
             stream: src.chars().peekable(),
             span: Span::default(),
             current: None,
             previous: None,
             debug_lexer,
+            keywords,
+            line_comment: ('-', Some('-')),
+        }
+    }
+
+    pub fn new_with_keywords(
+        src: &'a str,
+        debug_lexer: LexerDebug,
+        keywords: Vec<&'a str>,
+        line_comment: (char, Option<char>),
+    ) -> Self {
+        Self {
+            stream: src.chars().peekable(),
+            span: Span::default(),
+            current: None,
+            previous: None,
+            debug_lexer,
+            keywords,
+            line_comment,
         }
     }
 
@@ -35,6 +60,13 @@ impl<'a> Scanner<'a> {
                 self.span.end += c.to_string().as_bytes().len();
             }
         }
+    }
+
+    fn lookup(&self, id: &str) -> Option<String> {
+        if self.keywords.contains(&id) {
+            return Some(id.into());
+        }
+        None
     }
 
     fn matched(&mut self, c: char) -> bool {
@@ -96,9 +128,8 @@ impl<'a> Scanner<'a> {
             ident.push(ch);
         }
         let span = self.span();
-        Token::lookup(&ident.clone()).map_or(Token::Id(ident, span), |i| {
-            Token::KeyWord(i.into(), span)
-        })
+        self.lookup(&ident)
+            .map_or(Token::Id(ident, span), |i| Token::KeyWord(i.into(), span))
     }
 
     fn line_comment(&mut self) -> Option<Token> {
@@ -144,6 +175,19 @@ impl<'a> Scanner<'a> {
         }
         token
     }
+
+    fn is_comment(&mut self, c: char) -> bool {
+        if c != self.line_comment.0 {
+            return false;
+        }
+        let Some(nc) = self.line_comment.1 else {
+            return true;
+        };
+        if self.peek_char() != nc {
+            return false;
+        }
+        true
+    }
 }
 
 impl<'a> Iterator for Scanner<'a> {
@@ -152,10 +196,12 @@ impl<'a> Iterator for Scanner<'a> {
         let Some(ch) = self.next_char() else {
             return Some(self.debug_token(None));
         };
+        // comment (char, Option<char>)
         let token = match ch {
             num if num.is_ascii_digit() => Some(self.number()),
             ident if ident.is_ascii_alphabetic() => Some(self.id()),
-            '-' if self.matched('-') => self.line_comment(),
+            c if self.is_comment(c) => self.line_comment(),
+            // '-' if self.matched('-') => self.line_comment(),
             '-' if self.matched('>') => Some(self.op_token("->")),
             '=' if self.matched('>') => Some(self.op_token("=>")),
             '<' if self.matched('-') => Some(self.op_token("<-")),
@@ -168,6 +214,8 @@ impl<'a> Iterator for Scanner<'a> {
             '"' => self.string(),
             '\'' => self.chr(),
             '\\' => Some(self.op_token("\\")),
+            '%' => Some(self.op_token("%")),
+            '.' => Some(self.op_token(".")),
             '|' => Some(self.op_token("|")),
             '!' => Some(self.op_token("!")),
             '<' => Some(self.op_token("<")),

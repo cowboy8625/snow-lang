@@ -1,7 +1,7 @@
 mod args;
 mod repl;
 use std::io::Read;
-use vm::{Assembler, Machine};
+use vm::{assembler, Machine};
 
 fn remove_she_bang_bin(program: &mut Vec<u8>) {
     let [a, b] = program[0..2] else {
@@ -44,7 +44,7 @@ fn main() {
     let mut src = std::fs::read_to_string(filename)
         .unwrap_or_else(|_| panic!("failed to open file '{}'", filename));
     remove_she_bang_src(&mut src);
-    match Assembler::new(&src).assemble() {
+    match assembler(&src) {
         Ok(program) => {
             // use std::io::Write;
             // let mut file = std::fs::OpenOptions::new()
@@ -58,10 +58,8 @@ fn main() {
             let mut vm = Machine::new(program, settings.debug);
             vm.run();
         }
-        Err(errors) => {
-            for e in errors.iter() {
-                eprintln!("{e:?}");
-            }
+        Err(error) => {
+            snowc_error_messages::report(filename, &src, &error);
         }
     }
 }

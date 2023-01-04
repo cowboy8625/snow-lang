@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 snowc-lexer = { path = "../snowc-lexer" }
 snowc-error-messages = { path = "../snowc-error-messages" }
+snowc-error= { path = "../snowc-error" }
 
 [dev-dependencies]
 pretty_assertions = "1.3.0"

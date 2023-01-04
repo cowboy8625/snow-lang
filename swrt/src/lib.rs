@@ -1,11 +1,10 @@
 mod assembler;
 mod debug;
-mod error;
 mod machine;
 mod opcode;
 mod parse;
 
-pub use assembler::{Assembler, SymbolTable};
+pub use assembler::{assembler, SymbolTable};
 pub use debug::{debug_opcode, debug_program, hex_dump};
 pub use machine::Machine;
 

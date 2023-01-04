@@ -1,5 +1,14 @@
 # SWRT (Snow Rut Time)
 
+#### Header
+| offset | size | purpose                                       |
+|:-------|:----:|:---------------------------------------------:|
+|  0x00  |  4   | 0x7F followed by NOW(45 4c 46) in ASCII;      |
+|        |      | these four bytes constitute the magic number. |
+|  0x04  |  4   |   How big the .data section is                |
+|  0x08  |  4   |   Entry point into .text section              |
+|  0x0C  |  52  |   Not used section                              |
+
 #### Insturctions Supported
 
 |instruction| arg1 | arg2 | arg3 |

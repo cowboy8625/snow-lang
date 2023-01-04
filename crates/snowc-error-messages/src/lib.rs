@@ -3,46 +3,10 @@ use annotate_snippets::{
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
 use snowc_lexer::Span;
-use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ErrorCode {
-    E0000,
-    E0010,
-    E0020,
-    Unknown,
-}
-
-impl ErrorCode {
-    fn id(&self) -> String {
-        format!("{:?}", self)
-    }
-
-    fn label(&self) -> String {
-        format!("{}", self)
-    }
-}
-
-impl From<&String> for ErrorCode {
-    fn from(value: &String) -> Self {
-        match value.as_str() {
-            "E0000"=>Self::E0000, 
-            "E0010"=>Self::E0010,
-            "E0020"=>Self::E0020,
-            _=>Self::Unknown,
-        }
-    }
-}
-
-impl fmt::Display for ErrorCode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::E0000 => write!(f, "expressions not allowed in global scope"),
-            Self::E0010 => write!(f, "missing deliminator"),
-            Self::E0020 => write!(f, "expected a condition for if statement"),
-            Self::Unknown => write!(f, "place holder for a more correct error"),
-        }
-    }
+pub trait ErrorCode {
+    fn id(&self) -> String;
+    fn label(&self) -> String;
 }
 
 #[derive(Debug, Clone)]
@@ -55,7 +19,7 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn new(id: ErrorCode, span: Span) -> Self {
+    pub fn new(id: impl ErrorCode, span: Span) -> Self {
         Self {
             id: id.id(),
             label: id.label(),
@@ -65,9 +29,13 @@ impl Error {
         }
     }
 
-    pub fn new_with_cause(id: ErrorCode, span: Span, cause: Option<Error>) -> Self {
+    pub fn new_with_cause(id: impl ErrorCode, span: Span, cause: Option<Error>) -> Self {
         Self {
-            id: id.id(), label: id.label(), span, help: None, cause: cause.map(Box::new),
+            id: id.id(),
+            label: id.label(),
+            span,
+            help: None,
+            cause: cause.map(Box::new),
         }
     }
 
@@ -76,8 +44,8 @@ impl Error {
         self
     }
 
-    pub fn get_error_code(&self) -> ErrorCode {
-        ErrorCode::from(&self.id)
+    pub fn get_error_code<'a, T: From<&'a String>>(&'a self) -> T {
+        T::from(&self.id)
     }
 }
 

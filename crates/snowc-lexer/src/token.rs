@@ -25,13 +25,6 @@ pub enum Token {
     Eof(Span),
 }
 impl Token {
-    pub fn lookup(id: &str) -> Option<&str> {
-        match id {
-            "enum" | "data" | "type" | "true" | "false" | "return" | "let" | "and"
-            | "or" | "not" | "if" | "then" | "else" | "fn" => Some(id),
-            _ => None,
-        }
-    }
     is_token!(is_keyword, KeyWord);
     is_token!(is_id, Id);
     is_token!(is_op, Op);
@@ -52,6 +45,13 @@ impl Token {
     pub fn is_op_a(&self, item: impl Into<String>) -> bool {
         match self {
             Self::Op(ref inner, ..) => inner == &item.into(),
+            _ => false,
+        }
+    }
+
+    pub fn is_id_a(&self, item: impl Into<String>) -> bool {
+        match self {
+            Self::Id(ref inner, ..) => inner == &item.into(),
             _ => false,
         }
     }

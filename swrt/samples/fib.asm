@@ -1,12 +1,9 @@
 #!/home/cowboy/.cargo/bin/swrt
 .entry main
-.data
 .text
 main:
-a:
-    load %0 1
-b:
-    load %1 1
+    load %0 1 ; a
+    load %1 1 ; b
     load %2 46
 loop:
     push %1

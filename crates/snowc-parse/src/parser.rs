@@ -6,7 +6,7 @@ use super::{
     expr::{Atom, Expr},
     op::Op,
     precedence::Precedence,
-    ErrorCode, Error, ParserDebug, Scanner, Span, Token,
+    Error, ErrorCode, ParserDebug, Scanner, Span, Token,
 };
 use std::iter::Peekable;
 
@@ -81,11 +81,14 @@ impl<'a> Parser<'a> {
     // FIXME: This is broken
     fn recover(&mut self, deliminators: &[Token]) {
         if let Some(error) = &self.errors {
-            if error.get_error_code() == ErrorCode::E0010 {
+            if error.get_error_code::<ErrorCode>() == ErrorCode::E0010 {
                 return;
             }
         }
-        let mut last_span = self.previous().map(|t| t.span()).unwrap_or_else(Span::default);
+        let mut last_span = self
+            .previous()
+            .map(|t| t.span())
+            .unwrap_or_else(Span::default);
         println!("recovering");
         while let Some(tok) = self.next_if(|t| !deliminators.contains(&t)) {
             if tok.span().line > last_span.line {
@@ -251,7 +254,7 @@ impl<'a> Parser<'a> {
                 self.closure()
             });
         if let Some(error) = &self.errors {
-            if error.get_error_code() == ErrorCode::E0020 {
+            if error.get_error_code::<ErrorCode>() == ErrorCode::E0020 {
                 return Expr::Error(Span::default());
             }
         }
@@ -453,7 +456,7 @@ impl<'a> Parser<'a> {
             _ => {
                 let span = self.peek().span();
                 // return self.report("E5", "invalid token", span);
-                    return self.report(ErrorCode::Unknown, span);
+                return self.report(ErrorCode::Unknown, span);
             }
         };
         loop {

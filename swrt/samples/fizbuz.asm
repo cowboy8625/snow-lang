@@ -19,17 +19,17 @@ print_fizbuz:
   prts newline
   jmp loop
 main:
-reg_0_is_count:
-reg_1_is_max_count:
-  load %1 100
-reg_2_mod_value:
+;; reg 0 is count
+;; reg 1 is max count
+  load %1 30
+;; reg 2 mod value
   load %3 3
   load %5 5
   jmp loop_start
 loop:
   inc %0
 loop_start:
-check_if_fizbuz:
+;; check if fizbuz
   mod %0 %3 %2
   mod %0 %5 %4
   eq %2 %6
@@ -40,11 +40,11 @@ check_if_fiz:
   mod %0 %3 %2
   eq %2 %6
   jeq print_fiz
-check_if_buz:
+;; check if buz
   mod %0 %5 %2
   eq %2 %6
   jeq print_buz
-loop_condition:
+;; loop condition
   geq %1 %0
   prti %0
   jeq loop
