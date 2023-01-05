@@ -192,8 +192,8 @@ fn closures() {
 }
 
 #[test]
-fn user_type_def() {
-    let src = r#"type Option = Some Int | None;"#;
+fn enum_def() {
+    let src = r#"enum Option = Some Int | None;"#;
     let right = vec![r#"<Option: (Some, [Int]), (None, [])>"#];
     let left = parse_or_report("user_type_def", src);
     assert_eq!(left, right);
