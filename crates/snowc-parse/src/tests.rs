@@ -150,13 +150,21 @@ fn conditional() {
 }
 
 #[test]
-fn function_def() {
+fn function_def_from_parse_funtion() {
     let src = "x y = x + y;";
     let left = ParserBuilder::default()
         .build(src)
         .function(&Token::Id("add".into(), Span::default()))
         .to_string();
     assert_eq!(left, r#"<add: (\x -> (\y -> (+ x y)))>"#);
+}
+
+#[test]
+fn function_def() {
+    let src = "add x y = x + y;";
+    let left = parse_or_report("function_def", src);
+    let right = vec![r#"<add: (\x -> (\y -> (+ x y)))>"#];
+    assert_eq!(left, right);
 }
 
 #[test]
