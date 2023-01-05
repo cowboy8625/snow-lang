@@ -173,11 +173,11 @@ impl<'a> Parser<'a> {
                     return self.report(ErrorCode::E0010, span);
                 }
             };
+            types.push(type_name);
             if !self.peek().is_op_a("->") {
                 break;
             }
             self.next();
-            types.push(type_name);
             last_type_span = tok.span();
         }
 
