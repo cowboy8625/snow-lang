@@ -61,11 +61,15 @@ impl<'a> Parser<'a> {
 
     fn remove_last_error(&mut self) {
         let Some(error) = &mut self.errors else {
+            eprintln!("nothing to remove {:?}", self.errors);
             return;
         };
         if error.cause.is_none() {
+            eprintln!("cause is nothing {:?}", self.errors);
+            self.errors = None;
             return;
         }
+        eprintln!("removing last error, {:?}", error.cause);
         let cause = error.cause.clone().map(|t| *t).unwrap();
         self.errors = Some(cause);
     }
@@ -236,6 +240,7 @@ impl<'a> Parser<'a> {
                     args.push(self.expression(Precedence::Fn));
                 }
                 if self.next_if(|t| t.is_op_a("=")).is_none() {
+                    dbg!("EQ F");
                     let span = self.peek().span();
                     return self.report(ErrorCode::Unknown, span);
                 }
@@ -246,6 +251,7 @@ impl<'a> Parser<'a> {
                 })
             })
             .or_else(|_| {
+                dbg!(self.peek());
                 self.remove_last_error();
                 if self.next_if(|t| t.is_op_a("=")).is_none() {
                     let span = self.peek().span();
@@ -268,6 +274,8 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn closure(&mut self) -> Expr {
+        // FIXME: I think the problem is in closure function due to its being called in
+        // function_def and closuer test are failing too.
         if self
             .next_if(|t| t.is_op_a("λ") || t.is_op_a("\\"))
             .is_some()
@@ -399,15 +407,15 @@ impl<'a> Parser<'a> {
             _ => {
                 let mut l = self.lexer.clone();
                 l.next();
-                if Op::try_from(op).is_ok()
-                    && l.peek().map(|t| t.is_op_a(")")).unwrap_or(false)
-                {
+                let is_closing_pran = l.peek().map(|t| t.is_op_a(")")).unwrap_or(false);
+                if Op::try_from(op).is_ok() && is_closing_pran {
                     self.lexer = l;
                     let op = Op::try_from(op).unwrap();
                     Expr::Atom(Atom::Id(format!("({op})")), span)
                 } else {
                     // return self.report("E2", "unknown op char", span);
-                    self.report(ErrorCode::Unknown, span)
+                    dbg!(&op);
+                    self.report(ErrorCode::E0002, span)
                 }
             }
         }

@@ -3,6 +3,8 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorCode {
     E0000,
+    E0001,
+    E0002,
     E0010,
     E0020,
     Unknown,
@@ -22,6 +24,8 @@ impl From<&String> for ErrorCode {
     fn from(value: &String) -> Self {
         match value.as_str() {
             "E0000" => Self::E0000,
+            "E0001" => Self::E0001,
+            "E0002" => Self::E0002,
             "E0010" => Self::E0010,
             "E0020" => Self::E0020,
             _ => Self::Unknown,
@@ -39,6 +43,8 @@ impl fmt::Display for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::E0000 => write!(f, "expressions not allowed in global scope"),
+            Self::E0001 => write!(f, "missing identifier"),
+            Self::E0002 => write!(f, "unknown operator"),
             Self::E0010 => write!(f, "missing deliminator"),
             Self::E0020 => write!(f, "expected a condition for if statement"),
             Self::Unknown => write!(f, "place holder for a more correct error"),
