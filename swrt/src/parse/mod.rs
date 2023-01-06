@@ -1,6 +1,3 @@
-// TODO:[2] add comment support in swasm source files
-// TODO:[4] make labels and code be on same line
-// TODO:[5] Redo parser so that span can be accounted for
 mod data;
 mod directive;
 mod item;
@@ -56,7 +53,7 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(src: &'a str) -> Self {
         let keywords = vec![
-            "load", "push", "pop", "inc", "dec", "prti", "aloc", "setm", "eq", "neq",
+            "call", "ret", "load", "push", "pop", "inc", "dec", "prti", "aloc", "setm", "eq", "neq",
             "gt", "geq", "lt", "leq", "add", "sub", "div", "mod", "mul", "prts", "jmp",
             "jeq", "jne", "hlt", "nop",
         ];
@@ -254,10 +251,12 @@ impl<'a> Parser<'a> {
             "div" => self.parse_3reg(TokenOp::Div, &name),
             "mod" => self.parse_3reg(TokenOp::Mod, &name),
             "mul" => self.parse_3reg(TokenOp::Mul, &name),
+            "call" => self.parse_lab(TokenOp::Call, &name),
             "prts" => self.parse_lab(TokenOp::Prts, &name),
             "jmp" => self.parse_lab(TokenOp::Jmp, &name),
             "jeq" => self.parse_lab(TokenOp::Jeq, &name),
             "jne" => self.parse_lab(TokenOp::Jne, &name),
+            "ret" => Ok(TokenOp::Ret),
             "hlt" => Ok(TokenOp::Hlt),
             "nop" => Ok(TokenOp::Nop),
             _ => unreachable!("{:?}", token),

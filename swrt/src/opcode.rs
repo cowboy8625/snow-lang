@@ -24,8 +24,8 @@ pub enum OpCode {
     Leq,
     Inc,
     Dec,
-    // Call
-    // Ret,
+    Call,
+    Ret,
     Prts,
     Prti,
     Hlt,
@@ -57,8 +57,10 @@ impl From<&TokenOp> for OpCode {
             TokenOp::Geq(..) => Self::Geq,
             TokenOp::Lt(..) => Self::Lt,
             TokenOp::Leq(..) => Self::Leq,
+            TokenOp::Call(..) => Self::Call,
             TokenOp::Prts(..) => Self::Prts,
             TokenOp::Prti(..) => Self::Prti,
+            TokenOp::Ret => Self::Ret,
             TokenOp::Hlt => Self::Hlt,
             TokenOp::Nop => Self::Nop,
         }
@@ -88,10 +90,12 @@ impl From<u8> for OpCode {
             18 => Self::Leq,
             19 => Self::Inc,
             20 => Self::Dec,
-            21 => Self::Prts,
-            22 => Self::Prti,
-            23 => Self::Hlt,
-            24 => Self::Nop,
+            21 => Self::Call,
+            22 => Self::Ret,
+            23 => Self::Prts,
+            24 => Self::Prti,
+            25 => Self::Hlt,
+            26 => Self::Nop,
             _ => Self::Ige,
         }
     }

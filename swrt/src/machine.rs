@@ -1,4 +1,9 @@
 use super::{debug_opcode, debug_program, opcode::OpCode};
+//                                     |al-- 
+//                                |ax--|----     
+//                      |eax------|----|----     
+//|rax------------------|---------|----|----
+//|0000_0000_0000_0001 | 0000_0000_0000_0000 
 
 pub struct Machine {
     program: Vec<u8>,
@@ -6,6 +11,8 @@ pub struct Machine {
     heap: Vec<u8>,
     stack: Vec<u32>,
     pc: usize,
+    sp: usize,
+    bp: usize,
     running: bool,
     compare: bool,
     debug: bool,
@@ -19,6 +26,8 @@ impl Machine {
             heap: vec![],
             stack: vec![],
             pc: 0,
+            sp: 0,
+            bp: 0,
             compare: false,
             running: true,
             debug,
@@ -44,7 +53,6 @@ impl Machine {
             panic!("invalid entry offset");
         };
         *pc = u32::from_le_bytes([a, b, c, d]) as usize;
-        eprintln!("PC: {pc:?}");
     }
 
     fn get_next_u8(&mut self) -> u8 {
@@ -65,6 +73,7 @@ impl Machine {
         let src = self.get_next_u8() as usize;
         let value = self.registers[src];
         self.stack.push(value);
+        self.sp += 1;
         self.get_next_u8();
         self.get_next_u8();
     }
@@ -73,6 +82,7 @@ impl Machine {
         let des = self.get_next_u8() as usize;
         let value = self.stack.pop().unwrap_or_default();
         self.registers[des] = value;
+        self.sp -= 1;
         self.get_next_u8();
         self.get_next_u8();
     }
@@ -242,6 +252,27 @@ impl Machine {
         self.get_next_u8();
     }
 
+    fn call(&mut self) {
+        let v0 = self.get_next_u8() as u32;
+        let v1 = self.get_next_u8() as u32;
+        let v2 = self.get_next_u8() as u32;
+        let des = ((v0 << 8) | (v1 << 4) | v2) as usize;
+        self.stack.push(self.pc as u32);
+        self.stack.push(self.bp as u32);
+        self.bp = self.sp;
+        self.pc = des;
+    }
+
+    fn ret(&mut self) {
+        self.get_next_u8();
+        self.get_next_u8();
+        self.get_next_u8();
+        self.sp = self.bp;
+        self.bp = self.stack.pop().unwrap() as usize;
+        self.pc = self.stack.pop().unwrap() as usize;
+
+    }
+
     fn hlt(&mut self) {
         self.running = false;
     }
@@ -286,6 +317,7 @@ impl Machine {
             OpCode::Div => self.div(),
             OpCode::Mod => self.r#mod(),
             OpCode::Mul => self.mult(),
+            OpCode::Call => self.call(),
             OpCode::Jmp => self.jmp(),
             OpCode::Jeq => self.jeq(),
             OpCode::Jne => self.jne(),
@@ -299,9 +331,10 @@ impl Machine {
             OpCode::Dec => self.dec(),
             OpCode::Prts => self.prts(),
             OpCode::Prti => self.prti(),
+            OpCode::Ret => self.ret(),
             OpCode::Hlt => self.hlt(),
             OpCode::Nop => {}
-            OpCode::Ige => panic!("unknown opcode"),
+            OpCode::Ige => panic!("unknown opcode {}", self.program[self.pc - 1]),
         }
     }
 

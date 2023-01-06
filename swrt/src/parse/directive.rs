@@ -6,7 +6,7 @@ pub enum Directive {
 impl Directive {
     pub fn size(&self) -> usize {
         match self {
-            Self::Ascii(string) => self.as_bytes().len(),
+            Self::Ascii(_) => self.as_bytes().len(),
         }
     }
     pub fn as_bytes(&self) -> Vec<u8> {

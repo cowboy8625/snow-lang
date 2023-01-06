@@ -6,6 +6,7 @@ pub fn debug_opcode(chunk: &[u8]) -> String {
     };
     let opcode = OpCode::from(a);
     let addr = match opcode {
+        OpCode::Call |
         OpCode::Jmp | OpCode::Jeq | OpCode::Jne | OpCode::Prts => {
             u32::from_be_bytes([0, b, c, d])
         }
@@ -23,6 +24,7 @@ pub fn debug_opcode(chunk: &[u8]) -> String {
         OpCode::Div => format!("div %{b} %{c} %{d}"),
         OpCode::Mod => format!("mod %{b} %{c} %{d}"),
         OpCode::Mul => format!("mul %{b} %{c} %{d}"),
+        OpCode::Call => format!("call {addr}"),
         OpCode::Jmp => format!("jmp {addr}"),
         OpCode::Jeq => format!("jeq {addr}"),
         OpCode::Jne => format!("jne {addr}"),
@@ -34,9 +36,10 @@ pub fn debug_opcode(chunk: &[u8]) -> String {
         OpCode::Leq => format!("leq %{b} {c}"),
         OpCode::Inc => format!("inc %{b}"),
         OpCode::Dec => format!("dec %{b}"),
+        OpCode::Ret => format!("ret"),
         OpCode::Hlt => format!("hlt"),
         OpCode::Prts => format!("prts {addr}"),
-        OpCode::Prti => format!("prti {c}"),
+        OpCode::Prti => format!("prti {b}"),
         OpCode::Nop => format!("nop"),
         OpCode::Ige => format!("ige {a} {c} {c} {d}"),
     }
@@ -76,6 +79,6 @@ pub fn debug_program(program: &[u8]) {
     for (i, chunk) in program[text_start..].chunks(4).enumerate() {
         let bytes = hex_dump(i, chunk);
         let opcode = debug_opcode(chunk);
-        eprintln!("{:<10} | {}", opcode, bytes);
+        eprintln!("{:<20} | {}", opcode, bytes);
     }
 }
