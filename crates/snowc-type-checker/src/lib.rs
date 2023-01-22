@@ -46,7 +46,7 @@ impl Item {
     fn lookup(&self, name: impl Into<String>) -> Option<Type> {
         match self {
             Self::Func(typed_func) => typed_func.lookup(name),
-            _ => panic!("unbounded variable"),
+            Self::Enum(typed_enum) => typed_enum.lookup(name),
         }
     }
 }
@@ -66,6 +66,14 @@ struct TypedEnum {
 impl TypedEnum {
     fn ret_type(&self) -> Type {
         self.return_type.clone()
+    }
+
+    fn lookup(&self, name: impl Into<String>) -> Option<Type> {
+        let name = name.into();
+        if self.variants.iter().find(|v| v.name == name).is_some() {
+            return Some(Type::Custom(name));
+        }
+        None
     }
 }
 
@@ -192,15 +200,28 @@ fn type_check_app<'a>(
 
 fn type_of<'a>(func_name: &str, env: &Types, e: &'a Expr) -> Type {
     match e {
-        Expr::Atom(Atom::Int(_), _) => Type::Int,
-        Expr::Atom(Atom::Float(_), _) => Type::Float,
-        Expr::Atom(Atom::Bool(_), _) => Type::Bool,
-        Expr::Atom(Atom::String(_), _) => Type::String,
-        Expr::Atom(Atom::Char(_), _) => Type::Char,
-        Expr::Atom(Atom::Id(id), _) => lookup(func_name, env, id),
-        Expr::Unary(_, rhs, _) => type_of(func_name, env, rhs),
-        Expr::Binary(op, lhs, rhs, _) => type_check_binary(func_name, env, op, lhs, rhs),
-        Expr::IfElse(c, b1, b2, _) => type_check_if_else(func_name, env, c, b1, b2),
+        Expr::Atom(Atom::Int(..), ..) => Type::Int,
+        Expr::Atom(Atom::Float(..), ..) => Type::Float,
+        Expr::Atom(Atom::Bool(..), ..) => Type::Bool,
+        Expr::Atom(Atom::String(..), ..) => Type::String,
+        Expr::Atom(Atom::Char(..), ..) => Type::Char,
+        Expr::Atom(Atom::Id(id), ..) => lookup(func_name, env, id),
+        Expr::Unary(_, rhs, ..) => type_of(func_name, env, rhs),
+        Expr::Binary(op, lhs, rhs, ..) => type_check_binary(func_name, env, op, lhs, rhs),
+        Expr::IfElse(c, b1, b2, ..) => type_check_if_else(func_name, env, c, b1, b2),
+        enum_var @ Expr::EnumVar(..) => {
+            let mut names = vec![];
+            get_names(enum_var, &mut names);
+            let name = &names[0];
+            let variant = &names[1];
+            let Some(typed_enum) = env.get(name) else {
+                panic!("use for before defining '{}'", name)
+            };
+            let Some(t) = typed_enum.lookup(variant) else {
+                panic!("'{}' does not have a variant named '{}'", name, variant);
+            };
+            t
+        }
         Expr::App(name, args, span) => type_check_app(func_name, env, name, args, span),
         // e.span(),
         _ => panic!("not implemented yet for expr: '{e:?}'"),
@@ -273,6 +294,8 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
                 let dec_return_type = type_func.return_type.clone();
                 let return_type = type_of(name, &env, body);
                 if return_type != dec_return_type {
+                    // FIXME: add return error
+
                     // body.span(),
                     panic!(
                         "miss matched return types: found '{return_type:?}' \
@@ -320,6 +343,19 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
         return Err(errors);
     }
     Ok(())
+}
+
+fn get_names(expr: &Expr, names: &mut Vec<String>) {
+    match expr {
+        Expr::Atom(Atom::Id(name), ..) => {
+            names.push(name.clone());
+        },
+        Expr::EnumVar(head, tail, ..) => {
+            get_names(head, names);
+            get_names(tail, names);
+        }
+        _ => unreachable!(),
+    }
 }
 
 // #[cfg(test)]
