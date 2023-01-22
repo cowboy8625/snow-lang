@@ -10,31 +10,16 @@ main :: IO;
 main = print (fib 10);
 
 -- match statement
-fib :: Integer -> Integer
-fib 0 = 0
-fib 1 = 1
-fib n = fib (n-1) + fib (n-2)
+fib :: Int -> Int;
+fib 0 = 0;
+fib 1 = 1;
+fib n = fib (n-1) + fib (n-2);
 ```
 
 ### Todo
 
-###### Parser
-- [ ] Make visual tree of ast
-
-###### Error Messages
-- [ ] formated error messages
-
-###### Repl
-- [X] Greeting Message of the version of snowc
-
-###### Running
-- [X] get a simple ast walker working.
-- [ ] add passing functions as args
-- [ ] partial function application
-
-###### New Syntax
-- [ ] String
-- [ ] Char
 - [ ] Generics
 - [ ] Type variant access like `Type::Variant` like rust.
 - [ ] List syntax
+- [ ] Macros
+- [ ] Add more info into Tokens about there surroundings.
