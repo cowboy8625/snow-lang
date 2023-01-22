@@ -209,19 +209,19 @@ fn type_of<'a>(func_name: &str, env: &Types, e: &'a Expr) -> Type {
         Expr::Unary(_, rhs, ..) => type_of(func_name, env, rhs),
         Expr::Binary(op, lhs, rhs, ..) => type_check_binary(func_name, env, op, lhs, rhs),
         Expr::IfElse(c, b1, b2, ..) => type_check_if_else(func_name, env, c, b1, b2),
-        enum_var @ Expr::EnumVar(..) => {
-            let mut names = vec![];
-            get_names(enum_var, &mut names);
-            let name = &names[0];
-            let variant = &names[1];
-            let Some(typed_enum) = env.get(name) else {
-                panic!("use for before defining '{}'", name)
-            };
-            let Some(t) = typed_enum.lookup(variant) else {
-                panic!("'{}' does not have a variant named '{}'", name, variant);
-            };
-            t
-        }
+        // enum_var @ Expr::EnumVar(..) => {
+        //     let mut names = vec![];
+        //     get_names(enum_var, &mut names);
+        //     let name = &names[0];
+        //     let variant = &names[1];
+        //     let Some(typed_enum) = env.get(name) else {
+        //         panic!("use for before defining '{}'", name)
+        //     };
+        //     let Some(t) = typed_enum.lookup(variant) else {
+        //         panic!("'{}' does not have a variant named '{}'", name, variant);
+        //     };
+        //     t
+        // }
         Expr::App(name, args, span) => type_check_app(func_name, env, name, args, span),
         // e.span(),
         _ => panic!("not implemented yet for expr: '{e:?}'"),
@@ -344,20 +344,20 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
     }
     Ok(())
 }
-
-fn get_names(expr: &Expr, names: &mut Vec<String>) {
-    match expr {
-        Expr::Atom(Atom::Id(name), ..) => {
-            names.push(name.clone());
-        },
-        Expr::EnumVar(head, tail, ..) => {
-            get_names(head, names);
-            get_names(tail, names);
-        }
-        _ => unreachable!(),
-    }
-}
-
+//
+// fn get_names(expr: &Expr, names: &mut Vec<String>) {
+//     match expr {
+//         Expr::Atom(Atom::Id(name), ..) => {
+//             names.push(name.clone());
+//         },
+//         Expr::EnumVar(head, tail, ..) => {
+//             get_names(head, names);
+//             get_names(tail, names);
+//         }
+//         _ => unreachable!(),
+//     }
+// }
+//
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
