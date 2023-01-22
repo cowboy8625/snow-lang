@@ -53,9 +53,10 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(src: &'a str) -> Self {
         let keywords = vec![
-            "call", "ret", "load", "push", "pop", "inc", "dec", "prti", "aloc", "setm", "eq", "neq",
-            "gt", "geq", "lt", "leq", "add", "sub", "div", "mod", "mul", "prts", "jmp",
-            "jeq", "jne", "hlt", "nop",
+            "call", "ret", "load", "loadm", "push", "pop",
+            "inc", "dec", "prti", "aloc", "setm", "eq", "neq",
+            "gt", "geq", "lt", "leq", "add", "sub", "div", "mod",
+            "mul", "prts", "jmp", "jeq", "jne", "hlt", "nop",
         ];
         let line_comment = (';', None);
         Self {
@@ -70,6 +71,43 @@ impl<'a> Parser<'a> {
             last_span: Span::default(),
         }
     }
+
+    fn parse_opcode(&mut self) -> Result<TokenOp, Error> {
+        let token = self.next();
+        let name = token.value().to_owned();
+        match name.to_lowercase().as_str() {
+            "load" => self.parse_1reg_u16(TokenOp::Load, &name),
+            "push" => self.parse_1reg(TokenOp::Push, &name),
+            "pop" => self.parse_1reg(TokenOp::Pop, &name),
+            "inc" => self.parse_1reg(TokenOp::Inc, &name),
+            "dec" => self.parse_1reg(TokenOp::Dec, &name),
+            "prti" => self.parse_1reg(TokenOp::Prti, &name),
+            "aloc" => self.parse_1reg(TokenOp::Aloc, &name),
+            "loadm" => self.parse_2reg(TokenOp::LoadM, &name),
+            "setm" => self.parse_2reg(TokenOp::Setm, &name),
+            "eq" => self.parse_2reg(TokenOp::Eq, &name),
+            "neq" => self.parse_2reg(TokenOp::Neq, &name),
+            "gt" => self.parse_2reg(TokenOp::Gt, &name),
+            "geq" => self.parse_2reg(TokenOp::Geq, &name),
+            "lt" => self.parse_2reg(TokenOp::Lt, &name),
+            "leq" => self.parse_2reg(TokenOp::Leq, &name),
+            "add" => self.parse_3reg(TokenOp::Add, &name),
+            "sub" => self.parse_3reg(TokenOp::Sub, &name),
+            "div" => self.parse_3reg(TokenOp::Div, &name),
+            "mod" => self.parse_3reg(TokenOp::Mod, &name),
+            "mul" => self.parse_3reg(TokenOp::Mul, &name),
+            "call" => self.parse_lab(TokenOp::Call, &name),
+            "prts" => self.parse_lab(TokenOp::Prts, &name),
+            "jmp" => self.parse_lab(TokenOp::Jmp, &name),
+            "jeq" => self.parse_lab(TokenOp::Jeq, &name),
+            "jne" => self.parse_lab(TokenOp::Jne, &name),
+            "ret" => Ok(TokenOp::Ret),
+            "hlt" => Ok(TokenOp::Hlt),
+            "nop" => Ok(TokenOp::Nop),
+            _ => unreachable!("{:?}", token),
+        }
+    }
+
     fn next(&mut self) -> Token {
         let token = self.lexer.next().unwrap();
         let span = token.span();
@@ -226,41 +264,6 @@ impl<'a> Parser<'a> {
             .parse_label()
             .map_err(|e| label_missing_for(name, self.last_span, e))?;
         Ok(top(label))
-    }
-
-    fn parse_opcode(&mut self) -> Result<TokenOp, Error> {
-        let token = self.next();
-        let name = token.value().to_owned();
-        match name.as_str() {
-            "load" => self.parse_1reg_u16(TokenOp::Load, &name),
-            "push" => self.parse_1reg(TokenOp::Push, &name),
-            "pop" => self.parse_1reg(TokenOp::Pop, &name),
-            "inc" => self.parse_1reg(TokenOp::Inc, &name),
-            "dec" => self.parse_1reg(TokenOp::Dec, &name),
-            "prti" => self.parse_1reg(TokenOp::Prti, &name),
-            "aloc" => self.parse_1reg(TokenOp::Aloc, &name),
-            "setm" => self.parse_2reg(TokenOp::Setm, &name),
-            "eq" => self.parse_2reg(TokenOp::Eq, &name),
-            "neq" => self.parse_2reg(TokenOp::Neq, &name),
-            "gt" => self.parse_2reg(TokenOp::Gt, &name),
-            "geq" => self.parse_2reg(TokenOp::Geq, &name),
-            "lt" => self.parse_2reg(TokenOp::Lt, &name),
-            "leq" => self.parse_2reg(TokenOp::Leq, &name),
-            "add" => self.parse_3reg(TokenOp::Add, &name),
-            "sub" => self.parse_3reg(TokenOp::Sub, &name),
-            "div" => self.parse_3reg(TokenOp::Div, &name),
-            "mod" => self.parse_3reg(TokenOp::Mod, &name),
-            "mul" => self.parse_3reg(TokenOp::Mul, &name),
-            "call" => self.parse_lab(TokenOp::Call, &name),
-            "prts" => self.parse_lab(TokenOp::Prts, &name),
-            "jmp" => self.parse_lab(TokenOp::Jmp, &name),
-            "jeq" => self.parse_lab(TokenOp::Jeq, &name),
-            "jne" => self.parse_lab(TokenOp::Jne, &name),
-            "ret" => Ok(TokenOp::Ret),
-            "hlt" => Ok(TokenOp::Hlt),
-            "nop" => Ok(TokenOp::Nop),
-            _ => unreachable!("{:?}", token),
-        }
     }
 
     fn parse_text(&mut self) -> Result<Vec<Text>, Error> {

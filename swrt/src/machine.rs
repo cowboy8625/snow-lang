@@ -1,10 +1,4 @@
 use super::{debug_opcode, debug_program, opcode::OpCode};
-//                                     |al-- 
-//                                |ax--|----     
-//                      |eax------|----|----     
-//|rax------------------|---------|----|----
-//|0000_0000_0000_0001 | 0000_0000_0000_0000 
-
 pub struct Machine {
     program: Vec<u8>,
     registers: [u32; 32],
@@ -69,6 +63,16 @@ impl Machine {
         self.registers[des] = value;
     }
 
+    fn loadm(&mut self) {
+        let offset = self.registers[self.get_next_u8() as usize] as usize;
+        let &[a, b, c, d] = &self.heap[offset..offset + 4] else {
+            panic!("offset not within the the heap allocation range");
+        };
+        let data = u32::from_le_bytes([a,b,c,d]);
+        self.registers[self.get_next_u8() as usize] = data;
+        self.get_next_u8();
+    }
+
     fn push(&mut self) {
         let src = self.get_next_u8() as usize;
         let value = self.registers[src];
@@ -101,7 +105,7 @@ impl Machine {
         let src = self.get_next_u8() as usize;
         let offset = self.registers[offset] as usize;
         let src = self.registers[src];
-        for (i, v) in src.to_be_bytes().iter().enumerate() {
+        for (i, v) in src.to_le_bytes().iter().enumerate() {
             self.heap[offset + i] = *v;
         }
         self.get_next_u8();
@@ -308,6 +312,7 @@ impl Machine {
         }
         match self.get_opcode() {
             OpCode::Load => self.load(),
+            OpCode::LoadM => self.loadm(),
             OpCode::Push => self.push(),
             OpCode::Pop => self.pop(),
             OpCode::Aloc => self.aloc(),
@@ -342,13 +347,13 @@ impl Machine {
         self.read_header();
         // debug_program(&self.program);
         // std::process::exit(1);
-        // BUG: the pc is -2 off
         while self.running {
             // let a = self.program[self.pc];
             // let b = self.program[self.pc+1];
             // let c = self.program[self.pc+2];
             // let d = self.program[self.pc+3];
             // eprintln!("pc: {}: {}", self.pc,  debug_opcode(&[a, b, c, d]));
+            // eprintln!("{:?}", self.heap);
             // std::io::stdin().read_line(&mut "".into()).expect("");
             self.run_once();
         }

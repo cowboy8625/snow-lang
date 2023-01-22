@@ -15,6 +15,7 @@ pub fn debug_opcode(chunk: &[u8]) -> String {
     };
     match opcode {
         OpCode::Load => format!("load %{b} {addr}"),
+        OpCode::LoadM => format!("loadm %{b} %{c}"),
         OpCode::Push => format!("push %{b}"),
         OpCode::Pop => format!("pop %{b}"),
         OpCode::Aloc => format!("aloc %{b}"),

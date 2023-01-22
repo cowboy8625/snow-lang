@@ -15,6 +15,7 @@ pub enum TokenOp {
     Jne(Label),
     Prts(Label),
     Prti(u8),
+    LoadM(u8, u8),
     Setm(u8, u8),
     Eq(u8, u8),
     Neq(u8, u8),
@@ -54,6 +55,7 @@ impl TokenOp {
                 Ok([code, b3, b2, b1])
             }
             Self::Setm(a, b)
+            | Self::LoadM(a, b)
             | Self::Eq(a, b)
             | Self::Neq(a, b)
             | Self::Geq(a, b)
