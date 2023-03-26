@@ -14,9 +14,6 @@ clap = { version = "4.0.29", features = ["cargo"] }
 members = [
     "./crates/*",
 ]
-exclude = [
-    "./swrt",
-    ]
 
 
 [[bin]]

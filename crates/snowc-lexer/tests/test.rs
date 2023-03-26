@@ -1,4 +1,4 @@
-use snowc_lexer::{LexerDebug, Scanner, Token};
+use snowc_lexer::{LexerDebug, Scanner, Token, Span};
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
@@ -26,6 +26,17 @@ macro_rules! setup_test {
     };
 }
 
+#[test]
+fn failed() {
+    let mut scanner = Scanner::new("", LexerDebug::Off);
+    scanner.next();
+    scanner.next();
+    scanner.next();
+    scanner.next();
+    scanner.next();
+    scanner.next();
+    assert_eq!(scanner.next(), Some(Token::Eof(Span::new(0,0,0))));
+}
 setup_test!(token_error, "😅", (Error, "😅"));
 setup_test!(symbol_scan, "λλλ", (Op, "λ"), (Op, "λ"), (Op, "λ"),);
 

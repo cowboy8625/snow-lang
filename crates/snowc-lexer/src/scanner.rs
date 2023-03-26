@@ -76,7 +76,9 @@ impl<'a> Scanner<'a> {
     fn next_char(&mut self) -> Option<char> {
         self.previous = self.current;
         self.current = self.stream.next();
-        self.advance();
+        if self.current.is_some() {
+            self.advance();
+        }
         self.current
     }
 

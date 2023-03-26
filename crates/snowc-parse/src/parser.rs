@@ -82,30 +82,39 @@ impl<'a> Parser<'a> {
         Expr::Error(s)
     }
 
-    // FIXME: This is broken
-    fn recover(&mut self, deliminators: &[Token]) {
-        if let Some(error) = &self.errors {
-            if error.get_error_code::<ErrorCode>() == ErrorCode::E0010 {
-                return;
-            }
-        }
-        let mut last_span = self
-            .previous()
-            .map(|t| t.span())
-            .unwrap_or_else(Span::default);
-        println!("recovering");
-        while let Some(tok) = self.next_if(|t| !deliminators.contains(&t)) {
-            if tok.span().line > last_span.line {
-                break;
-            }
-            last_span = tok.span();
-            if self.is_end() {
+    fn recover(&mut self) {
+        loop {
+            let token =self.next();
+            if token.is_op_a(";") || token.is_eof() {
                 break;
             }
         }
-        self.next();
-        dbg!(self.peek());
     }
+
+    // FIXME: This is broken
+    // fn recover(&mut self, deliminators: &[Token]) {
+    //     if let Some(error) = &self.errors {
+    //         if error.get_error_code::<ErrorCode>() == ErrorCode::E0010 {
+    //             return;
+    //         }
+    //     }
+    //     let mut last_span = self
+    //         .previous()
+    //         .map(|t| t.span())
+    //         .unwrap_or_else(Span::default);
+    //     println!("recovering");
+    //     while let Some(tok) = self.next_if(|t| !deliminators.contains(&t)) {
+    //         if tok.span().line > last_span.line {
+    //             break;
+    //         }
+    //         last_span = tok.span();
+    //         if self.is_end() {
+    //             break;
+    //         }
+    //     }
+    //     self.next();
+    //     dbg!(self.peek());
+    // }
 
     pub fn parse(mut self) -> Result<Vec<Expr>, Error> {
         let Self { debug_parser, .. } = self;
@@ -133,20 +142,26 @@ impl<'a> Parser<'a> {
         if self.is_function(&token) {
             let expr = self.function(&token);
             if expr.is_error() {
-                self.recover(&[Token::Op(";".into(), token.span())]);
+                // self.recover(&[Token::Op(";".into(), token.span())]);
+                self.recover();
+                return self.declaration();
             }
             return expr;
         } else if token.is_keyword_a("enum") {
             let expr = self.enum_def(token.span());
             if expr.is_error() {
-                self.recover(&[Token::Op(";".into(), token.span())]);
+                // self.recover(&[Token::Op(";".into(), token.span())]);
+                self.recover();
+                return self.declaration();
             }
             return expr;
         } else if token.is_id() && self.peek().is_op_a("::") {
             // } else if let Token::Id(id, span) = token {
             let expr = self.type_dec(&token);
             if expr.is_error() {
-                self.recover(&[Token::Op(";".into(), token.span())]);
+                // self.recover(&[Token::Op(";".into(), token.span())]);
+                self.recover();
+                return self.declaration();
             }
             return expr;
         }
