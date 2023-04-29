@@ -367,7 +367,7 @@ impl<'a> Parser<'a> {
             let last;
             loop {
                 match self.peek() {
-                    Token::Op(ref op, ..) if op == "(" => {}
+                    Token::Op(ref op, ..) if op == "(" || op == "[" => {}
                     Token::Op(.., span) | Token::Eof(.., span) => {
                         last = Some(span);
                         break;

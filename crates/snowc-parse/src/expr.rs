@@ -21,6 +21,7 @@ pub enum Atom {
     Bool(bool),
     String(String),
     Char(char),
+    Array(Vec<Atom>),
 }
 
 impl fmt::Display for Atom {
@@ -32,6 +33,17 @@ impl fmt::Display for Atom {
             Self::Bool(b) => write!(f, "{b}"),
             Self::String(s) => write!(f, "{s}"),
             Self::Char(s) => write!(f, "{s}"),
+            Self::Array(array) => {
+                let mut a = array.iter().enumerate().fold("[".to_string(), |mut acc, (idx, item)| {
+                    if idx != 0 {
+                        acc += ", ";
+                    }
+                    acc += item.to_string().as_str();
+                    acc
+                });
+                a += "]";
+                write!(f, "{a}")
+            }
         }
     }
 }

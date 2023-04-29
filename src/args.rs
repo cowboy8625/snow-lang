@@ -7,6 +7,7 @@ pub struct Settings {
     pub debug_ast: bool,
     pub debug_graph: bool,
     pub option_no_type_check: bool,
+    pub option_compile_string: bool,
 }
 
 pub fn cargs() -> Settings {
@@ -45,6 +46,14 @@ pub fn cargs() -> Settings {
                 .action(clap::ArgAction::SetTrue)
                 .help("turn the language in to garbage"),
         )
+        .arg(
+            Arg::new("from_string")
+                .long("string")
+                .short('s')
+                .required(false)
+                .action(clap::ArgAction::SetTrue)
+                .help("turn the language in to garbage"),
+        )
         .get_matches();
 
     let mut setting = Settings::default();
@@ -63,5 +72,8 @@ pub fn cargs() -> Settings {
     setting.option_no_type_check = *matches
         .get_one::<bool>("dynamic")
         .expect("dynamic failed");
+    setting.option_compile_string = *matches
+        .get_one::<bool>("from_string")
+        .expect("from_string failed");
     setting
 }

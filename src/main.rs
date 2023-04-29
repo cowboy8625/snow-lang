@@ -63,16 +63,25 @@ fn handle_compiler_errors(filename: impl Into<String>) -> impl FnOnce(CompilerEr
     }
 }
 
+fn get_src(flag: bool) -> impl FnOnce(String) -> Result<String, CompilerError> {
+    move |filename| {
+        if flag {
+            return Ok(filename);
+        }
+        std::fs::read_to_string(filename).ok().ok_or(CompilerError::NoFileGive)
+    }
+}
+
 fn main() {
     let setting = args::cargs();
     if setting.debug_graph {
         unimplemented!("graphviz is not working just yet");
     }
     setting
-        .filename.clone()
-        .and_then(|filename| {
-            std::fs::read_to_string(filename).ok()
-        }).ok_or(CompilerError::NoFileGive)
+        .filename
+        .clone()
+        .ok_or(CompilerError::NoFileGive)
+        .and_then(get_src(setting.option_compile_string))
         .and_then(debug_tokens(setting.debug_token))
         .and_then(|src| {
             timer("Parse", ||parse(Scanner::new(&src)))

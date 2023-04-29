@@ -1,0 +1,7 @@
+range :: Int -> Int -> Array;
+range start end =
+  if start < end then
+    (push (range (start + 1)) start)
+  else
+    [end];
+main = range 0 10;

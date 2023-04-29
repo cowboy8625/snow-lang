@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use snowc_parse::{Atom, Expr, Op};
+use snowc_parse::{Span, Atom, Expr, Op};
 trait Visitor {
     type Item;
     fn visit_atom(
@@ -102,8 +102,8 @@ impl Interpreter {
         local_env: &mut Env,
         global_env: &Env,
     ) -> Atom {
-        self.visit_expr(tail, local_env, global_env);
-        self.visit_expr(head, local_env, global_env)
+        self.visit_expr(head, local_env, global_env);
+        self.visit_expr(tail, local_env, global_env)
     }
 
     // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
@@ -142,61 +142,123 @@ impl Interpreter {
         }
     }
 
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
-    fn app(
+    fn print_function(
         &mut self,
-        name: &Box<Expr>,
+        args: &[Expr],
+        local_env: &mut Env,
+        global_env: &Env,
+        ) -> Option<Atom> {
+            let e = self.visit_expr(&args[0], local_env, global_env);
+            println!("{}", e);
+            Some(e)
+    }
+    fn nth_function(
+        &mut self,
+        span: Span,
+        args: &[Expr],
+        local_env: &mut Env,
+        global_env: &Env,
+        ) -> Option<Atom> {
+        let atom = self.visit_expr(&args[0], local_env, global_env);
+        let Atom::Array(array) = atom else {
+            eprintln!("ERROR {}:{}: nth expected an array but found {atom}", span.start, span.end);
+            std::process::exit(1);
+        };
+        let Expr::Atom(Atom::Int(idx), ..) = &args[1] else {
+            eprintln!("ERROR {}:{}: nth expected a int", span.start, span.end);
+            std::process::exit(1);
+        };
+        let atom = &array[*idx as usize];
+        Some(atom.clone())
+    }
+
+    fn push_function(
+        &mut self,
+        span: Span,
+        args: &[Expr],
+        local_env: &mut Env,
+        global_env: &Env,
+        ) -> Option<Atom> {
+        let atom = self.visit_expr(&args[0], local_env, global_env);
+        let Atom::Array(mut array) = atom else {
+            eprintln!("ERROR {}:{}: nth expected an array but found {atom}", span.start, span.end);
+            std::process::exit(1);
+        };
+        let atom = self.visit_expr(&args[1], local_env, global_env);
+        array.push(atom);
+        Some(Atom::Array(array))
+    }
+
+    fn pop_function(
+        &mut self,
+        _span: Span,
+        _args: &[Expr],
+        _local_env: &mut Env,
+        _global_env: &Env,
+        ) -> Option<Atom> {
+        todo!()
+    }
+
+    fn builtin_functions(
+        &mut self,
+        name: &str,
+        span: Span,
+        args: &[Expr],
+        local_env: &mut Env,
+        global_env: &Env,
+        ) -> Option<Atom> {
+        match name {
+            "print_int" | "print_bool" | "print_str"  => self.print_function(args, local_env, global_env),
+            "nth" => self.nth_function(span, args, local_env, global_env),
+            "push" => self.push_function(span, args, local_env, global_env),
+            "pop" => self.pop_function(span, args, local_env, global_env),
+            _ => None,
+
+        }
+    }
+
+    fn unfold_clourse(
+        &mut self,
+        head: &Expr,
         args: &[Expr],
         local_env: &mut Env,
         global_env: &Env,
     ) -> Atom {
-        let Expr::Atom(Atom::Id(ref name), span) = **name else {
-            panic!("expected a Id but found '{name:?}'");
-        };
-        if ["print_int", "print_bool", "print_str"].contains(&name.as_str()) {
-            let e = self.visit_expr(&args[0], local_env, global_env);
-            println!("{}", e);
-            return e;
-        }
-        if name.as_str() == "nth" {
-            let first = if args[0].is_array() {
-                args[0].clone()
-            } else {
-                let Expr::Atom(atom, ..) = &args[0] else {
-                    eprintln!("ERROR {}:{}: {name} expected a array", span.start, span.end);
-                    std::process::exit(1);
-                };
-                let Atom::Id(name) = atom else {
-                    eprintln!("ERROR {}:{}: {name} expected a array", span.start, span.end);
-                    std::process::exit(1);
-                };
-                global_env.get(name).unwrap().clone()
-                // self.visit_expr(&args[0], local_env, global_env)
-            };
-            let Expr::Array(array, ..) = first else {
-                eprintln!("ERROR {}:{}: {name} expected a array", span.start, span.end);
-                std::process::exit(1);
-            };
-            let Expr::Atom(Atom::Int(idx), ..) = &args[1] else {
-                eprintln!("ERROR {}:{}: {name} expected a int", span.start, span.end);
-                std::process::exit(1);
-            };
-            let expr = &array[*idx as usize];
-            return self.visit_expr(expr, local_env, global_env);
-        }
-        let Some(func) = global_env.get(name) else {
-            eprintln!("ERROR {}:{}: {name} is not implemented yet", span.start, span.end);
-            std::process::exit(1);
-        };
         let mut params = Vec::new();
-        self.get_func_params(func, global_env, local_env, &mut params);
+        self.get_func_params(&head, global_env, local_env, &mut params);
         for (param, arg) in params.iter().zip(args) {
             let span = arg.span();
             let atom = self.visit_expr(arg, local_env, global_env);
             let expr = Expr::Atom(atom, span);
             local_env.insert(param.to_string(), expr.clone());
         }
-        self.visit_expr(func, local_env, global_env)
+        self.visit_expr(&head, local_env, global_env)
+    }
+
+    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
+    fn app(
+        &mut self,
+        head: &Box<Expr>,
+        args: &[Expr],
+        local_env: &mut Env,
+        global_env: &Env,
+    ) -> Atom {
+        let span = head.span();
+        let atom = match &**head {
+            Expr::Atom(atom, ..) => atom.clone(),
+            _ => self.unfold_clourse(head, args, local_env, global_env),
+        };
+        let Atom::Id(ref name) = atom else {
+            return atom;
+        };
+        if let Some(atom) = self.builtin_functions(name, span, args, local_env, global_env) {
+            return atom.clone();
+        }
+        let Some(func) = local_env.get(name).or(global_env.get(name)).cloned() else {
+            eprintln!("ERROR {}:{}: {name} is not implemented yet", span.start, span.end);
+            std::process::exit(1);
+        };
+        self.unfold_clourse(&func, args, local_env, global_env)
     }
 }
 
@@ -211,11 +273,9 @@ impl Visitor for Interpreter {
     ) -> Self::Item {
         match atom {
             Atom::Id(name) => {
-                let expr = global_env
-                    .get(name)
-                    .or(local_env.get(name))
-                    .cloned()
-                    .unwrap();
+                let Some(expr) = global_env.get(name).or(local_env.get(name)).cloned() else {
+                        return atom.clone();
+                };
                 self.visit_expr(&expr, local_env, global_env)
             }
             _ => atom.clone(),
@@ -241,7 +301,15 @@ impl Visitor for Interpreter {
                 self.closure(head, tail, local_env, global_env)
             }
             Expr::App(name, args, ..) => self.app(name, args, local_env, global_env),
-            Expr::Array(..) => unimplemented!(),
+            Expr::Array(array, ..) => {
+                let mut result = vec![];
+                for e in array.iter() {
+                    eprintln!("{e}: {local_env:?}");
+                    let expr = self.visit_expr(e, local_env, global_env);
+                    result.push(expr);
+                }
+                Atom::Array(result)
+            }
             Expr::Enum(..) => unimplemented!(),
             Expr::Func(..) => unreachable!(),
             Expr::TypeDec(..) => unreachable!(),
