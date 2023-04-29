@@ -1,0 +1,9 @@
+[package]
+name = "snowc-tree-walker"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+snowc-parse = { path = "../snowc-parse" }
+
+trace = "0.1.7"

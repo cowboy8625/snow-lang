@@ -1,0 +1,28 @@
+-- this is not a working fiz buzz program yet.
+
+Thing :: Int;
+enum Thing = One Int | Two Int Int;
+--
+-- let one in Thing.One 1
+--   match one
+--     | Thing.One num => something
+--     | Thing.Two n1 n2 => something
+--
+
+
+max :: Int -> Int -> Int;
+max x y = if x > y then x else y;
+
+min :: Int -> Int -> Int;
+min x y = if x < y then x else y;
+
+range :: Int -> Int -> Int;
+range n x = if n < x then (range (n + 1) x) else n;
+
+-- fib :: Int -> Int;
+-- fib 0 = 0;
+-- fib 1 = 1;
+-- fib n = fib (n-1) + fib (n-2);
+
+main :: IO;
+main = print_int (range 0 10);

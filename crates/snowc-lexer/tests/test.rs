@@ -1,4 +1,4 @@
-use snowc_lexer::{LexerDebug, Scanner, Token, Span};
+use snowc_lexer::{LexerDebug, Scanner, Span, Token};
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
@@ -35,7 +35,7 @@ fn failed() {
     scanner.next();
     scanner.next();
     scanner.next();
-    assert_eq!(scanner.next(), Some(Token::Eof(Span::new(0,0,0))));
+    assert_eq!(scanner.next(), Some(Token::Eof(Span::new(0, 0, 0))));
 }
 setup_test!(token_error, "😅", (Error, "😅"));
 setup_test!(symbol_scan, "λλλ", (Op, "λ"), (Op, "λ"), (Op, "λ"),);

@@ -65,7 +65,6 @@ impl<'a> Parser<'a> {
             return;
         };
         if error.cause.is_none() {
-            eprintln!("cause is nothing {:?}", self.errors);
             self.errors = None;
             return;
         }
@@ -84,7 +83,7 @@ impl<'a> Parser<'a> {
 
     fn recover(&mut self) {
         loop {
-            let token =self.next();
+            let token = self.next();
             if token.is_op_a(";") || token.is_eof() {
                 break;
             }
@@ -124,7 +123,9 @@ impl<'a> Parser<'a> {
             ast.push(e);
         }
         if let ParserDebug::On = debug_parser {
-            dbg!(&ast);
+            for node in ast.iter() {
+                eprintln!("{node}")
+            }
         }
         if let Some(error) = self.errors {
             return Err(error);
@@ -255,7 +256,6 @@ impl<'a> Parser<'a> {
                     args.push(self.expression(Precedence::Fn));
                 }
                 if self.next_if(|t| t.is_op_a("=")).is_none() {
-                    dbg!("EQ F");
                     let span = self.peek().span();
                     return self.report(ErrorCode::Unknown, span);
                 }
@@ -266,7 +266,6 @@ impl<'a> Parser<'a> {
                 })
             })
             .or_else(|_| {
-                dbg!(self.peek());
                 self.remove_last_error();
                 if self.next_if(|t| t.is_op_a("=")).is_none() {
                     let span = self.peek().span();
@@ -429,7 +428,6 @@ impl<'a> Parser<'a> {
                     Expr::Atom(Atom::Id(format!("({op})")), span)
                 } else {
                     // return self.report("E2", "unknown op char", span);
-                    dbg!(&op);
                     self.report(ErrorCode::E0002, span)
                 }
             }

@@ -63,6 +63,13 @@ fn unary() {
         .expression(Precedence::None)
         .to_string();
     assert_eq!(left, "(- a)");
+
+    let src = "!true";
+    let left = ParserBuilder::default()
+        .build(src)
+        .expression(Precedence::None)
+        .to_string();
+    assert_eq!(left, "(! true)");
 }
 
 #[test]

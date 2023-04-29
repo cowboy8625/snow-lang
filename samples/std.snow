@@ -5,4 +5,4 @@ min :: Int -> Int -> Int;
 min x y = if x < y then x else y;
 
 clamp :: Int -> Int -> Int -> Int;
-clamp num mx mn = max mn (min num mx);
+clamp input low high = max low (min input high);

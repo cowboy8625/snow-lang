@@ -66,7 +66,7 @@ impl Token {
             Self::String(i, ..) => i,
             Self::Char(i, ..) => i,
             Self::Error(i, ..) => i,
-            Self::Eof(..) => panic!("eof does not have a value"),
+            Self::Eof(..) => "Eof",
         }
     }
 
