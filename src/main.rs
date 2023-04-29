@@ -23,7 +23,7 @@ fn debug_tokens(flag: bool) -> impl FnOnce(String) -> Result<String, CompilerErr
     move |src: String| {
         if flag {
             for token in Scanner::new(&src) {
-                eprintln!("{token}");
+                eprintln!("{token:?}");
             }
         }
         Ok(src)
@@ -43,7 +43,24 @@ fn debug_ast(flag: bool) -> impl FnOnce(Vec<Expr>) -> Result<Vec<Expr>, Compiler
 
 }
 
-fn handle_compiler_errors(error: CompilerError) {
+fn handle_compiler_errors(filename: impl Into<String>) -> impl FnOnce(CompilerError){
+    move |error_type| {
+        match error_type {
+            CompilerError::Parse(ref errors) => {
+                let filename = filename.into();
+                let src = std::fs::read_to_string(&filename).expect("failed to get file source for error report");
+                snowc::report(&filename, &src, errors);
+            },
+            CompilerError::Type(errors) => {
+                for error in errors {
+                    eprintln!("{error}");
+                }
+            },
+            CompilerError::NoFileGive => {
+                eprintln!("No file given to compile");
+            },
+        }
+    }
 }
 
 fn main() {
@@ -51,8 +68,8 @@ fn main() {
     if setting.debug_graph {
         unimplemented!("graphviz is not working just yet");
     }
-    let ast = setting
-        .filename
+    setting
+        .filename.clone()
         .and_then(|filename| {
             std::fs::read_to_string(filename).ok()
         }).ok_or(CompilerError::NoFileGive)
@@ -68,7 +85,7 @@ fn main() {
             }
             Ok(ast)
         })
-        .map_or_else(handle_compiler_errors, Interpreter::new);
+        .map_or_else(handle_compiler_errors(setting.filename.unwrap_or_default()), Interpreter::new);
 }
 
 fn timer<O, E, F>(msg: impl Into<String>, func: F) -> Result<O, E>

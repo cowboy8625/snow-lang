@@ -7,9 +7,9 @@ macro_rules! testme {
         #[test]
         fn $name() -> Result<(), Error> {
             let ast = parse(Scanner::new($src))?;
-            // for node in ast.iter() {
-            //     eprintln!("{node}");
-            // }
+            for node in ast.iter() {
+                eprintln!("{node}");
+            }
             let left = ast.iter().map(ToString::to_string).collect::<Vec<_>>();
             assert_eq!(left, $expected);
             Ok(())
@@ -207,5 +207,13 @@ testme!(
     vec![
         r#"<add :: Int -> Int -> Int>"#,
         r#"<main: 1>"#,
+    ],
+);
+
+testme!(
+    array,
+    r#"main = [1, 2, 3, 4];"#,
+    vec![
+        r#"<main: [1, 2, 3, 4]>"#,
     ],
 );

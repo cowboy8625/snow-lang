@@ -98,22 +98,3 @@ pub use snowc_type_checker::*;
     // }
     // }
 
-fn timer<O, E, F>(msg: impl Into<String>, func: F) -> Result<O, E>
-where
-    F: FnOnce() -> Result<O, E>,
-{
-    let start = std::time::Instant::now();
-    let out = func();
-    let now = std::time::Instant::now();
-    let time = (now - start).as_secs_f64();
-    let msg = format_compiler_message(msg);
-    eprintln!("{msg} {time}s");
-    out
-}
-
-fn format_compiler_message(msg: impl Into<String>) -> String {
-    let msg = msg.into();
-    let w = msg.len() + (15 - msg.len());
-    let msg = format!("{:>w$}", msg);
-    msg
-}

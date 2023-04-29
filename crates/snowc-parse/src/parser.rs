@@ -32,7 +32,7 @@ impl<'a> Parser<'a> {
     }
 
     fn next(&mut self) -> Token {
-        let token = self.lexer.next().unwrap();
+        let token = self.lexer.next().unwrap_or(Token::Eof(Span::default()));
         self.token_stream.push(token.clone());
         token
     }
@@ -359,6 +359,7 @@ impl<'a> Parser<'a> {
         let mut lhs = self.expression(min_bp);
         if match self.peek() {
             Token::Op(ref op, ..) if op == "(" => true,
+            Token::Op(ref op, ..) if op == "[" => true,
             Token::Op(..) | Token::KeyWord(..) | Token::Eof(..) => false,
             _ => true,
         } {
@@ -394,6 +395,31 @@ impl<'a> Parser<'a> {
                     return self.report(ErrorCode::Unknown, span);
                 };
                 lhs
+            }
+            "[" => {
+                self.next();
+                let mut lhs = vec![];
+                while !self.peek().is_op_a("]") {
+                    let expr = self.closure();
+                    lhs.push(expr);
+                    self.next_if(|t| t.is_op_a(","));
+
+                }
+                if self.next_if(|t| t.is_op_a("]")).is_none() {
+                    let span = lhs.last().map(|t|t.span()).unwrap_or(self.peek().span());
+                    return self.report(ErrorCode::Unknown, span);
+                };
+                let span = lhs
+                    .first()
+                    .and_then(|f| {
+                        lhs
+                            .last()
+                            .map_or(
+                                Some(f.span()),
+                                |l| Some(Span::from((f.span(), l.span()))))
+                    })
+                    .unwrap_or_default();
+                Expr::Array(lhs, span)
             }
             o @ ("-" | "!") => {
                 self.next();

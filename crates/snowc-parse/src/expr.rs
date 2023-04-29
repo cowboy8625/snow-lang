@@ -45,6 +45,7 @@ pub enum Expr {
     Closure(Box<Self>, Box<Self>, Span),
     Func(String, Box<Self>, Span),
     App(Box<Self>, Vec<Self>, Span),
+    Array(Vec<Self>, Span),
     Enum(String, Vec<(String, Vec<String>)>, Span),
     TypeDec(String, Vec<String>, Span),
     Error(Span),
@@ -74,6 +75,7 @@ impl Expr {
             Self::Closure(.., span) => *span,
             Self::Func(.., span) => *span,
             Self::App(.., span) => *span,
+            Self::Array(.., span) => *span,
             Self::Enum(.., span) => *span,
             Self::TypeDec(.., span) => *span,
             Self::Error(span) => *span,
@@ -87,6 +89,7 @@ impl Expr {
     is_expr!(is_func, Func);
     is_expr!(is_app, App);
     is_expr!(is_type, Enum);
+    is_expr!(is_array, Array);
     is_expr!(is_type_dec, TypeDec);
     is_expr!(is_error, Error);
 }
@@ -116,6 +119,17 @@ impl fmt::Display for Expr {
                 }
                 write!(f, ")>")?;
                 Ok(())
+            }
+            Self::Array(array, ..) => {
+                let mut a = array.iter().enumerate().fold("[".to_string(), |mut acc, (idx, item)| {
+                    if idx != 0 {
+                        acc += ", ";
+                    }
+                    acc += item.to_string().as_str();
+                    acc
+                });
+                a += "]";
+                write!(f, "{a}")
             }
             Self::Enum(name, args, ..) => {
                 if args.is_empty() {

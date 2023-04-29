@@ -158,8 +158,35 @@ impl Interpreter {
             println!("{}", e);
             return e;
         }
+        if name.as_str() == "nth" {
+            let first = if args[0].is_array() {
+                args[0].clone()
+            } else {
+                let Expr::Atom(atom, ..) = &args[0] else {
+                    eprintln!("ERROR {}:{}: {name} expected a array", span.start, span.end);
+                    std::process::exit(1);
+                };
+                let Atom::Id(name) = atom else {
+                    eprintln!("ERROR {}:{}: {name} expected a array", span.start, span.end);
+                    std::process::exit(1);
+                };
+                global_env.get(name).unwrap().clone()
+                // self.visit_expr(&args[0], local_env, global_env)
+            };
+            let Expr::Array(array, ..) = first else {
+                eprintln!("ERROR {}:{}: {name} expected a array", span.start, span.end);
+                std::process::exit(1);
+            };
+            let Expr::Atom(Atom::Int(idx), ..) = &args[1] else {
+                eprintln!("ERROR {}:{}: {name} expected a int", span.start, span.end);
+                std::process::exit(1);
+            };
+            let expr = &array[*idx as usize];
+            return self.visit_expr(expr, local_env, global_env);
+        }
         let Some(func) = global_env.get(name) else {
-            panic!("ERROR {}:{}: {name} is not implemented yet", span.start, span.end);
+            eprintln!("ERROR {}:{}: {name} is not implemented yet", span.start, span.end);
+            std::process::exit(1);
         };
         let mut params = Vec::new();
         self.get_func_params(func, global_env, local_env, &mut params);
@@ -214,6 +241,7 @@ impl Visitor for Interpreter {
                 self.closure(head, tail, local_env, global_env)
             }
             Expr::App(name, args, ..) => self.app(name, args, local_env, global_env),
+            Expr::Array(..) => unimplemented!(),
             Expr::Enum(..) => unimplemented!(),
             Expr::Func(..) => unreachable!(),
             Expr::TypeDec(..) => unreachable!(),
