@@ -1,7 +1,7 @@
 -- this is not a working fiz buzz program yet.
 
-Thing :: Int;
-enum Thing = One Int | Two Int Int;
+-- Thing :: Int;
+-- enum Thing = One Int | Two Int Int;
 --
 -- let one in Thing.One 1
 --   match one

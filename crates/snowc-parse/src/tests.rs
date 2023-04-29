@@ -1,223 +1,211 @@
-use super::{precedence::Precedence, ParserBuilder, Span, Token};
-use snowc_error_messages::report;
+use super::{parse, Error, Scanner};
 
 use pretty_assertions::assert_eq;
 
-fn parse_or_report(test_name: &str, src: &str) -> Vec<String> {
-    let result = ParserBuilder::default()
-        .debug_parser(true)
-        .build(src)
-        .parse();
-    let Ok(ast) = result else {
-        eprintln!("{:?}", result);
-        if let Err(errors) = result {
-            report(test_name, src, &errors);
+macro_rules! testme {
+    ($name:ident, $src:expr, $expected:expr $(,)?) => {
+        #[test]
+        fn $name() -> Result<(), Error> {
+            let ast = parse(Scanner::new($src))?;
+            // for node in ast.iter() {
+            //     eprintln!("{node}");
+            // }
+            let left = ast.iter().map(ToString::to_string).collect::<Vec<_>>();
+            assert_eq!(left, $expected);
+            Ok(())
         }
-        return vec![];
     };
-    ast.iter().map(ToString::to_string).collect()
 }
 
-#[test]
-fn expression() {
-    let src = "1";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, src);
+testme!(
+    expression_int,
+    "main :: Int; main = 1;",
+    vec![
+        "<main :: Int>",
+        "<main: 1>",
+    ],
+);
 
-    let src = "1.2";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, src);
+testme!(
+    expression_float,
+    "main :: Int; main = 1.2;",
+    vec![
+        "<main :: Int>",
+        "<main: 1.2>",
+    ],
+);
+testme!(
+    expression_ident,
+    "main :: Int; main = a;",
+    vec![
+        "<main :: Int>",
+        "<main: a>",
+    ],
+);
 
-    let src = "a";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, src);
-}
-#[test]
-fn unary() {
-    let src = "-1";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(- 1)");
+testme!(
+    expression_unary_neg_int,
+    "main :: Int; main = -1;",
+    vec![
+        "<main :: Int>",
+        "<main: (- 1)>",
+    ],
+);
 
-    let src = "(- 1.2)";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(- 1.2)");
+testme!(
+    expression_unary_neg_float,
+    "main :: Int; main = -1.223;",
+    vec![
+        "<main :: Int>",
+        "<main: (- 1.223)>",
+    ],
+);
 
-    let src = "-a";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(- a)");
+testme!(
+    expression_unary_neg_ident,
+    "main :: Int; main = -a;",
+    vec![
+        "<main :: Int>",
+        "<main: (- a)>",
+    ],
+);
 
-    let src = "!true";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(! true)");
-}
+testme!(
+    expression_unary_not_true,
+    "main = !true;",
+    vec![
+        "<main: (! true)>",
+    ],
+);
 
-#[test]
-fn binary() {
-    let src = "1 + 2 * 3";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(+ 1 (* 2 3))");
-}
+testme!(
+    expression_unary_not_false,
+    "main = !false;",
+    vec![
+        "<main: (! false)>",
+    ],
+);
 
-#[test]
-fn binary_ids() {
-    let src = "a + b * c * d + e";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(+ (+ a (* (* b c) d)) e)");
+testme!(
+    expression_binary,
+    "main = 1 + 2 * 3;",
+    vec!["<main: (+ 1 (* 2 3))>"],
+);
 
-    let src = "a + b";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(+ a b)");
-}
+testme!(
+    expression_binary_ident_1,
+    "main = a + b * c * d + e;",
+    vec!["<main: (+ (+ a (* (* b c) d)) e)>"],
+);
 
-#[test]
-fn changing_precedence() {
-    let src = "(-1 + 2) * 3 - -4";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(- (* (+ (- 1) 2) 3) (- 4))");
+testme!(
+    expression_binary_ident_2,
+    "main = a + b;",
+    vec!["<main: (+ a b)>"],
+);
 
-    let src = "(((a)))";
-    let left = ParserBuilder::default()
-        .build(src)
-        .expression(Precedence::None)
-        .to_string();
-    assert_eq!(left, "a");
-}
+testme!(
+    changing_precedence_1,
+    "main = (((a)));",
+    vec!["<main: a>"],
+);
 
-#[test]
-fn calling_operator() {
-    let src = "(+) 1 2";
-    let left = ParserBuilder::default()
-        .build(src)
-        .call(Precedence::None)
-        .to_string();
-    assert_eq!(left, "<(+): (1, 2)>");
-}
+testme!(
+    changing_precedence_2,
+    "main = (-1 + 2) * 3 - -4;",
+    vec!["<main: (- (* (+ (- 1) 2) 3) (- 4))>"],
+);
 
-#[test]
-fn call() {
-    let src = "add 1 2";
-    let left = ParserBuilder::default()
-        .build(src)
-        .call(Precedence::None)
-        .to_string();
-    assert_eq!(left, "<add: (1, 2)>");
-}
+testme!(
+    calling_operator,
+    "main = (+) 1 2;",
+    vec!["<main: <(+): (1, 2)>>"],
+);
 
-#[test]
-fn pipe_call() {
-    let src = "2 |> add 1";
-    let left = ParserBuilder::default()
-        .build(src)
-        .call(Precedence::None)
-        .to_string();
-    assert_eq!(left, "(|> 2 <add: (1)>)");
-}
+testme!(
+    call,
+    "main = add 1 2;",
+    vec!["<main: <add: (1, 2)>>"],
+);
 
-#[test]
-fn conditional() {
-    let src = "if x > y then x else y;";
-    let left = ParserBuilder::default()
-        .build(src)
-        .conditional()
-        .to_string();
-    assert_eq!(left, "(if ((> x y)) then x else y)");
-}
+testme!(
+    pipe_call,
+    "main = 2 |> add 1;",
+    vec!["<main: (|> 2 <add: (1)>)>"],
+);
 
-#[test]
-fn function_def_from_parse_funtion() {
-    let src = "x y = x + y;";
-    let left = ParserBuilder::default()
-        .build(src)
-        .function(&Token::Id("add".into(), Span::default()))
-        .to_string();
-    assert_eq!(left, r#"<add: (\x -> (\y -> (+ x y)))>"#);
-}
+testme!(
+    conditional,
+    "main = if x > y then x else y;",
+    vec!["<main: (if ((> x y)) then x else y)>"],
+);
 
-#[test]
-fn function_def() {
-    let src = "add x y = x + y;";
-    let left = parse_or_report("function_def", src);
-    let right = vec![r#"<add: (\x -> (\y -> (+ x y)))>"#];
-    assert_eq!(left, right);
-}
+testme!(
+    function_def_from_parse_funtion,
+    "add x y = x + y; main = add 1 2;",
+    vec![
+        r#"<add: (\x -> (\y -> (+ x y)))>"#,
+        r#"<main: <add: (1, 2)>>"#
+    ],
+);
 
-#[test]
-fn super_duper_function_def() {
-    let src = "main = print (max ((add 1 2) + (sub 1 2)) 20);";
-    let right = vec!["<main: <print: (<max: ((+ <add: (1, 2)> <sub: (1, 2)>), 20)>)>>"];
-    let left = parse_or_report("super_duper_function_def", src);
-    assert_eq!(left, right);
-}
+testme!(
+    function_def,
+    "add x y = x + y; main = add 1 2;",
+    vec![
+        r#"<add: (\x -> (\y -> (+ x y)))>"#,
+        r#"<main: <add: (1, 2)>>"#
+    ],
+);
 
-#[test]
-fn multi_function_def() {
-    let src = "add x y = x + y; sub x y = x - y;";
-    let right = vec![
+testme!(
+    super_duper_function_def,
+    "main = print (max ((add 1 2) + (sub 1 2)) 20);",
+    vec![r#"<main: <print: (<max: ((+ <add: (1, 2)> <sub: (1, 2)>), 20)>)>>"#],
+);
+
+testme!(
+    multi_function_def,
+    "add x y = x + y; sub x y = x - y; main = sub (add 1 2) 3;",
+    vec![
         r#"<add: (\x -> (\y -> (+ x y)))>"#,
         r#"<sub: (\x -> (\y -> (- x y)))>"#,
-    ];
-    let left = parse_or_report("muli_function_def", src);
-    assert_eq!(left, right);
-}
+        r#"<main: <sub: (<add: (1, 2)>, 3)>>"#,
+    ],
+);
 
-#[test]
-fn closures() {
-    let src = "add = (λx -> (λy -> x + y));";
-    let right = vec![r#"<add: (\x -> (\y -> (+ x y)))>"#];
-    let left = parse_or_report("closures 1", src);
-    assert_eq!(left, right);
+testme!(
+    closures_lambda_sign,
+    "add = (λx -> (λy -> x + y)); main = add 1 2;",
+    vec![
+        r#"<add: (\x -> (\y -> (+ x y)))>"#,
+        r#"<main: <add: (1, 2)>>"#,
+    ],
+);
 
-    let src = r#"add = (\x -> (\y -> x + y));"#;
-    let right = vec![r#"<add: (\x -> (\y -> (+ x y)))>"#];
-    let left = parse_or_report("closures 2", src);
-    assert_eq!(left, right);
-}
+testme!(
+    closures,
+    r#"add = (\x -> (\y -> x + y)); main = add 1 2;"#,
+    vec![
+        r#"<add: (\x -> (\y -> (+ x y)))>"#,
+        r#"<main: <add: (1, 2)>>"#,
+    ],
+);
 
-#[test]
-fn enum_def() {
-    let src = r#"enum Option = Some Int | None;"#;
-    let right = vec![r#"<Option: (Some, [Int]), (None, [])>"#];
-    let left = parse_or_report("user_type_def", src);
-    assert_eq!(left, right);
-}
+testme!(
+    enum_def,
+    r#"enum Option = Some Int | None; main = 1;"#,
+    vec![
+        r#"<Option: (Some, [Int]), (None, [])>"#,
+        r#"<main: 1>"#,
+    ],
+);
 
-#[test]
-fn type_dec() {
-    let src = r#"add :: Int -> Int -> Int;"#;
-    let right = vec![r#"<add :: Int -> Int -> Int>"#];
-    let left = parse_or_report("type_dec", src);
-    assert_eq!(left, right);
-}
+testme!(
+    type_dec,
+    r#"add :: Int -> Int -> Int; main = 1;"#,
+    vec![
+        r#"<add :: Int -> Int -> Int>"#,
+        r#"<main: 1>"#,
+    ],
+);

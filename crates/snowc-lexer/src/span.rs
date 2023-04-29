@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct Span {
     pub line: usize,
     pub start: usize,
@@ -21,5 +21,11 @@ impl Span {
 
     pub fn range(&self) -> std::ops::Range<usize> {
         self.start..self.end
+    }
+}
+
+impl std::fmt::Debug for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}:{}", self.line, self.start, self.end)
     }
 }

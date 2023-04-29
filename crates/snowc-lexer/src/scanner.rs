@@ -1,4 +1,4 @@
-use super::{LexerDebug, Span, Token};
+use super::{Span, Token};
 use std::{iter::Peekable, str::Chars};
 type Stream<'a> = Peekable<Chars<'a>>;
 
@@ -8,13 +8,12 @@ pub struct Scanner<'a> {
     span: Span,
     current: Option<char>,
     previous: Option<char>,
-    debug_lexer: LexerDebug,
     keywords: Vec<&'a str>,
     line_comment: (char, Option<char>),
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(src: &'a str, debug_lexer: LexerDebug) -> Self {
+    pub fn new(src: &'a str) -> Self {
         let keywords = vec![
             "enum", "data", "type", "true", "false", "return", "let", "and", "or", "not",
             "if", "then", "else", "fn",
@@ -24,26 +23,8 @@ impl<'a> Scanner<'a> {
             span: Span::default(),
             current: None,
             previous: None,
-            debug_lexer,
             keywords,
             line_comment: ('-', Some('-')),
-        }
-    }
-
-    pub fn new_with_keywords(
-        src: &'a str,
-        debug_lexer: LexerDebug,
-        keywords: Vec<&'a str>,
-        line_comment: (char, Option<char>),
-    ) -> Self {
-        Self {
-            stream: src.chars().peekable(),
-            span: Span::default(),
-            current: None,
-            previous: None,
-            debug_lexer,
-            keywords,
-            line_comment,
         }
     }
 
@@ -168,16 +149,6 @@ impl<'a> Scanner<'a> {
         Some(Token::Error(c.to_string(), self.span()))
     }
 
-    fn debug_token(&mut self, token: Option<Token>) -> Token {
-        let token = token.unwrap_or_else(|| Token::Eof(self.span()));
-        if let LexerDebug::On = self.debug_lexer {
-            let kind = token.value();
-            let span = token.span();
-            eprintln!("{kind:?} @ {span:?}");
-        }
-        token
-    }
-
     fn is_comment(&mut self, c: char) -> bool {
         if c != self.line_comment.0 {
             return false;
@@ -196,10 +167,10 @@ impl<'a> Iterator for Scanner<'a> {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         let Some(ch) = self.next_char() else {
-            return Some(self.debug_token(None));
+            return None;
         };
         // comment (char, Option<char>)
-        let token = match ch {
+        match ch {
             num if num.is_ascii_digit() => Some(self.number()),
             ident if ident.is_ascii_alphabetic() => Some(self.id()),
             c if self.is_comment(c) => self.line_comment(),
@@ -242,7 +213,6 @@ impl<'a> Iterator for Scanner<'a> {
                 self.next()
             }
             c => self.err(c),
-        };
-        Some(self.debug_token(token))
+        }
     }
 }

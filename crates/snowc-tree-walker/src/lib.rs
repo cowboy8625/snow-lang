@@ -25,7 +25,7 @@ type Env = HashMap<String, Expr>;
 pub struct Interpreter;
 impl Interpreter {
     // #[trace]
-    pub fn new(ast: &[Expr]) {
+    pub fn new(ast: Vec<Expr>) {
         let mut global_env = Env::new();
         let mut interpreter = Self;
         let mut main_idx: Option<usize> = None;

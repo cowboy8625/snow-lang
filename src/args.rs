@@ -6,6 +6,7 @@ pub struct Settings {
     pub debug_token: bool,
     pub debug_ast: bool,
     pub debug_graph: bool,
+    pub option_no_type_check: bool,
 }
 
 pub fn cargs() -> Settings {
@@ -36,6 +37,14 @@ pub fn cargs() -> Settings {
                 .action(clap::ArgAction::SetTrue)
                 .help("Turns AST into a visual graph"),
         )
+        .arg(
+            Arg::new("dynamic")
+                .long("dynamic")
+                .short('d')
+                .required(false)
+                .action(clap::ArgAction::SetTrue)
+                .help("turn the language in to garbage"),
+        )
         .get_matches();
 
     let mut setting = Settings::default();
@@ -51,5 +60,8 @@ pub fn cargs() -> Settings {
     setting.debug_graph = *matches
         .get_one::<bool>("debug-graph")
         .expect("debug-graph failed");
+    setting.option_no_type_check = *matches
+        .get_one::<bool>("dynamic")
+        .expect("dynamic failed");
     setting
 }

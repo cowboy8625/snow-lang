@@ -6,7 +6,7 @@ use super::{
     expr::{Atom, Expr},
     op::Op,
     precedence::Precedence,
-    Error, ErrorCode, ParserDebug, Scanner, Span, Token,
+    Error, ErrorCode, Scanner, Span, Token,
 };
 use std::iter::Peekable;
 
@@ -14,23 +14,13 @@ pub struct Parser<'a> {
     pub(crate) lexer: Peekable<Scanner<'a>>,
     token_stream: Vec<Token>,
     errors: Option<Error>,
-    debug_parser: ParserDebug,
 }
 impl<'a> Parser<'a> {
     pub fn new(lexer: Peekable<Scanner<'a>>) -> Self {
-        let debug_parser = ParserDebug::Off;
-        Self::new_with_debug(lexer, debug_parser)
-    }
-
-    pub fn new_with_debug(
-        lexer: Peekable<Scanner<'a>>,
-        debug_parser: ParserDebug,
-    ) -> Self {
         Self {
             lexer,
             token_stream: vec![],
             errors: None,
-            debug_parser,
         }
     }
 
@@ -48,12 +38,12 @@ impl<'a> Parser<'a> {
     }
 
     fn peek(&mut self) -> Token {
-        self.lexer.peek().cloned().unwrap()
+        self.lexer.peek().cloned().unwrap_or(Token::Eof(Span::default()))
     }
 
-    fn previous(&self) -> Option<&Token> {
-        self.token_stream.last()
-    }
+    // fn previous(&self) -> Option<&Token> {
+    //     self.token_stream.last()
+    // }
 
     fn is_end(&mut self) -> bool {
         matches!(self.peek(), Token::Eof(..))
@@ -116,16 +106,10 @@ impl<'a> Parser<'a> {
     // }
 
     pub fn parse(mut self) -> Result<Vec<Expr>, Error> {
-        let Self { debug_parser, .. } = self;
         let mut ast = vec![];
         while !self.is_end() {
             let e = self.declaration();
             ast.push(e);
-        }
-        if let ParserDebug::On = debug_parser {
-            for node in ast.iter() {
-                eprintln!("{node}")
-            }
         }
         if let Some(error) = self.errors {
             return Err(error);
