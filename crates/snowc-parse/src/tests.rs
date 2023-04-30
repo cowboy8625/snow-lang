@@ -20,70 +20,48 @@ macro_rules! testme {
 testme!(
     expression_int,
     "main :: Int; main = 1;",
-    vec![
-        "<main :: Int>",
-        "<main: 1>",
-    ],
+    vec!["<main :: Int>", "<main: 1>",],
 );
 
 testme!(
     expression_float,
     "main :: Int; main = 1.2;",
-    vec![
-        "<main :: Int>",
-        "<main: 1.2>",
-    ],
+    vec!["<main :: Int>", "<main: 1.2>",],
 );
 testme!(
     expression_ident,
     "main :: Int; main = a;",
-    vec![
-        "<main :: Int>",
-        "<main: a>",
-    ],
+    vec!["<main :: Int>", "<main: a>",],
 );
 
 testme!(
     expression_unary_neg_int,
     "main :: Int; main = -1;",
-    vec![
-        "<main :: Int>",
-        "<main: (- 1)>",
-    ],
+    vec!["<main :: Int>", "<main: (- 1)>",],
 );
 
 testme!(
     expression_unary_neg_float,
     "main :: Int; main = -1.223;",
-    vec![
-        "<main :: Int>",
-        "<main: (- 1.223)>",
-    ],
+    vec!["<main :: Int>", "<main: (- 1.223)>",],
 );
 
 testme!(
     expression_unary_neg_ident,
     "main :: Int; main = -a;",
-    vec![
-        "<main :: Int>",
-        "<main: (- a)>",
-    ],
+    vec!["<main :: Int>", "<main: (- a)>",],
 );
 
 testme!(
     expression_unary_not_true,
     "main = !true;",
-    vec![
-        "<main: (! true)>",
-    ],
+    vec!["<main: (! true)>",],
 );
 
 testme!(
     expression_unary_not_false,
     "main = !false;",
-    vec![
-        "<main: (! false)>",
-    ],
+    vec!["<main: (! false)>",],
 );
 
 testme!(
@@ -104,11 +82,7 @@ testme!(
     vec!["<main: (+ a b)>"],
 );
 
-testme!(
-    changing_precedence_1,
-    "main = (((a)));",
-    vec!["<main: a>"],
-);
+testme!(changing_precedence_1, "main = (((a)));", vec!["<main: a>"],);
 
 testme!(
     changing_precedence_2,
@@ -122,11 +96,7 @@ testme!(
     vec!["<main: <(+): (1, 2)>>"],
 );
 
-testme!(
-    call,
-    "main = add 1 2;",
-    vec!["<main: <add: (1, 2)>>"],
-);
+testme!(call, "main = add 1 2;", vec!["<main: <add: (1, 2)>>"],);
 
 testme!(
     pipe_call,
@@ -195,25 +165,23 @@ testme!(
 testme!(
     enum_def,
     r#"enum Option = Some Int | None; main = 1;"#,
-    vec![
-        r#"<Option: (Some, [Int]), (None, [])>"#,
-        r#"<main: 1>"#,
-    ],
+    vec![r#"<Option: (Some, [Int]), (None, [])>"#, r#"<main: 1>"#,],
 );
 
 testme!(
     type_dec,
     r#"add :: Int -> Int -> Int; main = 1;"#,
-    vec![
-        r#"<add :: Int -> Int -> Int>"#,
-        r#"<main: 1>"#,
-    ],
+    vec![r#"<add :: Int -> Int -> Int>"#, r#"<main: 1>"#,],
 );
 
 testme!(
     array,
     r#"main = [1, 2, 3, 4];"#,
-    vec![
-        r#"<main: [1, 2, 3, 4]>"#,
-    ],
+    vec![r#"<main: [1, 2, 3, 4]>"#,],
+);
+
+testme!(
+    expression_mod,
+    r#"main = 1 mod 10;"#,
+    vec![r#"<main: (mod 1 10)>"#,],
 );

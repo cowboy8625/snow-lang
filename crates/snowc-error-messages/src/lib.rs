@@ -98,13 +98,23 @@ pub fn report(filename: &str, src: &str, error: &Error) {
 }
 
 fn snippet_builder<'a>(filename: &'a str, src: &'a str, error: &'a Error) -> Snippet<'a> {
-    let span = if error.span.end > src.len() {
+    let s = error.span.start;
+    let e = error.span.end;
+    let start = error.span.start.min(e);
+    let end = error.span.end.max(s);
+    if !(start < end) {
+        eprintln!("{error:?}");
+        eprintln!("{} < {}", start, end);
+    }
+    assert!(start < end);
+
+    let span = if end > src.len() {
         (
-            error.span.start.saturating_sub(1),
-            error.span.end.saturating_sub(1),
+            start.saturating_sub(1),
+            end.saturating_sub(1),
         )
     } else {
-        (error.span.start, error.span.end)
+        (start, end)
     };
     Snippet {
         title: Some(Annotation {

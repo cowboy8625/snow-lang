@@ -1,21 +1,18 @@
-// use trace::trace;
-// trace::init_depth_var!();
-
 use std::collections::HashMap;
 
-use snowc_parse::{Span, Atom, Expr, Op};
+use snowc_parse::{Atom, Expr, Op, Span};
 trait Visitor {
     type Item;
     fn visit_atom(
         &mut self,
         atom: &Atom,
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Self::Item;
     fn visit_expr(
         &mut self,
         expr: &Expr,
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Self::Item;
 }
@@ -24,7 +21,6 @@ type Env = HashMap<String, Expr>;
 
 pub struct Interpreter;
 impl Interpreter {
-    // #[trace]
     pub fn new(ast: Vec<Expr>) {
         let mut global_env = Env::new();
         let mut interpreter = Self;
@@ -54,14 +50,7 @@ impl Interpreter {
         let output = interpreter.visit_expr(&closure, &mut Env::new(), &global_env);
         println!("[OUTPUT]: {}", output);
     }
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
-    fn unary(
-        &mut self,
-        op: &Op,
-        rhs: &Expr,
-        local_env: &mut Env,
-        global_env: &Env,
-    ) -> Atom {
+    fn unary(&mut self, op: &Op, rhs: &Expr, local_env: &Env, global_env: &Env) -> Atom {
         let atom = self.visit_expr(rhs, local_env, global_env);
         match (op, atom) {
             (Op::Minus, Atom::Int(int)) => Atom::Int(-int),
@@ -69,13 +58,12 @@ impl Interpreter {
             _ => unimplemented!("for operator '{op:?}'"),
         }
     }
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
     fn binary(
         &mut self,
         op: &Op,
         lhs: &Expr,
         rhs: &Expr,
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Atom {
         let lhs_atom = self.visit_expr(lhs, local_env, global_env);
@@ -89,30 +77,33 @@ impl Interpreter {
             (Op::GrtEq, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Bool(lhs >= rhs),
             (Op::Les, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Bool(lhs < rhs),
             (Op::LesEq, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Bool(lhs <= rhs),
+            (Op::Eq, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Bool(lhs == rhs),
             (Op::Neq, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Bool(lhs != rhs),
+            (Op::Eq, Atom::String(lhs), Atom::String(rhs)) => Atom::Bool(lhs == rhs),
+            (Op::Neq, Atom::String(lhs), Atom::String(rhs)) => Atom::Bool(lhs != rhs),
+            (Op::And, Atom::Bool(lhs), Atom::Bool(rhs)) => Atom::Bool(lhs && rhs),
+            (Op::Or, Atom::Bool(lhs), Atom::Bool(rhs)) => Atom::Bool(lhs || rhs),
             (op, r, l) => unimplemented!("{l:?} {op:?} {r:?}"),
         }
     }
 
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
     fn closure(
         &mut self,
         head: &Expr,
         tail: &Expr,
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Atom {
         self.visit_expr(head, local_env, global_env);
         self.visit_expr(tail, local_env, global_env)
     }
 
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
     fn ifelse(
         &mut self,
         condition: &Expr,
         then: &Expr,
         r#else: &Expr,
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Atom {
         match self.visit_expr(condition, local_env, global_env) {
@@ -122,12 +113,11 @@ impl Interpreter {
         }
     }
 
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
     fn get_func_params(
         &self,
         closure: &Expr,
         global_env: &Env,
-        local_env: &mut Env,
+        local_env: &Env,
         params: &mut Vec<String>,
     ) {
         match closure {
@@ -145,27 +135,28 @@ impl Interpreter {
     fn print_function(
         &mut self,
         args: &[Expr],
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
-        ) -> Option<Atom> {
-            let e = self.visit_expr(&args[0], local_env, global_env);
-            println!("{}", e);
-            Some(e)
+    ) -> Option<Atom> {
+        let e = self.visit_expr(&args[0], local_env, global_env);
+        println!("{}", e);
+        Some(e)
     }
     fn nth_function(
         &mut self,
         span: Span,
         args: &[Expr],
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
-        ) -> Option<Atom> {
+    ) -> Option<Atom> {
         let atom = self.visit_expr(&args[0], local_env, global_env);
         let Atom::Array(array) = atom else {
             eprintln!("ERROR {}:{}: nth expected an array but found {atom}", span.start, span.end);
             std::process::exit(1);
         };
-        let Expr::Atom(Atom::Int(idx), ..) = &args[1] else {
-            eprintln!("ERROR {}:{}: nth expected a int", span.start, span.end);
+        let atom = self.visit_expr(&args[1], local_env, global_env);
+        let Atom::Int(idx) = &atom else {
+            eprintln!("ERROR {}:{}: nth expected a int but found {atom}", span.start, span.end);
             std::process::exit(1);
         };
         let atom = &array[*idx as usize];
@@ -176,9 +167,9 @@ impl Interpreter {
         &mut self,
         span: Span,
         args: &[Expr],
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
-        ) -> Option<Atom> {
+    ) -> Option<Atom> {
         let atom = self.visit_expr(&args[0], local_env, global_env);
         let Atom::Array(mut array) = atom else {
             eprintln!("ERROR {}:{}: nth expected an array but found {atom}", span.start, span.end);
@@ -193,10 +184,26 @@ impl Interpreter {
         &mut self,
         _span: Span,
         _args: &[Expr],
-        _local_env: &mut Env,
+        _local_env: &Env,
         _global_env: &Env,
-        ) -> Option<Atom> {
+    ) -> Option<Atom> {
         todo!()
+    }
+
+    fn length_function(
+        &mut self,
+        span: Span,
+        args: &[Expr],
+        local_env: &Env,
+        global_env: &Env,
+    ) -> Option<Atom> {
+        let atom = self.visit_expr(&args[0], local_env, global_env);
+        let Atom::Array(array) = atom else {
+            eprintln!("ERROR {}:{}: length expected an array but found {atom}", span.start, span.end);
+            std::process::exit(1);
+        };
+        let len = array.len();
+        Some(Atom::Int(len as i32))
     }
 
     fn builtin_functions(
@@ -204,16 +211,18 @@ impl Interpreter {
         name: &str,
         span: Span,
         args: &[Expr],
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
-        ) -> Option<Atom> {
+    ) -> Option<Atom> {
         match name {
-            "print_int" | "print_bool" | "print_str"  => self.print_function(args, local_env, global_env),
+            "print_int" | "print_bool" | "print_str" => {
+                self.print_function(args, local_env, global_env)
+            }
+            "length" => self.length_function(span, args, local_env, global_env),
             "nth" => self.nth_function(span, args, local_env, global_env),
             "push" => self.push_function(span, args, local_env, global_env),
             "pop" => self.pop_function(span, args, local_env, global_env),
             _ => None,
-
         }
     }
 
@@ -221,26 +230,26 @@ impl Interpreter {
         &mut self,
         head: &Expr,
         args: &[Expr],
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Atom {
+        let mut local_env = local_env.clone();
         let mut params = Vec::new();
-        self.get_func_params(&head, global_env, local_env, &mut params);
+        self.get_func_params(&head, global_env, &local_env, &mut params);
         for (param, arg) in params.iter().zip(args) {
             let span = arg.span();
-            let atom = self.visit_expr(arg, local_env, global_env);
+            let atom = self.visit_expr(arg, &local_env, global_env);
             let expr = Expr::Atom(atom, span);
             local_env.insert(param.to_string(), expr.clone());
         }
-        self.visit_expr(&head, local_env, global_env)
+        self.visit_expr(&head, &local_env, global_env)
     }
 
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
     fn app(
         &mut self,
         head: &Box<Expr>,
         args: &[Expr],
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Atom {
         let span = head.span();
@@ -251,7 +260,9 @@ impl Interpreter {
         let Atom::Id(ref name) = atom else {
             return atom;
         };
-        if let Some(atom) = self.builtin_functions(name, span, args, local_env, global_env) {
+        if let Some(atom) =
+            self.builtin_functions(name, span, args, local_env, global_env)
+        {
             return atom.clone();
         }
         let Some(func) = local_env.get(name).or(global_env.get(name)).cloned() else {
@@ -264,11 +275,10 @@ impl Interpreter {
 
 impl Visitor for Interpreter {
     type Item = Atom;
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
     fn visit_atom(
         &mut self,
         atom: &Atom,
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Self::Item {
         match atom {
@@ -281,11 +291,10 @@ impl Visitor for Interpreter {
             _ => atom.clone(),
         }
     }
-    // #[trace(prefix_enter="[ENTER]", prefix_exit="[EXIT]")]
     fn visit_expr(
         &mut self,
         expr: &Expr,
-        local_env: &mut Env,
+        local_env: &Env,
         global_env: &Env,
     ) -> Self::Item {
         match expr {
@@ -304,7 +313,6 @@ impl Visitor for Interpreter {
             Expr::Array(array, ..) => {
                 let mut result = vec![];
                 for e in array.iter() {
-                    eprintln!("{e}: {local_env:?}");
                     let expr = self.visit_expr(e, local_env, global_env);
                     result.push(expr);
                 }
@@ -317,27 +325,3 @@ impl Visitor for Interpreter {
         }
     }
 }
-
-// #[derive(Debug, Clone, Hash)]
-// pub enum Atom {
-//     Int(i32),
-//     Float(String),
-//     Id(String),
-//     Bool(bool),
-//     String(String),
-//     Char(char),
-// }
-
-// #[derive(Debug, Clone, Hash)]
-// pub enum Expr {
-//     Atom(Atom, Span),
-//     Unary(Op, Box<Self>, Span),
-//     Binary(Op, Box<Self>, Box<Self>, Span),
-//     IfElse(Box<Self>, Box<Self>, Box<Self>, Span),
-//     Closure(Box<Self>, Box<Self>, Span),
-//     Func(String, Box<Self>, Span),
-//     App(Box<Self>, Vec<Self>, Span),
-//     Enum(String, Vec<(String, Vec<String>)>, Span),
-//     TypeDec(String, Vec<String>, Span),
-//     Error(Span),
-// }

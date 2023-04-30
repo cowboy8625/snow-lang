@@ -133,10 +133,16 @@ fn type_check_binary<'a>(
         panic!("type miss matched '{op:?}' lhs: '{t1:?}', rhs: '{t2:?}'");
     }
     match op {
-        Op::Plus | Op::Minus | Op::Mult | Op::Div => t1,
-        Op::Grt | Op::Les | Op::GrtEq | Op::LesEq | Op::Eq | Op::Neq | Op::Not => {
-            Type::Bool
-        }
+        Op::Plus | Op::Minus | Op::Mult | Op::Div | Op::Mod => t1,
+        Op::Grt
+        | Op::Les
+        | Op::GrtEq
+        | Op::LesEq
+        | Op::Eq
+        | Op::Neq
+        | Op::Not
+        | Op::And
+        | Op::Or => Type::Bool,
         Op::Equals | Op::Pipe => {
             let _span = lhs.span().start..rhs.span().end;
             panic!("not yet implemented for assignment or pipe")

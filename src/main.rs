@@ -1,5 +1,5 @@
 mod args;
-use snowc::{Scanner, parse, type_check, Expr, Interpreter};
+use snowc::{parse, type_check, Expr, Interpreter, Scanner};
 #[derive(Debug)]
 enum CompilerError {
     NoFileGive,
@@ -28,7 +28,6 @@ fn debug_tokens(flag: bool) -> impl FnOnce(String) -> Result<String, CompilerErr
         }
         Ok(src)
     }
-
 }
 
 fn debug_ast(flag: bool) -> impl FnOnce(Vec<Expr>) -> Result<Vec<Expr>, CompilerError> {
@@ -40,25 +39,23 @@ fn debug_ast(flag: bool) -> impl FnOnce(Vec<Expr>) -> Result<Vec<Expr>, Compiler
         }
         Ok(ast)
     }
-
 }
 
-fn handle_compiler_errors(filename: impl Into<String>) -> impl FnOnce(CompilerError){
-    move |error_type| {
-        match error_type {
-            CompilerError::Parse(ref errors) => {
-                let filename = filename.into();
-                let src = std::fs::read_to_string(&filename).expect("failed to get file source for error report");
-                snowc::report(&filename, &src, errors);
-            },
-            CompilerError::Type(errors) => {
-                for error in errors {
-                    eprintln!("{error}");
-                }
-            },
-            CompilerError::NoFileGive => {
-                eprintln!("No file given to compile");
-            },
+fn handle_compiler_errors(filename: impl Into<String>) -> impl FnOnce(CompilerError) {
+    move |error_type| match error_type {
+        CompilerError::Parse(ref errors) => {
+            let filename = filename.into();
+            let src = std::fs::read_to_string(&filename)
+                .expect("failed to get file source for error report");
+            snowc::report(&filename, &src, errors);
+        }
+        CompilerError::Type(errors) => {
+            for error in errors {
+                eprintln!("{error}");
+            }
+        }
+        CompilerError::NoFileGive => {
+            eprintln!("No file given to compile");
         }
     }
 }
@@ -68,7 +65,9 @@ fn get_src(flag: bool) -> impl FnOnce(String) -> Result<String, CompilerError> {
         if flag {
             return Ok(filename);
         }
-        std::fs::read_to_string(filename).ok().ok_or(CompilerError::NoFileGive)
+        std::fs::read_to_string(filename)
+            .ok()
+            .ok_or(CompilerError::NoFileGive)
     }
 }
 
@@ -83,18 +82,19 @@ fn main() {
         .ok_or(CompilerError::NoFileGive)
         .and_then(get_src(setting.option_compile_string))
         .and_then(debug_tokens(setting.debug_token))
-        .and_then(|src| {
-            timer("Parse", ||parse(Scanner::new(&src)))
-                .map_err(Into::into)
-        })
+        .and_then(|src| timer("Parse", || parse(Scanner::new(&src))).map_err(Into::into))
         .and_then(debug_ast(setting.debug_ast))
         .and_then(|ast| {
             if !setting.option_no_type_check {
-                timer("Type Check", || type_check(&ast)).map_err(Into::<CompilerError>::into)?;
+                timer("Type Check", || type_check(&ast))
+                    .map_err(Into::<CompilerError>::into)?;
             }
             Ok(ast)
         })
-        .map_or_else(handle_compiler_errors(setting.filename.unwrap_or_default()), Interpreter::new);
+        .map_or_else(
+            handle_compiler_errors(setting.filename.unwrap_or_default()),
+            Interpreter::new,
+        );
 }
 
 fn timer<O, E, F>(msg: impl Into<String>, func: F) -> Result<O, E>

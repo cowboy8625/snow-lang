@@ -5,5 +5,4 @@ edition = "2021"
 
 [dependencies]
 snowc-parse = { path = "../snowc-parse" }
-
-trace = "0.1.7"
+# trace = "0.1.7"

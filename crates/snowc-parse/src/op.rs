@@ -16,6 +16,9 @@ pub enum Op {
     Not,
     Equals,
     Pipe,
+    And,
+    Or,
+    Mod,
 }
 
 impl TryFrom<&Token> for Op {
@@ -23,6 +26,7 @@ impl TryFrom<&Token> for Op {
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
         match token {
             Token::Op(ref op, ..) => Self::try_from(op),
+            Token::KeyWord(ref keyword, ..) => Self::try_from(keyword),
             _ => Err("not a operator"),
         }
     }
@@ -45,6 +49,9 @@ impl TryFrom<&str> for Op {
             "!" => Ok(Self::Not),
             // "=" => Ok(Self::Equals),
             "|>" => Ok(Self::Pipe),
+            "and" => Ok(Self::And),
+            "or" => Ok(Self::Or),
+            "mod" => Ok(Self::Mod),
             _ => Err("not an operator"),
         }
     }
@@ -80,6 +87,9 @@ impl fmt::Display for Op {
             Self::Not => write!(f, "!"),
             Self::Equals => write!(f, "="),
             Self::Pipe => write!(f, "|>"),
+            Self::And => write!(f, "and"),
+            Self::Or => write!(f, "or"),
+            Self::Mod => write!(f, "mod"),
         }
     }
 }

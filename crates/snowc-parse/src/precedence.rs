@@ -4,13 +4,13 @@ use super::Token;
 pub enum Precedence {
     None,
     Primary,
+    Or,         // or
+    And,        // and
     Term,       // + -
-    Factor,     // * /
+    Factor,     // * / %
     Equality,   // == !=
     Comparison, // < > <= >=
     Assignment, // =
-    Or,         // or
-    And,        // and
     Pipe,       // |>
     Call,       // . ()
     Fn,         // fn function declaration
@@ -27,6 +27,9 @@ impl TryFrom<Token> for Precedence {
             | Token::Char(..)
             | Token::Id(..) => Ok(Self::Primary),
             Token::KeyWord(ref b, ..) if b == "true" || b == "false" => Ok(Self::Primary),
+            Token::KeyWord(ref b, ..) if b == "and" => Ok(Self::And),
+            Token::KeyWord(ref b, ..) if b == "or" => Ok(Self::Or),
+            Token::KeyWord(ref b, ..) if b == "mod" => Ok(Self::Factor),
             Token::KeyWord(..) => Ok(Self::None),
             Token::Eof(..) => Ok(Self::None),
             Token::Op(ref op, ..) => match op.as_str() {

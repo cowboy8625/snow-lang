@@ -1,7 +1,53 @@
-range :: Int -> Int -> Array;
-range start end =
-  if start < end then
-    (push (range (start + 1)) start)
+-- create a grid of size
+create_grid :: Int -> Int -> Array;
+create_grid size char =
+  if 0 < (size - 1) then
+    (push (create_grid (size - 1) char) char)
   else
-    [end];
-main = range 0 10;
+    [char];
+
+-- 111   110   101   100   011   010   001   000
+--  0     1     1     0     1     1     1     0
+is_alive :: Str -> Str -> Str -> Bool;
+is_alive a b c =
+  if a == "#" and b == "#" and c == "#" then
+    false
+  else if a == "#" and b == "#" and c == " " then
+    true
+  else if a == "#" and b == " " and c == "#" then
+    true
+  else if a == "#" and b == " " and c == " " then
+    false
+  else if a == " " and b == "#" and c == "#" then
+    true
+  else if a == " " and b == "#" and c == " " then
+    true
+  else if a == " " and b == " " and c == "#" then
+    true
+  else
+    false;
+
+idx_of i len = (i + len) mod len;
+-- ((i - 1) + len) % len
+
+next_cell grid x =
+  (\len ->
+    (λa ->
+      (λb ->
+        (λc -> is_alive a b c
+        ) (nth grid (idx_of (x - 1) len))
+      ) (nth grid x)
+    ) (nth grid (idx_of (x + 1) len))
+  (length grid));
+
+main = Bool;
+main = next_cell (create_grid 10 "#") 0;
+-- main = (\grid -> length grid) (create_grid 10 "#");
+-- main = create_grid 10 "#";
+
+-- main =
+--   let grid = create_grid 10 "#" in
+--     let a = nth grid 0 in
+--       let b = nth grid 1 in
+--        let c = nth grid 2 in
+--        is_alive a b c;

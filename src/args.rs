@@ -69,9 +69,8 @@ pub fn cargs() -> Settings {
     setting.debug_graph = *matches
         .get_one::<bool>("debug-graph")
         .expect("debug-graph failed");
-    setting.option_no_type_check = *matches
-        .get_one::<bool>("dynamic")
-        .expect("dynamic failed");
+    setting.option_no_type_check =
+        *matches.get_one::<bool>("dynamic").expect("dynamic failed");
     setting.option_compile_string = *matches
         .get_one::<bool>("from_string")
         .expect("from_string failed");

@@ -38,7 +38,10 @@ impl<'a> Parser<'a> {
     }
 
     fn peek(&mut self) -> Token {
-        self.lexer.peek().cloned().unwrap_or(Token::Eof(Span::default()))
+        self.lexer
+            .peek()
+            .cloned()
+            .unwrap_or(Token::Eof(Span::default()))
     }
 
     // fn previous(&self) -> Option<&Token> {
@@ -58,7 +61,7 @@ impl<'a> Parser<'a> {
             self.errors = None;
             return;
         }
-        eprintln!("removing last error, {:?}", error.cause);
+        // eprintln!("removing last error, {:?}", error.cause);
         let cause = error.cause.clone().map(|t| *t).unwrap();
         self.errors = Some(cause);
     }
@@ -403,20 +406,17 @@ impl<'a> Parser<'a> {
                     let expr = self.closure();
                     lhs.push(expr);
                     self.next_if(|t| t.is_op_a(","));
-
                 }
                 if self.next_if(|t| t.is_op_a("]")).is_none() {
-                    let span = lhs.last().map(|t|t.span()).unwrap_or(self.peek().span());
+                    let span = lhs.last().map(|t| t.span()).unwrap_or(self.peek().span());
                     return self.report(ErrorCode::Unknown, span);
                 };
                 let span = lhs
                     .first()
                     .and_then(|f| {
-                        lhs
-                            .last()
-                            .map_or(
-                                Some(f.span()),
-                                |l| Some(Span::from((f.span(), l.span()))))
+                        lhs.last().map_or(Some(f.span()), |l| {
+                            Some(Span::from((f.span(), l.span())))
+                        })
                     })
                     .unwrap_or_default();
                 Expr::Array(lhs, span)
@@ -492,8 +492,15 @@ impl<'a> Parser<'a> {
         };
         loop {
             let token = self.peek();
+            // eprintln!("top loop: {token:?}");
+            // let Ok(cbp) = Precedence::try_from(token.clone()) else {
+            //     break;
+            // };
             let cbp: Precedence = match token.clone() {
                 Token::Op(..) => Precedence::try_from(token.clone()).unwrap(),
+                Token::KeyWord(ref k, ..) if k == "and" => Precedence::try_from(token.clone()).unwrap(),
+                Token::KeyWord(ref k, ..) if k == "or" => Precedence::try_from(token.clone()).unwrap(),
+                Token::KeyWord(ref k, ..) if k == "mod" => Precedence::try_from(token.clone()).unwrap(),
                 _ => break,
             };
             if cbp <= min_bp {
@@ -503,13 +510,20 @@ impl<'a> Parser<'a> {
             let start = token.span().start;
             let end = start_span.end;
             let span = Span::new(line, start, end);
+            // eprintln!("CBP: {cbp:?}");
             match cbp {
                 Precedence::Term
                 | Precedence::Factor
                 | Precedence::Comparison
-                | Precedence::Equality => {
+                | Precedence::Equality
+                | Precedence::And
+                | Precedence::Or => {
                     let _ = self.next();
                     let rhs = self.expression(cbp);
+                    // eprintln!("bin: {token:?}");
+                    // if token.is_keyword_a("and") {
+                    // std::process::exit(1);
+                    // }
                     lhs = Expr::Binary(
                         Op::try_from(&token).unwrap(),
                         Box::new(lhs),

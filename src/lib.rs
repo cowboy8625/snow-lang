@@ -32,69 +32,68 @@ pub use snowc_type_checker::*;
 //         self.src = Some(src.into());
 //         self
 //     }
-    //
-    // pub fn build(mut self) -> Compiler {
-    //     let Self {
-    //         debug_lexer,
-    //         debug_parser,
-    //         ..
-    //     } = self;
-    //
-    //     let filename = if let Some(filename) = self.filename {
-    //         self.src = Some(
-    //             std::fs::read_to_string(&filename)
-    //                 .expect("failed to read file to string"),
-    //         );
-    //         filename
-    //     } else {
-    //         "no name".into()
-    //     };
-    //
-    //     let msg = format_compiler_message("Compiling:");
-    //     let msg = format!("{msg} {filename}");
-    //     eprintln!("{}", msg);
-    //
-    //     let Some(src) = self.src else {
-    //         eprintln!("no src code to compile");
-    //         std::process::exit(1);
-    //     };
-    //
-    //     let result_ast = timer("Parsing:", || {
-    //         ParserBuilder::default()
-    //             .debug_lexer(debug_lexer)
-    //             .debug_parser(debug_parser)
-    //             .build(&src)
-    //             .parse()
-    //     });
-    //
-    //     let ast = match result_ast {
-    //         Ok(ast) => ast,
-    //         Err(errors) => {
-    //             report(&filename, &src, &errors);
-    //             std::process::exit(1);
-    //         }
-    //     };
-    //
-    //     if let Err(errors) = timer("Type Checking:", || type_check(&ast)) {
-    //         for error in errors {
-    //             eprintln!("{}", error);
-    //         }
-    //         std::process::exit(1);
-    //     }
-    //
-    //     // let _ = match ast {
-    //     //     Ok(ast) => ast,
-    //     //     Err(e) => {
-    //     //         eprintln!("{e}");
-    //     //         std::process::exit(1);
-    //     //     }
-    //     // };
-    //     //
-    //     // println!("{}", format_compiler_message("Complete:"));
-    //
-    //     Interpreter::new(&ast);
-    //
-    //     Compiler
-    // }
-    // }
-
+//
+// pub fn build(mut self) -> Compiler {
+//     let Self {
+//         debug_lexer,
+//         debug_parser,
+//         ..
+//     } = self;
+//
+//     let filename = if let Some(filename) = self.filename {
+//         self.src = Some(
+//             std::fs::read_to_string(&filename)
+//                 .expect("failed to read file to string"),
+//         );
+//         filename
+//     } else {
+//         "no name".into()
+//     };
+//
+//     let msg = format_compiler_message("Compiling:");
+//     let msg = format!("{msg} {filename}");
+//     eprintln!("{}", msg);
+//
+//     let Some(src) = self.src else {
+//         eprintln!("no src code to compile");
+//         std::process::exit(1);
+//     };
+//
+//     let result_ast = timer("Parsing:", || {
+//         ParserBuilder::default()
+//             .debug_lexer(debug_lexer)
+//             .debug_parser(debug_parser)
+//             .build(&src)
+//             .parse()
+//     });
+//
+//     let ast = match result_ast {
+//         Ok(ast) => ast,
+//         Err(errors) => {
+//             report(&filename, &src, &errors);
+//             std::process::exit(1);
+//         }
+//     };
+//
+//     if let Err(errors) = timer("Type Checking:", || type_check(&ast)) {
+//         for error in errors {
+//             eprintln!("{}", error);
+//         }
+//         std::process::exit(1);
+//     }
+//
+//     // let _ = match ast {
+//     //     Ok(ast) => ast,
+//     //     Err(e) => {
+//     //         eprintln!("{e}");
+//     //         std::process::exit(1);
+//     //     }
+//     // };
+//     //
+//     // println!("{}", format_compiler_message("Complete:"));
+//
+//     Interpreter::new(&ast);
+//
+//     Compiler
+// }
+// }
