@@ -498,9 +498,15 @@ impl<'a> Parser<'a> {
             // };
             let cbp: Precedence = match token.clone() {
                 Token::Op(..) => Precedence::try_from(token.clone()).unwrap(),
-                Token::KeyWord(ref k, ..) if k == "and" => Precedence::try_from(token.clone()).unwrap(),
-                Token::KeyWord(ref k, ..) if k == "or" => Precedence::try_from(token.clone()).unwrap(),
-                Token::KeyWord(ref k, ..) if k == "mod" => Precedence::try_from(token.clone()).unwrap(),
+                Token::KeyWord(ref k, ..) if k == "and" => {
+                    Precedence::try_from(token.clone()).unwrap()
+                }
+                Token::KeyWord(ref k, ..) if k == "or" => {
+                    Precedence::try_from(token.clone()).unwrap()
+                }
+                Token::KeyWord(ref k, ..) if k == "mod" => {
+                    Precedence::try_from(token.clone()).unwrap()
+                }
                 _ => break,
             };
             if cbp <= min_bp {

@@ -109,10 +109,7 @@ fn snippet_builder<'a>(filename: &'a str, src: &'a str, error: &'a Error) -> Sni
     assert!(start < end);
 
     let span = if end > src.len() {
-        (
-            start.saturating_sub(1),
-            end.saturating_sub(1),
-        )
+        (start.saturating_sub(1), end.saturating_sub(1))
     } else {
         (start, end)
     };
