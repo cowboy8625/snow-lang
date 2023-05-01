@@ -47,8 +47,8 @@ impl Interpreter {
         let Expr::Func(_, closure, ..) = main_function else {
             panic!("really bad things are happening");
         };
-        let output = interpreter.visit_expr(&closure, &mut Env::new(), &global_env);
-        println!("[OUTPUT]: {}", output);
+        let _output = interpreter.visit_expr(&closure, &mut Env::new(), &global_env);
+        // println!("[OUTPUT]: {}", output);
     }
     fn unary(&mut self, op: &Op, rhs: &Expr, local_env: &Env, global_env: &Env) -> Atom {
         let atom = self.visit_expr(rhs, local_env, global_env);
@@ -73,6 +73,7 @@ impl Interpreter {
             (Op::Minus, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Int(lhs - rhs),
             (Op::Mult, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Int(lhs * rhs),
             (Op::Div, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Int(lhs / rhs),
+            (Op::Mod, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Int(lhs % rhs),
             (Op::Grt, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Bool(lhs > rhs),
             (Op::GrtEq, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Bool(lhs >= rhs),
             (Op::Les, Atom::Int(lhs), Atom::Int(rhs)) => Atom::Bool(lhs < rhs),
@@ -138,9 +139,25 @@ impl Interpreter {
         local_env: &Env,
         global_env: &Env,
     ) -> Option<Atom> {
-        let e = self.visit_expr(&args[0], local_env, global_env);
-        println!("{}", e);
-        Some(e)
+        let args = args
+            .iter()
+            .map(|expr| self.visit_expr(expr, local_env, global_env))
+            .collect::<Vec<_>>();
+        let formated = args.iter().enumerate().fold("".into(), |acc, (idx, item)| {
+            let item = match item {
+                Atom::Array(array) => {
+                    array.iter().map(ToString::to_string).collect::<String>()
+                },
+                _ => item.to_string(),
+            };
+            if idx == 0 {
+                return item;
+            }
+            format!("{acc} {item}")
+        });
+        // let e = self.visit_expr(&args[0], local_env, global_env);
+        print!("{formated}");
+        Some(args[0].clone())
     }
     fn nth_function(
         &mut self,
@@ -215,9 +232,7 @@ impl Interpreter {
         global_env: &Env,
     ) -> Option<Atom> {
         match name {
-            "print_int" | "print_bool" | "print_str" => {
-                self.print_function(args, local_env, global_env)
-            }
+            "print" => self.print_function(args, local_env, global_env),
             "length" => self.length_function(span, args, local_env, global_env),
             "nth" => self.nth_function(span, args, local_env, global_env),
             "push" => self.push_function(span, args, local_env, global_env),

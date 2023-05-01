@@ -31,23 +31,29 @@ idx_of i len = (i + len) mod len;
 -- ((i - 1) + len) % len
 
 next_cell grid x =
-  (\len ->
-    (λa ->
-      (λb ->
-        (λc -> is_alive a b c
-        ) (nth grid (idx_of (x - 1) len))
-      ) (nth grid x)
-    ) (nth grid (idx_of (x + 1) len))
-  (length grid));
+-- let len = length grid in
+-- let a = nth grid (idx_of (x - 1) len) in
+-- let b = nth grid x in
+-- let c = nth grid (idx_of (x + 1) len) in
+-- is_alive a b c
+  (λlen ->
+  (λa   ->
+  (λb   ->
+  (λc   -> is_alive a b c)
+  (nth grid (idx_of (x - 1) len)))
+  (nth grid x))
+  (nth grid (idx_of (x + 1) len)))
+  (length grid);
 
-main = Bool;
-main = next_cell (create_grid 10 "#") 0;
--- main = (\grid -> length grid) (create_grid 10 "#");
--- main = create_grid 10 "#";
+next_gen :: Array -> Array;
+next_gen grid idx =
+  if idx < (length grid) then
+    push (next_gen grid (idx + 1)) (if (next_cell grid idx) then "#" else " ")
+  else
+    push [] (if (next_cell grid idx) then "#" else " ")
+  ;
 
--- main =
---   let grid = create_grid 10 "#" in
---     let a = nth grid 0 in
---       let b = nth grid 1 in
---        let c = nth grid 2 in
---        is_alive a b c;
+main = IO;
+main = (\grid ->( print (next_gen (print grid "\n") 0)))
+       (push (create_grid 9 " ") "#");
+

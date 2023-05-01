@@ -16,7 +16,7 @@ impl<'a> Scanner<'a> {
     pub fn new(src: &'a str) -> Self {
         let keywords = vec![
             "enum", "data", "type", "true", "false", "return", "let", "and", "or", "not",
-            "if", "then", "else", "fn",
+            "if", "then", "else", "fn", "mod",
         ];
         Self {
             stream: src.chars().peekable(),
@@ -126,6 +126,7 @@ impl<'a> Scanner<'a> {
             string.push(ch);
         }
         self.next_char();
+        let string = string.replace("\\n", "\n");
         Some(Token::String(string, self.span()))
     }
 

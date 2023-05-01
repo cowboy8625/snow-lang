@@ -1,2 +1,2 @@
 main :: IO;
-main = print_str "Hello World";
+main = print "Hello World\n";
