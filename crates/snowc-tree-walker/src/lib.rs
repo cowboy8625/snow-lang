@@ -21,7 +21,7 @@ type Env = HashMap<String, Expr>;
 
 pub struct Interpreter;
 impl Interpreter {
-    pub fn new(ast: Vec<Expr>) {
+    pub fn init(ast: Vec<Expr>) {
         let mut global_env = Env::new();
         let mut interpreter = Self;
         let mut main_idx: Option<usize> = None;
@@ -47,7 +47,7 @@ impl Interpreter {
         let Expr::Func(_, closure, ..) = main_function else {
             panic!("really bad things are happening");
         };
-        let _output = interpreter.visit_expr(&closure, &mut Env::new(), &global_env);
+        let _output = interpreter.visit_expr(closure, &Env::new(), &global_env);
         // println!("[OUTPUT]: {}", output);
     }
     fn unary(&mut self, op: &Op, rhs: &Expr, local_env: &Env, global_env: &Env) -> Atom {
@@ -115,21 +115,16 @@ impl Interpreter {
     }
 
     fn get_func_params(
-        &self,
         closure: &Expr,
-        global_env: &Env,
-        local_env: &Env,
+        _global_env: &Env,
+        _local_env: &Env,
         params: &mut Vec<String>,
     ) {
-        match closure {
-            Expr::Closure(head, tail, ..) => match **head {
-                Expr::Atom(Atom::Id(ref name), ..) => {
-                    params.push(name.clone());
-                    self.get_func_params(tail, global_env, local_env, params)
-                }
-                _ => {}
-            },
-            _ => {}
+        if let Expr::Closure(head, tail, ..) = closure { 
+            if let Expr::Atom(Atom::Id(ref name), ..) = **head {
+                params.push(name.clone());
+                Self::get_func_params(tail, _global_env, _local_env, params)
+            }
         }
     }
 
@@ -250,25 +245,25 @@ impl Interpreter {
     ) -> Atom {
         let mut local_env = local_env.clone();
         let mut params = Vec::new();
-        self.get_func_params(&head, global_env, &local_env, &mut params);
+        Self::get_func_params(head, global_env, &local_env, &mut params);
         for (param, arg) in params.iter().zip(args) {
             let span = arg.span();
             let atom = self.visit_expr(arg, &local_env, global_env);
             let expr = Expr::Atom(atom, span);
             local_env.insert(param.to_string(), expr.clone());
         }
-        self.visit_expr(&head, &local_env, global_env)
+        self.visit_expr(head, &local_env, global_env)
     }
 
     fn app(
         &mut self,
-        head: &Box<Expr>,
+        head: &Expr,
         args: &[Expr],
         local_env: &Env,
         global_env: &Env,
     ) -> Atom {
         let span = head.span();
-        let atom = match &**head {
+        let atom = match &head {
             Expr::Atom(atom, ..) => atom.clone(),
             _ => self.unfold_clourse(head, args, local_env, global_env),
         };
@@ -278,7 +273,7 @@ impl Interpreter {
         if let Some(atom) =
             self.builtin_functions(name, span, args, local_env, global_env)
         {
-            return atom.clone();
+            return atom;
         }
         let Some(func) = local_env.get(name).or(global_env.get(name)).cloned() else {
             eprintln!("ERROR {}:{}: {name} is not implemented yet", span.start, span.end);

@@ -70,7 +70,7 @@ impl TypedEnum {
 
     fn lookup(&self, name: impl Into<String>) -> Option<Type> {
         let name = name.into();
-        if self.variants.iter().find(|v| v.name == name).is_some() {
+        if self.variants.iter().any(|v| v.name == name) {
             return Some(Type::Custom(name));
         }
         None
@@ -171,10 +171,10 @@ fn type_check_if_else<'a>(
     t1
 }
 
-fn type_check_app<'a>(
+fn type_check_app(
     func_name: &str,
     env: &Types,
-    name: &'a Expr,
+    name: &Expr,
     args: &[Expr],
     _span: &Span,
 ) -> Type {
@@ -204,7 +204,7 @@ fn type_check_app<'a>(
     t
 }
 
-fn type_of<'a>(func_name: &str, env: &Types, e: &'a Expr) -> Type {
+fn type_of(func_name: &str, env: &Types, e: &Expr) -> Type {
     match e {
         Expr::Atom(Atom::Int(..), ..) => Type::Int,
         Expr::Atom(Atom::Float(..), ..) => Type::Float,

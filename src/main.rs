@@ -93,7 +93,7 @@ fn main() {
         })
         .map_or_else(
             handle_compiler_errors(setting.filename.unwrap_or_default()),
-            Interpreter::new,
+            Interpreter::init,
         );
 }
 

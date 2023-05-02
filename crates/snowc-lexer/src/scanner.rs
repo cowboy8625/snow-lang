@@ -112,7 +112,7 @@ impl<'a> Scanner<'a> {
         }
         let span = self.span();
         self.lookup(&ident)
-            .map_or(Token::Id(ident, span), |i| Token::KeyWord(i.into(), span))
+            .map_or(Token::Id(ident, span), |i| Token::KeyWord(i, span))
     }
 
     fn line_comment(&mut self) -> Option<Token> {

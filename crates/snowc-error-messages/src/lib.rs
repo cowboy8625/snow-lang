@@ -102,7 +102,7 @@ fn snippet_builder<'a>(filename: &'a str, src: &'a str, error: &'a Error) -> Sni
     let e = error.span.end;
     let start = error.span.start.min(e);
     let end = error.span.end.max(s);
-    if !(start < end) {
+    if start >= end {
         eprintln!("{error:?}");
         eprintln!("{} < {}", start, end);
     }
