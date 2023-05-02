@@ -19,10 +19,24 @@ trait Visitor {
 
 type Env = HashMap<String, Expr>;
 
+fn builtin(op: Op) -> Expr {
+    let span = Span::default();
+    let lhs = Expr::Atom(Atom::Id("x".into()),span);
+    let rhs = Expr::Atom(Atom::Id("y".into()),span);
+    let body = Expr::Binary(op, Box::new(lhs.clone()), Box::new(rhs.clone()), span);
+    let x = Expr::Closure(Box::new(lhs), Box::new(body), span);
+    Expr::Closure(Box::new(rhs), Box::new(x), span)
+}
+
+
 pub struct Interpreter;
 impl Interpreter {
     pub fn init(ast: Vec<Expr>) {
         let mut global_env = Env::new();
+        global_env.insert("(+)".into(), builtin(Op::Plus));
+        global_env.insert("(-)".into(), builtin(Op::Minus));
+        global_env.insert("(*)".into(), builtin(Op::Mult));
+        global_env.insert("(/)".into(), builtin(Op::Div));
         let mut interpreter = Self;
         let mut main_idx: Option<usize> = None;
         for (idx, expr) in ast.iter().enumerate() {
