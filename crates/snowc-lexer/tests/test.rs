@@ -15,12 +15,14 @@ macro_rules! setup_test {
                     let span = t.span().range();
                     (t, &src[span])
                 }).unwrap();
-
                 let span = tok.span();
                 let value = tok.value().to_string();
                 assert_eq!($token(value, span), tok, "token vs. token");
                 assert_eq!(tok.value(), $output, "captured in token");
-                assert_eq!(found, $output, "span in source");
+                match tok {
+                    Token::String(..) => assert_eq!(found, format!("{:?}", $output), "span in source"),
+                    _ => assert_eq!(found, $output, "span in source"),
+                }
             )*
         }
     };
@@ -42,23 +44,19 @@ setup_test!(symbol_scan, "λλλ", (Op, "λ"), (Op, "λ"), (Op, "λ"),);
 
 setup_test!(
     scanner_main,
-    r#"fn main() {
-    return 0;
-}
-"#,
-    (KeyWord, "fn"),
+    r#"main = print "Hello World!";"#,
     (Id, "main"),
-    (Op, "("),
-    (Op, ")"),
-    (Op, "{"),
-    (KeyWord, "return"),
-    (Int, "0"),
+    (Op, "="),
+    (Id, "print"),
+    (String, "Hello World!"),
     (Op, ";"),
-    (Op, "}")
 );
+
 setup_test!(
     lambdas,
-    r#"\x -> x;"#,
+    r#"main = \x -> x;"#,
+    (Id, "main"),
+    (Op, "="),
     (Op, "\\"),
     (Id, "x"),
     (Op, "->"),
@@ -87,44 +85,70 @@ setup_test!(
     (Op, ")"),
     (Op, ";")
 );
+
 setup_test!(
     scanner_add_func,
-    r#"fn add(x u64, y u64) u64 {
-    x + y
-}
-fn main() {
-    let x = add(123, 321);
-}
+    r#"
+
+
+
+add x y = x + y;
+main = add 123 321;
 "#,
-    (KeyWord, "fn"),
     (Id, "add"),
-    (Op, "("),
     (Id, "x"),
-    (Id, "u64"),
-    (Op, ","),
     (Id, "y"),
-    (Id, "u64"),
-    (Op, ")"),
-    (Id, "u64"),
-    (Op, "{"),
+    (Op, "="),
     (Id, "x"),
     (Op, "+"),
     (Id, "y"),
-    (Op, "}"),
-    (KeyWord, "fn"),
+    (Op, ";"),
     (Id, "main"),
-    (Op, "("),
-    (Op, ")"),
-    (Op, "{"),
-    (KeyWord, "let"),
-    (Id, "x"),
     (Op, "="),
     (Id, "add"),
-    (Op, "("),
     (Int, "123"),
-    (Op, ","),
     (Int, "321"),
-    (Op, ")"),
     (Op, ";"),
-    (Op, "}")
 );
+
+// #[test]
+// fn check_string() {
+//     use Token::*;
+//     let src = r#"""#;
+//     let output = r#"""#;
+//     let mut scanner = Scanner::new(src);
+//     let (tok, found) = scanner.next().map(|t| {
+//         let span = t.span().range();
+//         (t, &src[span])
+//     }).unwrap();
+//
+//     let span = tok.span();
+//     let value = tok.value().to_string();
+//     assert_eq!(String(value, span), tok, "token vs. token");
+//     assert_eq!(tok.value(), output, "captured in token");
+//     assert_eq!(found, output, "span in source");
+// }
+
+// fn test_tokens(src: &str, scanner: &mut Scanner) {
+//     let (tok, found, rspan) = scanner.next().map(|t| {
+//         let span = t.span();
+//         let range = span.range();
+//         (t, &src[range], span)
+//     }).unwrap();
+//
+//     let tok_span = tok.span();
+//     let value = tok.value().to_string();
+//     eprintln!("{tok:?}, {found:?}, {tok_span:?}, {rspan:?}, {value:?}");
+// }
+//
+// #[test]
+// fn check_span() {
+//     let src = r#"let main =
+//     println "hello";"#;
+//     let mut scanner = Scanner::new(src);
+//     test_tokens(src, &mut scanner);
+//     test_tokens(src, &mut scanner);
+//     test_tokens(src, &mut scanner);
+//     test_tokens(src, &mut scanner);
+//     assert!(false);
+// }

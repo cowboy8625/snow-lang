@@ -1,26 +1,23 @@
-// TODO:[1] (cowboy) move error messages to be a enum of error codes
-//          Error::E10 or Error::NoClosesSimiColon or
-//          self.report(Error::E10(last_token, token_found));
-//
 use super::{
+    error::Error,
     expr::{Atom, Expr},
     op::Op,
     precedence::Precedence,
-    Error, ErrorCode, Scanner, Span, Token,
+    Scanner, Span, Token,
 };
 use std::iter::Peekable;
 
 pub struct Parser<'a> {
     pub(crate) lexer: Peekable<Scanner<'a>>,
     token_stream: Vec<Token>,
-    errors: Option<Error>,
+    errors: Vec<Error>,
 }
 impl<'a> Parser<'a> {
     pub fn new(lexer: Peekable<Scanner<'a>>) -> Self {
         Self {
             lexer,
             token_stream: vec![],
-            errors: None,
+            errors: Vec::new(),
         }
     }
 
@@ -32,7 +29,20 @@ impl<'a> Parser<'a> {
     }
 
     fn next(&mut self) -> Token {
-        let token = self.lexer.next().unwrap_or(Token::Eof(Span::default()));
+        let token = self
+            .lexer
+            .next()
+            .map(|t| match t {
+                Token::Error(ch, span) => {
+                    self.report(Error::InvalidChar(
+                        ch.chars().last().unwrap_or('\0'),
+                        span,
+                    ));
+                    Token::Eof(span)
+                }
+                _ => t,
+            })
+            .unwrap_or(Token::Eof(Span::default()));
         self.token_stream.push(token.clone());
         token
     }
@@ -53,25 +63,13 @@ impl<'a> Parser<'a> {
     }
 
     fn remove_last_error(&mut self) {
-        let Some(error) = &mut self.errors else {
-            eprintln!("nothing to remove {:?}", self.errors);
-            return;
-        };
-        if error.cause.is_none() {
-            self.errors = None;
-            return;
-        }
-        // eprintln!("removing last error, {:?}", error.cause);
-        let cause = error.cause.clone().map(|t| *t).unwrap();
-        self.errors = Some(cause);
+        self.errors.pop();
     }
 
-    fn report(&mut self, id: ErrorCode, span: Span) -> Expr {
-        let s = span;
-        let last = self.errors.take();
-        let error = Error::new_with_cause(id, span, last);
-        self.errors = Some(error);
-        Expr::Error(s)
+    fn report(&mut self, error: Error) -> Expr {
+        let span = error.span();
+        self.errors.push(error);
+        Expr::Error(span)
     }
 
     fn recover(&mut self) {
@@ -108,14 +106,14 @@ impl<'a> Parser<'a> {
     //     dbg!(self.peek());
     // }
 
-    pub fn parse(mut self) -> Result<Vec<Expr>, Error> {
+    pub fn parse(mut self) -> Result<Vec<Expr>, Vec<Error>> {
         let mut ast = vec![];
         while !self.is_end() {
             let e = self.declaration();
             ast.push(e);
         }
-        if let Some(error) = self.errors {
-            return Err(error);
+        if !self.errors.is_empty() {
+            return Err(self.errors);
         }
         Ok(ast)
     }
@@ -153,7 +151,8 @@ impl<'a> Parser<'a> {
             }
             return expr;
         }
-        self.report(ErrorCode::E0000, token.span())
+        self.recover();
+        self.report(Error::ItemNotAllowedInGlobalSpace(token.span()))
     }
 
     fn type_dec(&mut self, token: &Token) -> Expr {
@@ -171,13 +170,11 @@ impl<'a> Parser<'a> {
             let type_name = match tok {
                 Token::Id(id, ..) => id.to_string(),
                 _ => {
+                    // FIXME: not pointing to right location
                     let idx = self.token_stream.len().saturating_sub(3);
                     let last_token = &self.token_stream[idx];
-                    let line = last_token.span().line;
-                    let start = last_token.span().end;
-                    let end = last_type_span.start;
-                    let span = Span::new(line, start, end);
-                    return self.report(ErrorCode::E0010, span);
+                    let span = last_token.span();
+                    return self.report(Error::MissingDeliminator(span));
                 }
             };
             types.push(type_name);
@@ -189,15 +186,13 @@ impl<'a> Parser<'a> {
         }
 
         if !self.peek().is_op_a(";") {
-            // setting up span
-            let line = last_type_span.line;
-            let start = last_type_span.start;
-            let end = self.peek().span().start;
-            let span = Span::new(line, start, end);
-            return self.report(ErrorCode::E0010, span);
+            // FIXME: This probably does not point to correct span
+            let span_start = self.peek().span();
+            let span = Span::from((span_start, last_type_span));
+            return self.report(Error::MissingDeliminator(span));
         }
-        let end = self.next().span().end;
-        let span = Span::new(start.line, start.start, end);
+        let span_end = self.next().span();
+        let span = Span::from((start, span_end));
         Expr::TypeDec(name.into(), types, span)
     }
 
@@ -221,14 +216,12 @@ impl<'a> Parser<'a> {
         }
         if !self.peek().is_op_a(";") {
             // let span = self.peek().span();
-            let line = start.line;
-            let start = start.end;
-            let end = self.peek().span().start;
-            let span = Span::new(line, start, end);
-            return self.report(ErrorCode::E0010, span);
+            let end = self.peek().span();
+            let span = Span::from((start, end));
+            return self.report(Error::MissingDeliminator(span));
         }
-        let end = self.next().span().end;
-        let span = Span::new(start.line, start.start, end);
+        let end = self.next().span();
+        let span = Span::from((start, end));
         Expr::Enum(name, variants, span)
     }
 
@@ -244,11 +237,11 @@ impl<'a> Parser<'a> {
                 }
                 if self.next_if(|t| t.is_op_a("=")).is_none() {
                     let span = self.peek().span();
-                    return self.report(ErrorCode::Unknown, span);
+                    return self.report(Error::Unknown(span));
                 }
                 let body = self.closure();
                 args.into_iter().rev().fold(body, |last, next| {
-                    let span = Span::new(start.line, start.start, last.span().end);
+                    let span = Span::from((start, last.span()));
                     Expr::Closure(Box::new(next), Box::new(last), span)
                 })
             })
@@ -256,21 +249,19 @@ impl<'a> Parser<'a> {
                 self.remove_last_error();
                 if self.next_if(|t| t.is_op_a("=")).is_none() {
                     let span = self.peek().span();
-                    return self.report(ErrorCode::Unknown, span);
+                    return self.report(Error::Unknown(span));
                 };
                 self.closure()
             });
-        if let Some(error) = &self.errors {
-            if error.get_error_code::<ErrorCode>() == ErrorCode::E0020 {
-                return Expr::Error(Span::default());
-            }
+        if let Some(Error::MissingDeliminator(_span)) = self.errors.last() {
+            return Expr::Error(Span::default());
         }
         if !self.peek().is_op_a(";") {
             let span = self.peek().span();
-            return self.report(ErrorCode::E0010, span);
+            return self.report(Error::MissingDeliminator(span));
         }
-        let end = self.next().span().end;
-        let span = Span::new(start.line, start.start, end);
+        let end = self.next().span();
+        let span = Span::from((start, end));
         Expr::Func(name.into(), Box::new(body), span)
     }
 
@@ -287,39 +278,33 @@ impl<'a> Parser<'a> {
                     .and_then(|mut lhs| {
                         while let Token::Id(..) = self.peek() {
                             let tail = Box::new(self.expression(Precedence::Fn));
-                            let s = lhs.span();
-                            let line = s.line;
-                            let start = s.start;
-                            let end = tail.span().end;
-                            let span = Span::new(line, start, end);
+                            let start = lhs.span();
+                            let end = tail.span();
+                            let span = Span::from((start, end));
                             lhs = Expr::Closure(Box::new(lhs), tail, span);
                         }
                         if self.next_if(|t| t.is_op_a("->")).is_none() {
                             let span = self.peek().span();
-                            return self.report(ErrorCode::Unknown, span);
+                            return self.report(Error::Unknown(span));
                         };
                         let body = self.closure();
-                        let s = lhs.span();
-                        let line = s.line;
-                        let start = s.start;
-                        let end = body.span().end;
-                        let span = Span::new(line, start, end);
+                        let start = lhs.span();
+                        let end = body.span();
+                        let span = Span::from((start, end));
                         Expr::Closure(Box::new(lhs), Box::new(body), span)
                     })
                     .or_else(|_| {
                         self.remove_last_error();
                         if self.next_if(|t| t.is_op_a("->")).is_none() {
                             let span = self.peek().span();
-                            return self.report(ErrorCode::Unknown, span);
+                            return self.report(Error::Unknown(span));
                         };
                         self.closure()
                     }),
             );
-            let s = head.span();
-            let line = s.line;
-            let start = s.start;
-            let end = tail.span().end;
-            let span = Span::new(line, start, end);
+            let start = head.span();
+            let end = tail.span();
+            let span = Span::from((start, end));
             return Expr::Closure(head, tail, span);
         }
         self.conditional()
@@ -331,23 +316,22 @@ impl<'a> Parser<'a> {
             let condition = self.expression(Precedence::None);
             if condition.is_error() {
                 self.remove_last_error();
-                let line = start.line;
-                let start = start.end;
-                let end = condition.span().start;
-                let span = Span::new(line, start, end);
-                return self.report(ErrorCode::E0020, span);
+                let end = condition.span();
+                let span = Span::from((start, end));
+                return self.report(Error::ExpectedConditionForStatement(span));
             }
             if self.next_if(|t| t.is_keyword_a("then")).is_none() {
                 let span = self.peek().span();
-                return self.report(ErrorCode::Unknown, span);
+                return self.report(Error::Unknown(span));
             }
             let branch1 = self.closure();
             if self.next_if(|t| t.is_keyword_a("else")).is_none() {
                 let span = self.peek().span();
-                return self.report(ErrorCode::Unknown, span);
+                return self.report(Error::Unknown(span));
             }
             let branch2 = self.closure();
-            let span = Span::new(start.line, start.start, branch2.span().end);
+            let end = branch2.span();
+            let span = Span::from((start, end));
             return Expr::IfElse(
                 Box::new(condition),
                 Box::new(branch1),
@@ -379,9 +363,9 @@ impl<'a> Parser<'a> {
                 };
                 args.push(self.expression(Precedence::None));
             }
-            let lhs_span = lhs.span();
-            let last_span = last.unwrap_or(lhs_span);
-            let span = Span::new(lhs_span.line, lhs_span.start, last_span.end);
+            let start = lhs.span();
+            let end = last.unwrap_or(start);
+            let span = Span::from((start, end));
             lhs = Expr::App(Box::new(lhs), args, span);
         }
         lhs
@@ -395,7 +379,7 @@ impl<'a> Parser<'a> {
                 if self.next_if(|t| t.is_op_a(")")).is_none() {
                     let span = self.peek().span();
                     // return self.report("E13", "closing ')' missing", span);
-                    return self.report(ErrorCode::Unknown, span);
+                    return self.report(Error::Unknown(span));
                 };
                 lhs
             }
@@ -409,7 +393,7 @@ impl<'a> Parser<'a> {
                 }
                 if self.next_if(|t| t.is_op_a("]")).is_none() {
                     let span = lhs.last().map(|t| t.span()).unwrap_or(self.peek().span());
-                    return self.report(ErrorCode::Unknown, span);
+                    return self.report(Error::Unknown(span));
                 };
                 let span = lhs
                     .first()
@@ -425,7 +409,8 @@ impl<'a> Parser<'a> {
                 self.next();
                 let op = Op::try_from(o).unwrap();
                 let lhs = self.expression(Precedence::Unary);
-                let span = Span::new(span.line, span.start, lhs.span().end);
+                let end = lhs.span();
+                let span = Span::from((span, end));
                 Expr::Unary(op, Box::new(lhs), span)
             }
             _ => {
@@ -437,8 +422,7 @@ impl<'a> Parser<'a> {
                     let op = Op::try_from(op).unwrap();
                     Expr::Atom(Atom::Id(format!("({op})")), span)
                 } else {
-                    // return self.report("E2", "unknown op char", span);
-                    self.report(ErrorCode::E0002, span)
+                    self.report(Error::UnknownOperator(span))
                 }
             }
         }
@@ -475,11 +459,11 @@ impl<'a> Parser<'a> {
                 self.next();
                 if c.chars().count() > 1 {
                     // return self.report("E3", "invalid op char", span);
-                    return self.report(ErrorCode::Unknown, span);
+                    return self.report(Error::Unknown(span));
                 }
                 let Some(c) = c.chars().next() else {
                     // return self.report("E4", "invalid char definition", span);
-                    return self.report(ErrorCode::Unknown, span);
+                    return self.report(Error::Unknown(span));
                 };
                 Expr::Atom(Atom::Char(c), span)
             }
@@ -487,7 +471,7 @@ impl<'a> Parser<'a> {
             _ => {
                 let span = self.peek().span();
                 // return self.report("E5", "invalid token", span);
-                return self.report(ErrorCode::Unknown, span);
+                return self.report(Error::Unknown(span));
             }
         };
         loop {
@@ -512,11 +496,7 @@ impl<'a> Parser<'a> {
             if cbp <= min_bp {
                 break;
             }
-            let line = token.span().line;
-            let start = token.span().start;
-            let end = start_span.end;
-            let span = Span::new(line, start, end);
-            // eprintln!("CBP: {cbp:?}");
+            let span = Span::from((start_span, token.span()));
             match cbp {
                 Precedence::Term
                 | Precedence::Factor
@@ -538,19 +518,31 @@ impl<'a> Parser<'a> {
                     );
                 }
                 Precedence::Assignment | Precedence::None => break,
-                Precedence::Pipe => {
+                Precedence::RLPipe => {
                     let _ = self.next();
-                    let rhs = self.call(cbp);
-                    lhs = Expr::Binary(
-                        Op::try_from(&token).unwrap(),
-                        Box::new(lhs),
-                        Box::new(rhs),
-                        span,
-                    );
+                    let rhs = self.closure();
+                    eprintln!("{rhs:?} {lhs:?}");
+                    if let Expr::App(_, args, _) = &mut lhs {
+                        args.push(rhs)
+                    } else {
+                        let l = Box::new(lhs);
+                        lhs = Expr::App(l, vec![rhs], span);
+                    }
+                }
+                Precedence::LRPipe => {
+                    let _ = self.next();
+                    let mut rhs = self.closure();
+                    if let Expr::App(_, args, _) = &mut rhs {
+                        args.push(lhs);
+                        lhs = rhs;
+                    } else {
+                        let r = Box::new(rhs);
+                        lhs = Expr::App(r, vec![lhs], span);
+                    }
                 }
                 _ => {
                     // lhs = self.report("E5", "invalid token", span);
-                    return self.report(ErrorCode::Unknown, span);
+                    return self.report(Error::Unknown(span));
                 }
             }
         }

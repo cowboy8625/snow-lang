@@ -13,7 +13,7 @@ macro_rules! is_expr {
     };
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Atom {
     Int(i32),
     Float(String),
@@ -21,7 +21,6 @@ pub enum Atom {
     Bool(bool),
     String(String),
     Char(char),
-    Array(Vec<Atom>),
 }
 
 impl fmt::Display for Atom {
@@ -33,25 +32,11 @@ impl fmt::Display for Atom {
             Self::Bool(b) => write!(f, "{b}"),
             Self::String(s) => write!(f, "{s}"),
             Self::Char(s) => write!(f, "{s}"),
-            Self::Array(array) => {
-                let mut a = array.iter().enumerate().fold(
-                    "[".to_string(),
-                    |mut acc, (idx, item)| {
-                        if idx != 0 {
-                            acc += ", ";
-                        }
-                        acc += item.to_string().as_str();
-                        acc
-                    },
-                );
-                a += "]";
-                write!(f, "{a}")
-            }
         }
     }
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Expr {
     Atom(Atom, Span),
     Unary(Op, Box<Self>, Span),
@@ -107,6 +92,27 @@ impl Expr {
     is_expr!(is_array, Array);
     is_expr!(is_type_dec, TypeDec);
     is_expr!(is_error, Error);
+
+    pub fn is_id(&self) -> bool {
+        let Expr::Atom(Atom::Id(_), _) = self else {
+            return false;
+        };
+        true
+    }
+
+    pub fn get_head(&self) -> Option<&Self> {
+        match self {
+            Expr::Closure(ref head, ..) => Some(head),
+            _ => None,
+        }
+    }
+
+    pub fn get_tail(&self) -> Option<&Self> {
+        match self {
+            Expr::Closure(_, ref tail, ..) => Some(tail),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Expr {

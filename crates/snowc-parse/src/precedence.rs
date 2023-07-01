@@ -4,6 +4,7 @@ use super::Token;
 pub enum Precedence {
     None,
     Primary,
+    LRPipe,     // |>
     Or,         // or
     And,        // and
     Term,       // + -
@@ -11,7 +12,7 @@ pub enum Precedence {
     Equality,   // == !=
     Comparison, // < > <= >=
     Assignment, // =
-    Pipe,       // |>
+    RLPipe,     // <|
     Call,       // . ()
     Fn,         // fn function declaration
     Unary,      // ! -
@@ -38,7 +39,8 @@ impl TryFrom<Token> for Precedence {
                 ">" | "<" | ">=" | "<=" => Ok(Precedence::Comparison),
                 "==" | "!=" => Ok(Precedence::Equality),
                 "=" => Ok(Precedence::Assignment),
-                "|>" => Ok(Precedence::Pipe),
+                "|>" => Ok(Precedence::LRPipe),
+                "<|" => Ok(Precedence::RLPipe),
                 _ => Ok(Precedence::None),
             },
             Token::Error(c, ..) => Err(format!("Unknown char {c}")),

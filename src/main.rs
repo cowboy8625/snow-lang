@@ -1,14 +1,16 @@
 mod args;
-use snowc::{parse, type_check, Expr, Interpreter, Scanner};
+use snowc::error::Error;
+use snowc::{parse, type_check, walk, Expr, Scanner};
+use snowc_repl::Repl;
 #[derive(Debug)]
 enum CompilerError {
     NoFileGive,
-    Parse(snowc::Error),
+    Parse(Vec<Error>),
     Type(Vec<String>),
 }
 
-impl From<snowc::Error> for CompilerError {
-    fn from(value: snowc::Error) -> Self {
+impl From<Vec<Error>> for CompilerError {
+    fn from(value: Vec<Error>) -> Self {
         Self::Parse(value)
     }
 }
@@ -34,7 +36,7 @@ fn debug_ast(flag: bool) -> impl FnOnce(Vec<Expr>) -> Result<Vec<Expr>, Compiler
     move |ast| {
         if flag {
             for node in ast.iter() {
-                eprintln!("{node}");
+                eprintln!("{node:#?}");
             }
         }
         Ok(ast)
@@ -47,7 +49,10 @@ fn handle_compiler_errors(filename: impl Into<String>) -> impl FnOnce(CompilerEr
             let filename = filename.into();
             let src = std::fs::read_to_string(&filename)
                 .expect("failed to get file source for error report");
-            snowc::report(&filename, &src, errors);
+            for error in errors.iter() {
+                let msg = error.report(&filename, &src);
+                eprintln!("{msg}");
+            }
         }
         CompilerError::Type(errors) => {
             for error in errors {
@@ -79,21 +84,43 @@ fn main() {
     setting
         .filename
         .clone()
-        .ok_or(CompilerError::NoFileGive)
+        .ok_or_else(|| {
+            let _ = Repl::default().run();
+            CompilerError::NoFileGive
+        })
         .and_then(get_src(setting.option_compile_string))
         .and_then(debug_tokens(setting.debug_token))
-        .and_then(|src| timer("Parse", || parse(Scanner::new(&src))).map_err(Into::into))
+        .and_then(|src| {
+            timer("Parsing", || parse(Scanner::new(&src))).map_err(Into::into)
+        })
         .and_then(debug_ast(setting.debug_ast))
         .and_then(|ast| {
             if !setting.option_no_type_check {
-                timer("Type Check", || type_check(&ast))
+                timer("Type Checking", || type_check(&ast))
                     .map_err(Into::<CompilerError>::into)?;
             }
             Ok(ast)
         })
         .map_or_else(
-            handle_compiler_errors(setting.filename.unwrap_or_default()),
-            Interpreter::init,
+            handle_compiler_errors(setting.filename.clone().unwrap_or_default()),
+            |ast| {
+                let msg = format_compiler_message("Running");
+                let filename = setting.filename.unwrap_or_default();
+                eprintln!("{msg} {filename}");
+                let result = walk(&ast);
+                match result {
+                    Ok(_) => {}
+                    Err(errors) => {
+                        let src =
+                            get_src(setting.option_compile_string)(filename.clone())
+                                .expect("failed to get file source for error report");
+                        for err in errors.iter() {
+                            let msg = err.report(&filename, &src);
+                            eprintln!("{msg}");
+                        }
+                    }
+                }
+            },
         );
 }
 

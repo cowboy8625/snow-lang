@@ -12,7 +12,7 @@ macro_rules! is_token {
     };
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Token {
     KeyWord(String, Span),
     Id(String, Span),
@@ -81,6 +81,22 @@ impl Token {
             Self::Char(.., span) => *span,
             Self::Error(.., span) => *span,
             Self::Eof(span) => *span,
+        }
+    }
+}
+
+impl fmt::Debug for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::KeyWord(i, ..) => write!(f, "{i}"),
+            Self::Id(i, ..) => write!(f, "{i}"),
+            Self::Op(i, ..) => write!(f, "{i}"),
+            Self::Int(i, ..) => write!(f, "{i}"),
+            Self::Float(i, ..) => write!(f, "{i}"),
+            Self::String(i, ..) => write!(f, "\"{i}\""),
+            Self::Char(i, ..) => write!(f, "{i}"),
+            Self::Error(i, ..) => write!(f, "{i}"),
+            Self::Eof(..) => write!(f, "EOF"),
         }
     }
 }

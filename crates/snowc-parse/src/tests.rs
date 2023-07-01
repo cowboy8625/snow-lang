@@ -1,12 +1,21 @@
-use super::{parse, Error, Scanner};
+use super::{error::Error, parse, Scanner};
 
 use pretty_assertions::assert_eq;
 
 macro_rules! testme {
     ($name:ident, $src:expr, $expected:expr $(,)?) => {
         #[test]
-        fn $name() -> Result<(), Error> {
-            let ast = parse(Scanner::new($src))?;
+        fn $name() -> Result<(), Vec<Error>> {
+            let ast = match parse(Scanner::new($src)) {
+                Ok(ok) => ok,
+                Err(errors) => {
+                    for err in errors.iter() {
+                        let msg = err.report("nothing", $src);
+                        eprintln!("{msg}");
+                    }
+                    return Err(errors);
+                }
+            };
             for node in ast.iter() {
                 eprintln!("{node}");
             }
@@ -99,9 +108,21 @@ testme!(
 testme!(call, "main = add 1 2;", vec!["<main: <add: (1, 2)>>"],);
 
 testme!(
+    pipe_call_right_to_left,
+    "main = (add 1) <| 2;",
+    vec!["<main: <add: (1, 2)>>"],
+);
+
+testme!(
+    pipe_call_left_to_right,
+    "main = 2 |> (add 1);",
+    vec!["<main: <add: (1, 2)>>"],
+);
+
+testme!(
     pipe_call,
-    "main = 2 |> add 1;",
-    vec!["<main: (|> 2 <add: (1)>)>"],
+    "main = 2 |> add <| 1;",
+    vec!["<main: <add: (1, 2)>>"],
 );
 
 testme!(

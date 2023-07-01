@@ -3,20 +3,19 @@
 struct Branch {
     value: char,
     end: bool,
-    child: Vec<Box<Branch>>,
+    child: Vec<Branch>,
 }
 
 impl Branch {
     fn new(word: &[char]) -> Self {
         let child = if word.len() > 1 {
-            vec![Box::new(Branch::new(&word[1..]))]
+            vec![Branch::new(&word[1..])]
         } else {
             vec![]
         };
-        let end = if word.len() == 1 { true } else { false };
         Self {
             value: word[0],
-            end,
+            end: word.len() == 1,
             child,
         }
     }
@@ -32,7 +31,7 @@ impl Branch {
                     return child.insert(&word[1..]);
                 }
             }
-            self.child.push(Box::new(Branch::new(&word[1..])));
+            self.child.push(Branch::new(&word[1..]));
         } else if self.value == word[0] {
             self.end = true;
             return true;

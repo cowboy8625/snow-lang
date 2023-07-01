@@ -1,13 +1,11 @@
 [package]
-name = "snowc-tree-walker"
+name = "snowc-repl"
 version = "0.0.0"
 edition = "2021"
 
 [dependencies]
 snowc-parse = { path = "../snowc-parse" }
+snowc-lexer = { path = "../snowc-lexer" }
+snowc-tree-walker = { path = "../snowc-tree-walker" }
+crossterm = "0.25.0"
 annotate-snippets = { version = "0.9.1", features = ["color"] }
-thiserror = "1.0.40"
-anyhow = "1.0.71"
-
-[dev-dependencies]
-pretty_assertions = "1.3.0"

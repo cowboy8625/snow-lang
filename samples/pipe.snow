@@ -1,0 +1,13 @@
+add :: Int -> Int -> Int;
+add x y = x + y;
+
+-- main :: IO;
+-- main = print <| add 1 <| add 1 1;
+
+main = print <| add 1 2;
+
+-- main = add 1 1
+--        |> add 1
+--        |> print;
+
+-- main = print ((add 1) 2);

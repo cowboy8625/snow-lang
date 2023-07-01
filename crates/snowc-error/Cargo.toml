@@ -1,7 +1,0 @@
-[package]
-name = "snowc-error"
-version = "0.0.0"
-edition = "2021"
-
-[dependencies]
-snowc-error-messages = { path = "../snowc-error-messages" }

@@ -1,3 +1,4 @@
+pub mod error;
 pub mod expr;
 pub mod op;
 pub mod parser;
@@ -7,13 +8,16 @@ mod precedence;
 #[cfg(test)]
 mod tests;
 use parser::Parser;
-use snowc_error::ErrorCode;
-use snowc_error_messages::Error;
 pub use snowc_lexer::{Scanner, Span, Token};
 
-pub fn parse(scanner: Scanner) -> Result<Vec<Expr>, Error> {
+pub fn parse(scanner: Scanner) -> Result<Vec<Expr>, Vec<error::Error>> {
     let stream = scanner.peekable();
     Parser::new(stream).parse()
+}
+
+pub fn parse_expr(scanner: Scanner) -> Result<Expr, Vec<error::Error>> {
+    let stream = scanner.peekable();
+    Ok(Parser::new(stream).conditional())
 }
 
 #[macro_export]

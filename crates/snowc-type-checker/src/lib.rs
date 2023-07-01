@@ -143,8 +143,7 @@ fn type_check_binary<'a>(
         | Op::Not
         | Op::And
         | Op::Or => Type::Bool,
-        Op::Equals | Op::Pipe => {
-            let _span = lhs.span().start..rhs.span().end;
+        Op::Equals | Op::LRPipe | Op::RLPipe => {
             panic!("not yet implemented for assignment or pipe")
         }
     }

@@ -52,7 +52,7 @@ pub fn cargs() -> Settings {
                 .short('s')
                 .required(false)
                 .action(clap::ArgAction::SetTrue)
-                .help("turn the language in to garbage"),
+                .help("takes in string to compile"),
         )
         .get_matches();
 

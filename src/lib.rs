@@ -1,5 +1,4 @@
 pub use snowc_byte_code_gen::*;
-pub use snowc_error_messages::*;
 pub use snowc_parse::*;
 pub use snowc_tree_walker::*;
 pub use snowc_type_checker::*;
