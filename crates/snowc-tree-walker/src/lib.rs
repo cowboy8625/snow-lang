@@ -176,7 +176,14 @@ fn expr_app(name: &Expr, args: &[Expr], _span: Span, scope: &Scope) -> Result<Va
                     .fold("".into(), |acc, (idx, item)| {
                         let item = match item {
                             Value::Array(array, ..) => {
-                                array.iter().map(ToString::to_string).collect::<String>()
+                                array.iter().enumerate().map(|(idx, i)| {
+                                    if idx == 0 {
+                                        return format!("[{i}, ")
+                                    } else if idx == array.len().saturating_sub(1) {
+                                        return format!("{i}]")
+                                    }
+                                    format!("{i}, ")
+                                }).collect::<String>()
                             }
                             _ => item.to_string(),
                         };
