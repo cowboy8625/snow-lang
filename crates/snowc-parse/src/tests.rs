@@ -37,6 +37,7 @@ testme!(
     "main :: Int; main = 1.2;",
     vec!["<main :: Int>", "<main: 1.2>",],
 );
+
 testme!(
     expression_ident,
     "main :: Int; main = a;",

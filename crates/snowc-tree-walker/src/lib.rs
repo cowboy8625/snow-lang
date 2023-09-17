@@ -73,6 +73,9 @@ fn expr_binary(
         (Op::Plus, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
             Ok(Value::Int(lhs + rhs, span))
         }
+        (Op::Plus, Value::String(lhs, ..), Value::String(rhs, ..)) => {
+            Ok(Value::String(format!("{lhs}{rhs}"), span))
+        }
         (Op::Minus, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
             Ok(Value::Int(lhs - rhs, span))
         }
@@ -213,19 +216,52 @@ fn expr_app(name: &Expr, args: &[Expr], _span: Span, scope: &Scope) -> Result<Va
         }
         "length" => {
             let Value::Array(array, span) = walk_expr(&args[0], scope)? else {
-                return Err(RuntimeError::InvalidArguments(*span));
+                // eprintln!("{:#?}", scope.get("arr"));
+                // return Err(RuntimeError::InvalidArguments(*span));
+                return Ok(Value::Int(0, *span))
             };
             let len = array.len();
             Ok(Value::Int(len as i32, span))
         }
         "push" => {
-            let Value::Array(mut array, span) = walk_expr(&args[0], scope)? else {
-                return Err(RuntimeError::InvalidArguments(*span));
-            };
-            let value = walk_expr(&args[1], scope)?;
-            array.push(value);
-            Ok(Value::Array(array, span))
+            let lhs = walk_expr(&args[0], scope)?;
+            let rhs = walk_expr(&args[1], scope)?;
+            match (lhs, rhs) {
+                (Value::String(mut string, span), Value::String(value, ..)) => {
+                    string.push_str(&value);
+                    Ok(Value::String(string, span))
+                }
+                (Value::Array(mut array, span), value) =>{
+                    array.push(value);
+                    Ok(Value::Array(array, span))
+                },
+                _ => Err(RuntimeError::InvalidArguments(*span)),
+            }
         }
+        "tail" => {
+            let iter = walk_expr(&args[0], scope)?;
+            match iter {
+                Value::String(string, span) => {
+                    Ok(Value::String(string[1..].to_string(), span))
+                }
+                Value::Array(array, span) => {
+                    Ok(Value::Array(array[1..].to_vec(), span))
+                },
+                _ => Err(RuntimeError::InvalidArguments(*span)),
+            }
+        },
+        "head" => {
+            let iter = walk_expr(&args[0], scope)?;
+            match iter {
+                Value::String(string, span) => {
+                    Ok(Value::String(string[0..1].to_string(), span))
+                }
+                Value::Array(array, ..) => {
+                    Ok(array[0].clone())
+                },
+                _ => Err(RuntimeError::InvalidArguments(*span)),
+            }
+        },
         _ => {
             let Some(mut func) = scope.get(name) else {
                 return Err(RuntimeError::Undefined(name.into(), *span));
