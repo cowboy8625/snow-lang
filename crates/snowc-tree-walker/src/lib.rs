@@ -5,7 +5,7 @@ mod value;
 pub use error::RuntimeError;
 use snowc_parse::{Atom, Expr, Op, Span};
 use std::collections::HashMap;
-use value::Value;
+pub use value::Value;
 
 type Env = HashMap<String, Expr>;
 type Result<T> = std::result::Result<T, RuntimeError>;
@@ -155,11 +155,11 @@ fn expr_closure_with_args(
     walk_expr(tail, &scope)
 }
 
-fn expr_app(name: &Expr, args: &[Expr], _span: Span, scope: &Scope) -> Result<Value> {
+fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Value> {
     let Expr::Atom(Atom::Id(name), span) = name else {
         let (Some(head), Some(tail)) = (name.get_head(), name.get_tail()) else {
             let Expr::App(name, args, span) = name else {
-                unimplemented!("return a run time error");
+                return Err(RuntimeError::InvalidArguments(span));
             };
             return expr_app(name, args, *span, scope);
         };

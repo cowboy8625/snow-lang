@@ -1,4 +1,4 @@
-use super::{error::Error, parse, Scanner};
+use super::{error::Error, parse, Scanner, parse_expr};
 
 use pretty_assertions::assert_eq;
 
@@ -24,6 +24,12 @@ macro_rules! testme {
             Ok(())
         }
     };
+}
+
+#[test]
+fn is_error() {
+    let ast = parse_expr(Scanner::new("1 +"));
+    assert!(ast.iter().any(|x| x.is_error()));
 }
 
 testme!(

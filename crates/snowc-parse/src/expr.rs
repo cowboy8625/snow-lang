@@ -91,7 +91,20 @@ impl Expr {
     is_expr!(is_type, Enum);
     is_expr!(is_array, Array);
     is_expr!(is_type_dec, TypeDec);
-    is_expr!(is_error, Error);
+
+    pub fn is_error(&self) -> bool {
+        match self {
+            Self::Unary(_, e, _) => e.is_error(),
+            Self::Binary(_, l, r, _) => l.is_error() || r.is_error(),
+            Self::IfElse(c, t, e, ..) => c.is_error() || t.is_error() || e.is_error(),
+            Self::Closure(h, t, ..) => h.is_error() || t.is_error(),
+            Self::Func(_, e, ..) => e.is_error(),
+            Self::App(e, ..) => e.is_error(),
+            Self::Array(array, ..) => array.iter().any(|e| e.is_error()),
+            Self::Error(..) => true,
+            _ => false,
+        }
+    }
 
     pub fn is_id(&self) -> bool {
         let Expr::Atom(Atom::Id(_), _) = self else {

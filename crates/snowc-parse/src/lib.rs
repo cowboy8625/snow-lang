@@ -4,6 +4,7 @@ pub mod op;
 pub mod parser;
 pub use expr::{Atom, Expr};
 pub use op::Op;
+
 mod precedence;
 #[cfg(test)]
 mod tests;

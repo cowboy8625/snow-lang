@@ -21,6 +21,10 @@ pub enum Error {
     InvalidChar(char, Span),
     #[error("who knows what you did, gezzz {0:?}")]
     Unknown(Span),
+    #[error("unexpected end of file {0:?}")]
+    UnexpectedEOF(Span),
+    #[error("unexpected token {0:?}")]
+    UnexpectedToken(Span),
 }
 
 impl Error {
@@ -33,11 +37,14 @@ impl Error {
             Self::ItemNotAllowedInGlobalSpace(s) => *s,
             Self::InvalidChar(_, s) => *s,
             Self::Unknown(s) => *s,
+            Self::UnexpectedEOF(s) => *s,
+            Self::UnexpectedToken(s) => *s,
         }
     }
 
     pub fn report<'a>(&'a self, filename: &'a str, src: &'a str) -> String {
         let span = self.span();
+        debug_assert!(span.idx_start < span.idx_end, "reported span is invalid for {:?}", &self);
         let range = (span.idx_start, span.idx_end);
         let label = &self.to_string();
         let snippet = Snippet {
