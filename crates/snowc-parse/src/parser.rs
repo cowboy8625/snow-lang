@@ -82,31 +82,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // FIXME: This is broken
-    // fn recover(&mut self, deliminators: &[Token]) {
-    //     if let Some(error) = &self.errors {
-    //         if error.get_error_code::<ErrorCode>() == ErrorCode::E0010 {
-    //             return;
-    //         }
-    //     }
-    //     let mut last_span = self
-    //         .previous()
-    //         .map(|t| t.span())
-    //         .unwrap_or_else(Span::default);
-    //     println!("recovering");
-    //     while let Some(tok) = self.next_if(|t| !deliminators.contains(&t)) {
-    //         if tok.span().line > last_span.line {
-    //             break;
-    //         }
-    //         last_span = tok.span();
-    //         if self.is_end() {
-    //             break;
-    //         }
-    //     }
-    //     self.next();
-    //     dbg!(self.peek());
-    // }
-
     pub fn parse(mut self) -> Result<Vec<Expr>, Vec<Error>> {
         let mut ast = vec![];
         while !self.is_end() {

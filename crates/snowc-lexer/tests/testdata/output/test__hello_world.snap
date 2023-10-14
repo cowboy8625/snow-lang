@@ -1,0 +1,15 @@
+---
+source: crates/snowc-lexer/tests/test.rs
+expression: snapshot_lexing(contents)
+---
+main :: IO
+^^^^ main
+     ^^ ::
+        ^^ IO
+main = print "Hello World\n"
+^^^^ main
+     ^ =
+       ^^^^^ print
+             ^^^^^^^^^^^^^^^ "Hello World
+"
+

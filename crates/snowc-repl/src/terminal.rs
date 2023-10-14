@@ -67,10 +67,6 @@ impl Terminal {
         })
     }
 
-    pub fn x(&self) -> u16 {
-        self.cursor.x
-    }
-
     pub fn y(&self) -> u16 {
         self.cursor.y
     }
@@ -131,16 +127,13 @@ impl Terminal {
     }
 
     pub fn new_line(&mut self) -> Result<()> {
-        if self.cursor.y >= self.size.height {
-            self.scroll_up(1)?;
-        } else {
-            self.cursor.y += 1;
-        }
+        self.cursor.y += 1;
+        self.scroll_up_if_needed(self.cursor.y)?;
         Ok(())
     }
 
-    pub fn scroll_up_if_needed(&mut self) -> Result<()> {
-        if self.cursor.y >= self.size.height {
+    pub fn scroll_up_if_needed(&mut self, y: u16) -> Result<()> {
+        if y >= self.size.height {
             self.scroll_up(1)?;
             self.cursor.y -= 1;
         }

@@ -1,5 +1,5 @@
 use annotate_snippets::{
-    display_list::{DisplayList, FormatOptions, Margin},
+    display_list::{DisplayList, FormatOptions},
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
 use snowc_parse::Span;

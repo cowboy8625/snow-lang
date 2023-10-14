@@ -5,8 +5,8 @@ use crossterm::style::Stylize;
 use anyhow::Result;
 
 const PROMPT: &str = ":> ";
-const WELCOME: &str = "snow-lang version 0.0.0\r\n";
-const HELP_MESSAGE: &str = "Help Commands
+const _WELCOME: &str = "snow-lang version 0.0.0\r\n";
+const _HELP_MESSAGE: &str = "Help Commands
 :help             get this message
 :exit | :quit     kill repl
 :clear            clears screen
@@ -18,11 +18,12 @@ const HELP_MESSAGE: &str = "Help Commands
 use snowc_tree_walker::{eval_expr_with_scope, Scope, Value};
 
 pub fn repl() -> Result<()> {
-    println!("{}\n{}", WELCOME, HELP_MESSAGE);
     let mut repl = Repl::new();
     let mut terminal = Terminal::new()?;
     let mut scope = Scope::default();
 
+    terminal.print("Welcome to snow repl")?;
+    terminal.new_line()?;
     terminal.print(PROMPT)?;
     terminal.flush()?;
 
@@ -45,8 +46,8 @@ pub fn repl() -> Result<()> {
             let mut s = scope.clone();
             match compile(&format!("{}  ", repl.input), &mut s) {
                 Ok(Some(v)) => {
-                    terminal.scroll_up_if_needed()?;
                     let y = terminal.y() + 1;
+                    terminal.scroll_up_if_needed(y)?;
                     terminal.print_at(0, y, &v.to_string().grey().to_string())?;
                 }
                 _ => {
@@ -100,7 +101,10 @@ fn execute_return_command(terminal: &mut Terminal, repl: &mut Repl, scope: &mut 
         Err(errors) => {
             terminal.print(&errors.join("\n"))?;
         }
-        _ => {},
+        _ => {
+            let y = terminal.y();
+            terminal.scroll_up_if_needed(y)?;
+        },
     }
     repl.clear_input();
     Ok(())
