@@ -5,8 +5,8 @@ pub struct Span {
     pub idx_start: usize,
     pub idx_end: usize,
     pub row_start: usize,
-    pub col_start: usize,
     pub row_end: usize,
+    pub col_start: usize,
     pub col_end: usize,
 }
 
@@ -15,16 +15,16 @@ impl Span {
         idx_start: usize,
         idx_end: usize,
         row_start: usize,
-        col_start: usize,
         row_end: usize,
+        col_start: usize,
         col_end: usize,
     ) -> Self {
         Self {
             idx_start,
             idx_end,
             row_start,
-            col_start,
             row_end,
+            col_start,
             col_end,
         }
     }
@@ -52,6 +52,11 @@ impl Span {
     pub fn range(&self) -> Range<usize> {
         self.idx_start..self.idx_end
     }
+
+    #[allow(unused)]
+    pub fn len(&self) -> usize {
+        self.idx_end.saturating_sub(self.idx_start)
+    }
 }
 
 impl From<(Span, Span)> for Span {
@@ -59,8 +64,8 @@ impl From<(Span, Span)> for Span {
         let idx_start: usize = x.idx_start;
         let idx_end: usize = y.idx_end;
         let row_start: usize = x.row_start;
-        let col_start: usize = y.col_start;
-        let row_end: usize = x.row_end;
+        let col_start: usize = x.col_start;
+        let row_end: usize = y.row_end;
         let col_end: usize = y.col_end;
         Self::new(idx_start, idx_end, row_start, row_end, col_start, col_end)
     }
@@ -71,49 +76,7 @@ impl fmt::Debug for Span {
         write!(
             f,
             "({},{})->({},{})",
-            self.row_start, self.col_start, self.row_end, self.col_end
+            self.col_start, self.row_start, self.col_end, self.row_end
         )
     }
 }
-
-// #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
-// pub struct Span {
-//     pub line: usize,
-//     pub start: usize,
-//     pub end: usize,
-// }
-//
-// impl Span {
-//     pub fn new(line: usize, start: usize, end: usize) -> Self {
-//         Self { line, start, end }
-//     }
-//
-//     pub fn shift_right(&mut self) {
-//         self.start += 1;
-//     }
-//
-//     pub fn new_line(&mut self) {
-//         self.line += 1;
-//         self.start += 1;
-//     }
-//
-//     pub fn range(&self) -> std::ops::Range<usize> {
-//         self.start..self.end
-//     }
-// }
-//
-// impl From<(Span, Span)> for Span {
-//     fn from((start, end): (Span, Span)) -> Self {
-//         let line = start.line;
-//         let start = start.start;
-//         let end = end.end;
-//         assert!(start < end);
-//         Self::new(line, start, end)
-//     }
-// }
-//
-// impl std::fmt::Debug for Span {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "{}:{}:{}", self.line, self.start, self.end)
-//     }
-// }

@@ -7,5 +7,6 @@ edition = "2021"
 snowc-parse = { path = "../snowc-parse" }
 snowc-lexer = { path = "../snowc-lexer" }
 snowc-tree-walker = { path = "../snowc-tree-walker" }
-crossterm = "0.25.0"
-annotate-snippets = { version = "0.9.1", features = ["color"] }
+crossterm = "0.27.0"
+anyhow = "1.0.75"
+# annotate-snippets = { version = "0.9.1", features = ["color"] }

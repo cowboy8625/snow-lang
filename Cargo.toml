@@ -10,6 +10,7 @@ snowc-byte-code-gen = { path="./crates/snowc-byte-code-gen" }
 snowc-repl = { path = "./crates/snowc-repl" }
 snowc-tree-walker = { path = "./crates/snowc-tree-walker" }
 clap = { version = "4.0.29", features = ["cargo"] }
+anyhow = "1.0.75"
 
 [workspace]
 members = [

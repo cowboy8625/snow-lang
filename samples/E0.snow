@@ -1,2 +1,0 @@
-main :: String
-main = if true then "Then" else "Else"

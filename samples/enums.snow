@@ -1,6 +1,0 @@
-enum Option = Some String | None;
-
-enum Other = Item Option;
-
-main :: Other;
-main = Other::Item Option "Hello";

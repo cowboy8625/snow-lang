@@ -1,8 +1,33 @@
-max :: Int -> Int -> Int;
-max x y = if x > y then x else y;
+enum Option a = Some a | None
+Option.map f = match self on
+  | Some x -> Some (f x)
+  | None -> None
 
-min :: Int -> Int -> Int;
-min x y = if x < y then x else y;
+enum Bool = True | False
 
-clamp :: Int -> Int -> Int -> Int;
-clamp input low high = max low (min input high);
+max :> Int -> Int -> Int
+max x y = if x > y then x else y
+
+min :> Int -> Int -> Int
+min x y = if x < y then x else y
+
+clamp :> Int -> Int -> Int -> Int
+clamp input low high = max low (min input high)
+
+is_digit :> Char -> Bool
+is_digit c = c >= '0' && c <= '9'
+
+`==` :> a -> a -> Bool
+`==` x y = core::equal x y Bool::True Bool::False
+
+`<=` :> a -> a -> Bool
+`<=` x y = core::less_equal x y Bool::True Bool::False
+
+`>=` :> a -> a -> Bool
+`>=` x y = core::greater_equal x y Bool::True Bool::False
+
+`>` :> a -> a -> Bool
+`>` x y = core::greater x y Bool::True Bool::False
+
+`<` :> a -> a -> Bool
+`<` x y = core::less x y Bool::True Bool::False
