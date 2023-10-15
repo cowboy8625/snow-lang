@@ -5,6 +5,7 @@ use super::{
     precedence::Precedence,
     Scanner, Span, Token,
 };
+
 use std::iter::Peekable;
 
 pub struct Parser<'a> {
@@ -81,38 +82,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // FIXME: This is broken
-    // fn recover(&mut self, deliminators: &[Token]) {
-    //     if let Some(error) = &self.errors {
-    //         if error.get_error_code::<ErrorCode>() == ErrorCode::E0010 {
-    //             return;
-    //         }
-    //     }
-    //     let mut last_span = self
-    //         .previous()
-    //         .map(|t| t.span())
-    //         .unwrap_or_else(Span::default);
-    //     println!("recovering");
-    //     while let Some(tok) = self.next_if(|t| !deliminators.contains(&t)) {
-    //         if tok.span().line > last_span.line {
-    //             break;
-    //         }
-    //         last_span = tok.span();
-    //         if self.is_end() {
-    //             break;
-    //         }
-    //     }
-    //     self.next();
-    //     dbg!(self.peek());
-    // }
-
     pub fn parse(mut self) -> Result<Vec<Expr>, Vec<Error>> {
         let mut ast = vec![];
         while !self.is_end() {
             let e = self.declaration();
             ast.push(e);
         }
-        if !self.errors.is_empty() {
+        if !self.errors.is_empty() || ast.iter().any(|x| x.is_error()) {
             return Err(self.errors);
         }
         Ok(ast)
@@ -241,7 +217,7 @@ impl<'a> Parser<'a> {
                 }
                 let body = self.closure();
                 args.into_iter().rev().fold(body, |last, next| {
-                    let span = Span::from((start, last.span()));
+                    let span = Span::from((last.span(), next.span()));
                     Expr::Closure(Box::new(next), Box::new(last), span)
                 })
             })
@@ -429,7 +405,6 @@ impl<'a> Parser<'a> {
     }
 
     pub(crate) fn expression(&mut self, min_bp: Precedence) -> Expr {
-        let start_span = self.peek().span();
         let mut lhs = match self.peek() {
             Token::KeyWord(ref b, span) if b == "true" => {
                 self.next();
@@ -474,12 +449,9 @@ impl<'a> Parser<'a> {
                 return self.report(Error::Unknown(span));
             }
         };
+        let start_span = lhs.span();
         loop {
             let token = self.peek();
-            // eprintln!("top loop: {token:?}");
-            // let Ok(cbp) = Precedence::try_from(token.clone()) else {
-            //     break;
-            // };
             let cbp: Precedence = match token.clone() {
                 Token::Op(..) => Precedence::try_from(token.clone()).unwrap(),
                 Token::KeyWord(ref k, ..) if k == "and" => {
@@ -506,10 +478,6 @@ impl<'a> Parser<'a> {
                 | Precedence::Or => {
                     let _ = self.next();
                     let rhs = self.expression(cbp);
-                    // eprintln!("bin: {token:?}");
-                    // if token.is_keyword_a("and") {
-                    // std::process::exit(1);
-                    // }
                     lhs = Expr::Binary(
                         Op::try_from(&token).unwrap(),
                         Box::new(lhs),
@@ -521,7 +489,6 @@ impl<'a> Parser<'a> {
                 Precedence::RLPipe => {
                     let _ = self.next();
                     let rhs = self.closure();
-                    eprintln!("{rhs:?} {lhs:?}");
                     if let Expr::App(_, args, _) = &mut lhs {
                         args.push(rhs)
                     } else {

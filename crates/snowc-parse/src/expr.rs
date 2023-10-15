@@ -13,7 +13,7 @@ macro_rules! is_expr {
     };
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Atom {
     Int(i32),
     Float(String),
@@ -21,6 +21,19 @@ pub enum Atom {
     Bool(bool),
     String(String),
     Char(char),
+}
+
+impl fmt::Debug for Atom {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Int(i) => write!(f, "{i:?}"),
+            Self::Float(i) => write!(f, "{i:?}"),
+            Self::Id(id) => write!(f, "{id:?}"),
+            Self::Bool(b) => write!(f, "{b:?}"),
+            Self::String(s) => write!(f, "{s:?}"),
+            Self::Char(s) => write!(f, "{s:?}"),
+        }
+    }
 }
 
 impl fmt::Display for Atom {
@@ -36,7 +49,7 @@ impl fmt::Display for Atom {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Expr {
     Atom(Atom, Span),
     Unary(Op, Box<Self>, Span),
@@ -91,7 +104,20 @@ impl Expr {
     is_expr!(is_type, Enum);
     is_expr!(is_array, Array);
     is_expr!(is_type_dec, TypeDec);
-    is_expr!(is_error, Error);
+
+    pub fn is_error(&self) -> bool {
+        match self {
+            Self::Unary(_, e, _) => e.is_error(),
+            Self::Binary(_, l, r, _) => l.is_error() || r.is_error(),
+            Self::IfElse(c, t, e, ..) => c.is_error() || t.is_error() || e.is_error(),
+            Self::Closure(h, t, ..) => h.is_error() || t.is_error(),
+            Self::Func(_, e, ..) => e.is_error(),
+            Self::App(e, ..) => e.is_error(),
+            Self::Array(array, ..) => array.iter().any(|e| e.is_error()),
+            Self::Error(..) => true,
+            _ => false,
+        }
+    }
 
     pub fn is_id(&self) -> bool {
         let Expr::Atom(Atom::Id(_), _) = self else {
@@ -187,6 +213,84 @@ impl fmt::Display for Expr {
                     }
                 });
                 write!(f, "<{name} :: {types}>")
+            }
+            Self::Error(..) => write!(f, "Error"),
+        }
+    }
+}
+
+impl fmt::Debug for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Atom(i, ..) => write!(f, "{i:?}"),
+            Self::Unary(op, lhs, ..) => write!(f, "({op} {lhs:?})"),
+            Self::Binary(op, lhs, rhs, ..) => write!(f, "({op} {lhs:?} {rhs:?})"),
+            Self::IfElse(condition, branch1, branch2, ..) => {
+                write!(f, "(if ({condition:?}) then {branch1:?} else {branch2:?})")
+            }
+            Self::Closure(head, tail, ..) => {
+                write!(f, "(\\{head:?} -> {tail:?})")
+            }
+            Self::Func(name, clouser, ..) => {
+                write!(f, "<{name:?}: {clouser:?}>")
+            }
+            Self::App(name, args, ..) => {
+                write!(f, "<{name:?}: (")?;
+                for (i, arg) in args.iter().enumerate() {
+                    write!(f, "{arg:?}")?;
+                    if i < args.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, ")>")?;
+                Ok(())
+            }
+            Self::Array(array, ..) => {
+                let mut a = array.iter().enumerate().fold(
+                    "[".to_string(),
+                    |mut acc, (idx, item)| {
+                        if idx != 0 {
+                            acc += ", ";
+                        }
+                        acc += format!("{item:?}").as_str();
+                        acc
+                    },
+                );
+                a += "]";
+                write!(f, "{a}")
+            }
+            Self::Enum(name, args, ..) => {
+                if args.is_empty() {
+                    return write!(f, "<{name:?}>");
+                }
+                let fstring = args.iter().enumerate().fold(
+                    format!("<{name:?}: "),
+                    |fstring, (i, (name, type_arg))| {
+                        let targs = type_arg.iter().fold(String::new(), |fstring, t| {
+                            if fstring.is_empty() {
+                                t.to_string()
+                            } else {
+                                format!("{fstring}, {t}")
+                            }
+                        });
+                        if i < args.len() - 1 {
+                            format!("{fstring:?}({name:?}, [{targs:?}]), ")
+                        } else {
+                            format!("{fstring:?}({name:?}, [{targs:?}])")
+                        }
+                    },
+                );
+                write!(f, "{fstring}>")
+            }
+            Self::TypeDec(name, type_list, ..) => {
+                let types = type_list.iter().fold(String::new(), |fstring, item| {
+                    if fstring.is_empty() {
+                        item.to_string()
+                    } else {
+                        format!("{fstring:?} -> {item:?}")
+                    }
+                });
+                write!(f, "<{name:?} :: {types:?}>")
             }
             Self::Error(..) => write!(f, "Error"),
         }

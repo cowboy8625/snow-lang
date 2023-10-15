@@ -51,17 +51,12 @@ fn snippet_builder<'a>(
     label: &'a str,
     span: Span,
 ) -> Snippet<'a> {
-    // assert!(span.start < span.end, "{span:?}");
-
-    // let range = if span.start < span.end {
-    //     (span.start, span.end)
-    // } else {
-    //     (span.end, span.start)
-    // };
+    debug_assert!(span.idx_end < src.len(), "index: {:?}, is to small for the span {:?} label: {}", src.len(), span, label);
+    debug_assert!(span.idx_start < span.idx_end, "reported span is invalid");
     let range = (span.idx_start, span.idx_end);
     Snippet {
         title: Some(Annotation {
-            label: Some(label),
+            label: None,
             id: None,
             annotation_type: AnnotationType::Error,
         }),
@@ -72,7 +67,7 @@ fn snippet_builder<'a>(
             origin: Some(filename),
             fold: true,
             annotations: vec![SourceAnnotation {
-                label: "",
+                label,
                 annotation_type: AnnotationType::Error,
                 range,
             }],

@@ -1,2 +1,0 @@
-main :: Int;
-main = if then 10 else 0;

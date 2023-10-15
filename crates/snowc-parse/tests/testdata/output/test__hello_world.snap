@@ -1,0 +1,14 @@
+---
+source: crates/snowc-parse/tests/test.rs
+expression: snapshot_parsing(contents)
+---
+main :: IO;
+^^^^^^^^^^^ <"main" :: "IO">
+
+main = print "Hello World\n";
+       ^^^^^ "print"
+             ^^^^^^^^^^^^^^^ "Hello World\n"
+       ^^^^^^^^^^^^^^^^^^^^^^ <"print": ("Hello World\n")>
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ <"main": <"print": ("Hello World\n")>>
+
+
