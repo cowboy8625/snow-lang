@@ -72,8 +72,14 @@ next_gen grid idx =
   then (push (next_gen grid (idx + 1)) (cell_type grid idx))
   else [cell_type grid idx];
 
-display :: IO;
-display grid = print grid "\n";
+str_join :: Str -> Array -> Str;
+str_join sep arr =
+  if (length arr) > 0
+  then (str_join sep (tail arr)) + (sep + (head arr))
+  else "";
+
+display :: Array -> IO;
+display grid = head [grid, (print (str_join "" grid) "\n")];
 
 run :: Array -> Array;
 run grid = run (next_gen (display grid) 0);

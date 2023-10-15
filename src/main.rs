@@ -2,8 +2,8 @@ mod args;
 use snowc::error::Error;
 use snowc::{parse, type_check, walk, Expr, Scanner};
 use snowc_repl::repl;
+#[derive(Debug)]
 enum CompilerError {
-    #[derive(Debug)]
     NoFileGive,
     Parse(Vec<Error>),
     Type(Vec<String>),

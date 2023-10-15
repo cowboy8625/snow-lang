@@ -1,6 +1,6 @@
 mod terminal;
-use terminal::{Pos, Command, Terminal};
 use crossterm::style::Stylize;
+use terminal::{Command, Pos, Terminal};
 
 use anyhow::Result;
 
@@ -28,7 +28,6 @@ pub fn repl() -> Result<()> {
     terminal.flush()?;
 
     while repl.is_running() {
-
         let Some(command) = terminal.get_input() else {
             continue;
         };
@@ -36,11 +35,12 @@ pub fn repl() -> Result<()> {
         match command {
             Command::InsertChar(c) => repl.insert_char(c),
             Command::Backspace => backspace(&mut terminal, &mut repl)?,
-            Command::Return => execute_return_command(&mut terminal, &mut repl, &mut scope)?,
+            Command::Return => {
+                execute_return_command(&mut terminal, &mut repl, &mut scope)?
+            }
             Command::Clear => repl.pos.y = 0,
             Command::Quit => repl.quit(),
         }
-
 
         if !matches!(command, Command::Return) {
             let mut s = scope.clone();
@@ -58,25 +58,28 @@ pub fn repl() -> Result<()> {
 
         terminal.print(&format!("{PROMPT}{}", &repl.input))?;
         terminal.flush()?;
-
     }
     Ok(())
 }
 
 // Not sure what to return here
-fn compile(input: &str, scope: &mut Scope) -> std::result::Result<Option<Value>, Vec<String>> {
+fn compile(
+    input: &str,
+    scope: &mut Scope,
+) -> std::result::Result<Option<Value>, Vec<String>> {
     let lexer = |i| snowc_lexer::Scanner::new(i);
     let ast = match snowc_parse::parse(lexer(input)) {
         Ok(ast) => ast,
         Err(_) => match snowc_parse::parse_expr(lexer(input)) {
             Ok(ast) => vec![ast],
-            Err(err) => return Err(err.into_iter().map(|x| x.report("snowc", input)).collect()),
-        }
+            Err(err) => {
+                return Err(err.into_iter().map(|x| x.report("snowc", input)).collect())
+            }
+        },
     };
     if ast.iter().any(|x| x.is_error()) {
         return Ok(None);
     }
-
 
     let mut results = vec![];
     for node in ast {
@@ -88,8 +91,13 @@ fn compile(input: &str, scope: &mut Scope) -> std::result::Result<Option<Value>,
     Ok(results.pop().flatten())
 }
 
-fn execute_return_command(terminal: &mut Terminal, repl: &mut Repl, scope: &mut Scope) -> Result<()> {
-    if execute_builtin_repl_command(terminal, repl)? {
+fn execute_return_command(
+    terminal: &mut Terminal,
+    repl: &mut Repl,
+    scope: &mut Scope,
+) -> Result<()> {
+    if execute_builtin_repl_command(terminal, repl, scope)? {
+        repl.clear_input();
         return Ok(());
     }
     repl.input.push_str(" ");
@@ -104,14 +112,32 @@ fn execute_return_command(terminal: &mut Terminal, repl: &mut Repl, scope: &mut 
         _ => {
             let y = terminal.y();
             terminal.scroll_up_if_needed(y)?;
-        },
+        }
     }
     repl.clear_input();
     Ok(())
 }
 
-fn execute_builtin_repl_command(terminal: &mut Terminal, repl: &mut Repl) -> Result<bool> {
+fn execute_builtin_repl_command(
+    terminal: &mut Terminal,
+    repl: &mut Repl,
+    scope: &mut Scope,
+) -> Result<bool> {
     match repl.input.as_str() {
+        i if i.starts_with(":load") => {
+            // FIXME: properly handle filename if it doesn't exist
+            let filename = &i[6..];
+            let src = std::fs::read_to_string(filename).unwrap();
+            let result = compile(&src, scope);
+            if result.is_err() {
+                terminal.print(&result.unwrap_err().join("\n"))?;
+                terminal.new_line()?;
+                return Ok(true);
+            }
+            terminal.print(&format!("loaded file {}", &i[6..]))?;
+            terminal.new_line()?;
+            Ok(true)
+        }
         ":exit" | ":quit" => {
             repl.quit();
             Ok(true)
