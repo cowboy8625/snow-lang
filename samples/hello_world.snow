@@ -1,2 +1,2 @@
-main :: IO
-main = print "Hello World\n"
+main :: IO;
+main = print "Hello World\n";

@@ -489,7 +489,6 @@ impl<'a> Parser<'a> {
                 Precedence::RLPipe => {
                     let _ = self.next();
                     let rhs = self.closure();
-                    eprintln!("{rhs:?} {lhs:?}");
                     if let Expr::App(_, args, _) = &mut lhs {
                         args.push(rhs)
                     } else {

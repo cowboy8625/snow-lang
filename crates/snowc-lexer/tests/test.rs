@@ -37,3 +37,4 @@ macro_rules! snapshot {
 }
 
 snapshot!(hello_world, "./../../../samples/hello_world.snow");
+snapshot!(rule110, "./../../../samples/rule110.snow");
