@@ -1,8 +1,0 @@
-[package]
-name = "snowc-errors"
-version = "0.0.0"
-edition = "2021"
-
-[dependencies]
-# anyhow = "1.0.66"
-# thiserror = "1.0.37"
