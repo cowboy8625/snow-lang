@@ -13,6 +13,7 @@ pub struct Parser<'a> {
     token_stream: Vec<Token>,
     errors: Vec<Error>,
 }
+
 impl<'a> Parser<'a> {
     pub fn new(lexer: Peekable<Scanner<'a>>) -> Self {
         Self {
@@ -406,31 +407,31 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn expression(&mut self, min_bp: Precedence) -> Expr {
         let mut lhs = match self.peek() {
-            Token::KeyWord(ref b, span) if b == "true" => {
+            Token::KeyWord(ref b, _, span) if b == "true" => {
                 self.next();
                 Expr::Atom(Atom::Bool(true), span)
             }
-            Token::KeyWord(ref b, span) if b == "false" => {
+            Token::KeyWord(ref b, _, span) if b == "false" => {
                 self.next();
                 Expr::Atom(Atom::Bool(false), span)
             }
-            Token::Int(int, span) => {
+            Token::Int(int, _, span) => {
                 self.next();
                 Expr::Atom(Atom::Int(int.parse().unwrap()), span)
             }
-            Token::Float(float, span) => {
+            Token::Float(float, _, span) => {
                 self.next();
                 Expr::Atom(Atom::Float(float.parse().unwrap()), span)
             }
-            Token::Id(ref id, span) => {
+            Token::Id(ref id, _, span) => {
                 self.next();
                 Expr::Atom(Atom::Id(id.into()), span)
             }
-            Token::String(ref string, span) => {
+            Token::String(ref string, _, span) => {
                 self.next();
                 Expr::Atom(Atom::String(string.into()), span)
             }
-            Token::Char(ref c, span) => {
+            Token::Char(ref c, _, span) => {
                 self.next();
                 if c.chars().count() > 1 {
                     // return self.report("E3", "invalid op char", span);
@@ -442,7 +443,7 @@ impl<'a> Parser<'a> {
                 };
                 Expr::Atom(Atom::Char(c), span)
             }
-            Token::Op(ref op, span) => self.prefix_op(op, span),
+            Token::Op(ref op, _, span) => self.prefix_op(op, span),
             _ => {
                 let span = self.peek().span();
                 // return self.report("E5", "invalid token", span);
