@@ -2,14 +2,15 @@
 source: crates/snowc-lexer/tests/test.rs
 expression: snapshot_lexing(contents)
 ---
-main :: IO
-^^^^ main
-     ^^ ::
-        ^^ IO
-main = print "Hello World\n"
-^^^^ main
-     ^ =
-       ^^^^^ print
-             ^^^^^^^^^^^^^^^ "Hello World
-"
+main :: IO;
+^^^^ main Start
+     ^^ :: Middle
+        ^^ IO Middle
+          ^ ; End
+main = print "Hello World\n";
+^^^^ main Start
+     ^ = Middle
+       ^^^^^ print Middle
+             ^^^^^^^^^^^^^^^ "Hello World\n" Middle
+                            ^ ; End
 

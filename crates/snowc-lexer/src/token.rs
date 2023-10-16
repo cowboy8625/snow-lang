@@ -14,16 +14,17 @@ macro_rules! is_token {
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Token {
-    KeyWord(String, Span),
-    Id(String, Span),
-    Op(String, Span),
-    Int(String, Span),
-    Float(String, Span),
-    String(String, Span),
-    Char(String, Span),
+    KeyWord(String, TokenPosition, Span),
+    Id(String, TokenPosition, Span),
+    Op(String, TokenPosition, Span),
+    Int(String, TokenPosition, Span),
+    Float(String, TokenPosition, Span),
+    String(String, TokenPosition, Span),
+    Char(String, TokenPosition, Span),
     Error(String, Span),
     Eof(Span),
 }
+
 impl Token {
     is_token!(is_keyword, KeyWord);
     is_token!(is_id, Id);
@@ -53,6 +54,21 @@ impl Token {
         match self {
             Self::Id(ref inner, ..) => inner == &item.into(),
             _ => false,
+        }
+    }
+
+    pub fn position(&self) -> &TokenPosition {
+        match self {
+            Self::KeyWord(_, tp, ..) => tp,
+            Self::Id(_, tp, ..) => tp,
+            Self::Op(_, tp, ..) => tp,
+            Self::Int(_, tp, ..) => tp,
+            Self::Float(_, tp, ..) => tp,
+            Self::String(_, tp, ..) => tp,
+            Self::Char(_, tp, ..) => tp,
+            // FIXME: I don't like this
+            Self::Error(_, ..) => &TokenPosition::End,
+            Self::Eof(..) => &TokenPosition::End,
         }
     }
 
@@ -88,13 +104,13 @@ impl Token {
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::KeyWord(i, ..) => write!(f, "{i}"),
-            Self::Id(i, ..) => write!(f, "{i}"),
-            Self::Op(i, ..) => write!(f, "{i}"),
-            Self::Int(i, ..) => write!(f, "{i}"),
-            Self::Float(i, ..) => write!(f, "{i}"),
-            Self::String(i, ..) => write!(f, "\"{i}\""),
-            Self::Char(i, ..) => write!(f, "{i}"),
+            Self::KeyWord(i, tp, ..) => write!(f, "{i} {tp:?}"),
+            Self::Id(i, tp, ..) => write!(f, "{i} {tp:?}"),
+            Self::Op(i, tp, ..) => write!(f, "{i} {tp:?}"),
+            Self::Int(i, tp, ..) => write!(f, "{i} {tp:?}"),
+            Self::Float(i, tp, ..) => write!(f, "{i} {tp:?}"),
+            Self::String(i, tp, ..) => write!(f, "{i:?} {tp:?}"),
+            Self::Char(i, tp, ..) => write!(f, "{i} {tp:?}"),
             Self::Error(i, ..) => write!(f, "{i}"),
             Self::Eof(..) => write!(f, "EOF"),
         }
@@ -115,4 +131,12 @@ impl fmt::Display for Token {
             Self::Eof(..) => write!(f, "EOF"),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenPosition {
+    Start,
+    Middle,
+    End,
+    FullSpan,
 }

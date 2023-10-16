@@ -1,0 +1,541 @@
+---
+source: crates/snowc-lexer/tests/test.rs
+expression: snapshot_lexing(contents)
+---
+-- create a grid of size
+create_grid :: Int -> Int -> Array;
+^^^^^^^^^^^ create_grid Start
+            ^^ :: Middle
+               ^^^ Int Middle
+                   ^^ -> Middle
+                      ^^^ Int Middle
+                          ^^ -> Middle
+                             ^^^^^ Array Middle
+                                  ^ ; End
+create_grid size char =
+^^^^^^^^^^^ create_grid Start
+            ^^^^ size Middle
+                 ^^^^ char Middle
+                      ^ = End
+  if 0 < (size - 1)
+  ^^ if Middle
+     ^ 0 Middle
+       ^ < Middle
+         ^ ( Middle
+          ^^^^ size Middle
+               ^ - Middle
+                 ^ 1 Middle
+                  ^ ) End
+  then (push (create_grid (size - 1) char) char)
+  ^^^^ then Middle
+       ^ ( Middle
+        ^^^^ push Middle
+             ^ ( Middle
+              ^^^^^^^^^^^ create_grid Middle
+                          ^ ( Middle
+                           ^^^^ size Middle
+                                ^ - Middle
+                                  ^ 1 Middle
+                                   ^ ) Middle
+                                     ^^^^ char Middle
+                                         ^ ) Middle
+                                           ^^^^ char Middle
+                                               ^ ) End
+  else [char];
+  ^^^^ else Middle
+       ^ [ Middle
+        ^^^^ char Middle
+            ^ ] Middle
+             ^ ; End
+
+-- 111   110   101   100   011   010   001   000
+--  0     1     1     0     1     1     1     0
+is_alive :: Str -> Str -> Str -> Bool;
+^^^^^^^^ is_alive Start
+         ^^ :: Middle
+            ^^^ Str Middle
+                ^^ -> Middle
+                   ^^^ Str Middle
+                       ^^ -> Middle
+                          ^^^ Str Middle
+                              ^^ -> Middle
+                                 ^^^^ Bool Middle
+                                     ^ ; End
+is_alive a b c =
+^^^^^^^^ is_alive Start
+         ^ a Middle
+           ^ b Middle
+             ^ c Middle
+               ^ = End
+  if      a == "#"
+  ^^ if Middle
+          ^ a Middle
+            ^^ == Middle
+               ^^^ "#" End
+    and   b == "#"
+    ^^^ and Middle
+          ^ b Middle
+            ^^ == Middle
+               ^^^ "#" End
+    and   c == "#"
+    ^^^ and Middle
+          ^ c Middle
+            ^^ == Middle
+               ^^^ "#" End
+  then false
+  ^^^^ then Middle
+       ^^^^^ false End
+  else if a == "#"
+  ^^^^ else Middle
+       ^^ if Middle
+          ^ a Middle
+            ^^ == Middle
+               ^^^ "#" End
+    and   b == "#"
+    ^^^ and Middle
+          ^ b Middle
+            ^^ == Middle
+               ^^^ "#" End
+    and   c == " "
+    ^^^ and Middle
+          ^ c Middle
+            ^^ == Middle
+               ^^^ " " End
+  then true
+  ^^^^ then Middle
+       ^^^^ true End
+  else if a == "#"
+  ^^^^ else Middle
+       ^^ if Middle
+          ^ a Middle
+            ^^ == Middle
+               ^^^ "#" End
+    and   b == " "
+    ^^^ and Middle
+          ^ b Middle
+            ^^ == Middle
+               ^^^ " " End
+    and   c == "#"
+    ^^^ and Middle
+          ^ c Middle
+            ^^ == Middle
+               ^^^ "#" End
+  then true
+  ^^^^ then Middle
+       ^^^^ true End
+  else if a == "#"
+  ^^^^ else Middle
+       ^^ if Middle
+          ^ a Middle
+            ^^ == Middle
+               ^^^ "#" End
+    and   b == " "
+    ^^^ and Middle
+          ^ b Middle
+            ^^ == Middle
+               ^^^ " " End
+    and   c == " "
+    ^^^ and Middle
+          ^ c Middle
+            ^^ == Middle
+               ^^^ " " End
+  then false
+  ^^^^ then Middle
+       ^^^^^ false End
+  else if a == " "
+  ^^^^ else Middle
+       ^^ if Middle
+          ^ a Middle
+            ^^ == Middle
+               ^^^ " " End
+    and   b == "#"
+    ^^^ and Middle
+          ^ b Middle
+            ^^ == Middle
+               ^^^ "#" End
+    and   c == "#"
+    ^^^ and Middle
+          ^ c Middle
+            ^^ == Middle
+               ^^^ "#" End
+  then true
+  ^^^^ then Middle
+       ^^^^ true End
+  else if a == " "
+  ^^^^ else Middle
+       ^^ if Middle
+          ^ a Middle
+            ^^ == Middle
+               ^^^ " " End
+    and   b == "#"
+    ^^^ and Middle
+          ^ b Middle
+            ^^ == Middle
+               ^^^ "#" End
+    and   c == " "
+    ^^^ and Middle
+          ^ c Middle
+            ^^ == Middle
+               ^^^ " " End
+  then true
+  ^^^^ then Middle
+       ^^^^ true End
+  else if a == " "
+  ^^^^ else Middle
+       ^^ if Middle
+          ^ a Middle
+            ^^ == Middle
+               ^^^ " " End
+    and   b == " "
+    ^^^ and Middle
+          ^ b Middle
+            ^^ == Middle
+               ^^^ " " End
+    and   c == "#"
+    ^^^ and Middle
+          ^ c Middle
+            ^^ == Middle
+               ^^^ "#" End
+  then true
+  ^^^^ then Middle
+       ^^^^ true End
+  else false;
+  ^^^^ else Middle
+       ^^^^^ false Middle
+            ^ ; End
+
+idx_of :: Int -> Int -> Int;
+^^^^^^ idx_of Start
+       ^^ :: Middle
+          ^^^ Int Middle
+              ^^ -> Middle
+                 ^^^ Int Middle
+                     ^^ -> Middle
+                        ^^^ Int Middle
+                           ^ ; End
+idx_of i len = (i + len) mod len;
+^^^^^^ idx_of Start
+       ^ i Middle
+         ^^^ len Middle
+             ^ = Middle
+               ^ ( Middle
+                ^ i Middle
+                  ^ + Middle
+                    ^^^ len Middle
+                       ^ ) Middle
+                         ^^^ mod Middle
+                             ^^^ len Middle
+                                ^ ; End
+-- idx_of = (\i -> (\len -> (i + len) mod len));
+-- ((i - 1) + len) % len
+
+next_cell :: Array -> Int -> Bool;
+^^^^^^^^^ next_cell Start
+          ^^ :: Middle
+             ^^^^^ Array Middle
+                   ^^ -> Middle
+                      ^^^ Int Middle
+                          ^^ -> Middle
+                             ^^^^ Bool Middle
+                                 ^ ; End
+next_cell grid x =
+^^^^^^^^^ next_cell Start
+          ^^^^ grid Middle
+               ^ x Middle
+                 ^ = End
+-- let len = length grid in
+-- let a = nth grid (idx_of (x - 1) len) in
+-- let b = nth grid x in
+-- let c = nth grid (idx_of (x + 1) len) in
+-- is_alive a b c
+  (λlen ->
+  ^ ( Middle
+   ^^ λ Middle
+     ^^^ len Middle
+         ^^ -> End
+  (λa   ->
+  ^ ( Middle
+   ^^ λ Middle
+     ^ a Middle
+         ^^ -> End
+  (λb   ->
+  ^ ( Middle
+   ^^ λ Middle
+     ^ b Middle
+         ^^ -> End
+  (λc   -> is_alive a b c)
+  ^ ( Middle
+   ^^ λ Middle
+     ^ c Middle
+         ^^ -> Middle
+            ^^^^^^^^ is_alive Middle
+                     ^ a Middle
+                       ^ b Middle
+                         ^ c Middle
+                          ^ ) End
+  (nth grid (idx_of (x - 1) len)))
+  ^ ( Middle
+   ^^^ nth Middle
+       ^^^^ grid Middle
+            ^ ( Middle
+             ^^^^^^ idx_of Middle
+                    ^ ( Middle
+                     ^ x Middle
+                       ^ - Middle
+                         ^ 1 Middle
+                          ^ ) Middle
+                            ^^^ len Middle
+                               ^ ) Middle
+                                ^ ) Middle
+                                 ^ ) End
+  (nth grid x))
+  ^ ( Middle
+   ^^^ nth Middle
+       ^^^^ grid Middle
+            ^ x Middle
+             ^ ) Middle
+              ^ ) End
+  (nth grid (idx_of (x + 1) len)))
+  ^ ( Middle
+   ^^^ nth Middle
+       ^^^^ grid Middle
+            ^ ( Middle
+             ^^^^^^ idx_of Middle
+                    ^ ( Middle
+                     ^ x Middle
+                       ^ + Middle
+                         ^ 1 Middle
+                          ^ ) Middle
+                            ^^^ len Middle
+                               ^ ) Middle
+                                ^ ) Middle
+                                 ^ ) End
+  (length grid);
+  ^ ( Middle
+   ^^^^^^ length Middle
+          ^^^^ grid Middle
+              ^ ) Middle
+               ^ ; End
+
+cell_type :: Array -> Int -> Str;
+^^^^^^^^^ cell_type Start
+          ^^ :: Middle
+             ^^^^^ Array Middle
+                   ^^ -> Middle
+                      ^^^ Int Middle
+                          ^^ -> Middle
+                             ^^^ Str Middle
+                                ^ ; End
+cell_type grid idx =
+^^^^^^^^^ cell_type Start
+          ^^^^ grid Middle
+               ^^^ idx Middle
+                   ^ = End
+  if (next_cell grid idx)
+  ^^ if Middle
+     ^ ( Middle
+      ^^^^^^^^^ next_cell Middle
+                ^^^^ grid Middle
+                     ^^^ idx Middle
+                        ^ ) End
+  then "#"
+  ^^^^ then Middle
+       ^^^ "#" End
+  else " ";
+  ^^^^ else Middle
+       ^^^ " " Middle
+          ^ ; End
+
+next_gen :: Array -> Int -> Array;
+^^^^^^^^ next_gen Start
+         ^^ :: Middle
+            ^^^^^ Array Middle
+                  ^^ -> Middle
+                     ^^^ Int Middle
+                         ^^ -> Middle
+                            ^^^^^ Array Middle
+                                 ^ ; End
+next_gen grid idx =
+^^^^^^^^ next_gen Start
+         ^^^^ grid Middle
+              ^^^ idx Middle
+                  ^ = End
+  if (idx + 1) < (length grid)
+  ^^ if Middle
+     ^ ( Middle
+      ^^^ idx Middle
+          ^ + Middle
+            ^ 1 Middle
+             ^ ) Middle
+               ^ < Middle
+                 ^ ( Middle
+                  ^^^^^^ length Middle
+                         ^^^^ grid Middle
+                             ^ ) End
+  then (push (next_gen grid (idx + 1)) (cell_type grid idx))
+  ^^^^ then Middle
+       ^ ( Middle
+        ^^^^ push Middle
+             ^ ( Middle
+              ^^^^^^^^ next_gen Middle
+                       ^^^^ grid Middle
+                            ^ ( Middle
+                             ^^^ idx Middle
+                                 ^ + Middle
+                                   ^ 1 Middle
+                                    ^ ) Middle
+                                     ^ ) Middle
+                                       ^ ( Middle
+                                        ^^^^^^^^^ cell_type Middle
+                                                  ^^^^ grid Middle
+                                                       ^^^ idx Middle
+                                                          ^ ) Middle
+                                                           ^ ) End
+  else [cell_type grid idx];
+  ^^^^ else Middle
+       ^ [ Middle
+        ^^^^^^^^^ cell_type Middle
+                  ^^^^ grid Middle
+                       ^^^ idx Middle
+                          ^ ] Middle
+                           ^ ; End
+
+str_join :: Str -> Array -> Str;
+^^^^^^^^ str_join Start
+         ^^ :: Middle
+            ^^^ Str Middle
+                ^^ -> Middle
+                   ^^^^^ Array Middle
+                         ^^ -> Middle
+                            ^^^ Str Middle
+                               ^ ; End
+str_join sep arr =
+^^^^^^^^ str_join Start
+         ^^^ sep Middle
+             ^^^ arr Middle
+                 ^ = End
+  if (length arr) > 0
+  ^^ if Middle
+     ^ ( Middle
+      ^^^^^^ length Middle
+             ^^^ arr Middle
+                ^ ) Middle
+                  ^ > Middle
+                    ^ 0 End
+  then (str_join sep (tail arr)) + (sep + (head arr))
+  ^^^^ then Middle
+       ^ ( Middle
+        ^^^^^^^^ str_join Middle
+                 ^^^ sep Middle
+                     ^ ( Middle
+                      ^^^^ tail Middle
+                           ^^^ arr Middle
+                              ^ ) Middle
+                               ^ ) Middle
+                                 ^ + Middle
+                                   ^ ( Middle
+                                    ^^^ sep Middle
+                                        ^ + Middle
+                                          ^ ( Middle
+                                           ^^^^ head Middle
+                                                ^^^ arr Middle
+                                                   ^ ) Middle
+                                                    ^ ) End
+  else "";
+  ^^^^ else Middle
+       ^^ "" Middle
+         ^ ; End
+
+display :: Array -> IO;
+^^^^^^^ display Start
+        ^^ :: Middle
+           ^^^^^ Array Middle
+                 ^^ -> Middle
+                    ^^ IO Middle
+                      ^ ; End
+display grid = head [grid, (print (str_join "" grid) "\n")];
+^^^^^^^ display Start
+        ^^^^ grid Middle
+             ^ = Middle
+               ^^^^ head Middle
+                    ^ [ Middle
+                     ^^^^ grid Middle
+                         ^ , Middle
+                           ^ ( Middle
+                            ^^^^^ print Middle
+                                  ^ ( Middle
+                                   ^^^^^^^^ str_join Middle
+                                            ^^ "" Middle
+                                               ^^^^ grid Middle
+                                                   ^ ) Middle
+                                                     ^^^^ "\n" Middle
+                                                         ^ ) Middle
+                                                          ^ ] Middle
+                                                           ^ ; End
+
+run :: Array -> Array;
+^^^ run Start
+    ^^ :: Middle
+       ^^^^^ Array Middle
+             ^^ -> Middle
+                ^^^^^ Array Middle
+                     ^ ; End
+run grid = run (next_gen (display grid) 0);
+^^^ run Start
+    ^^^^ grid Middle
+         ^ = Middle
+           ^^^ run Middle
+               ^ ( Middle
+                ^^^^^^^^ next_gen Middle
+                         ^ ( Middle
+                          ^^^^^^^ display Middle
+                                  ^^^^ grid Middle
+                                      ^ ) Middle
+                                        ^ 0 Middle
+                                         ^ ) Middle
+                                          ^ ; End
+
+main = IO;
+^^^^ main Start
+     ^ = Middle
+       ^^ IO Middle
+         ^ ; End
+main =
+^^^^ main Start
+     ^ = End
+  -- let start = create_grid 9 " " in
+  -- let starting_grid = push start "#" in
+  -- let grid = display starting_grid in
+  -- display <| next_gen grid 0;
+  (\starting_grid ->
+  ^ ( Middle
+   ^ \ Middle
+    ^^^^^^^^^^^^^ starting_grid Middle
+                  ^^ -> End
+  (\grid -> run grid)
+  ^ ( Middle
+   ^ \ Middle
+    ^^^^ grid Middle
+         ^^ -> Middle
+            ^^^ run Middle
+                ^^^^ grid Middle
+                    ^ ) End
+  (display starting_grid))
+  ^ ( Middle
+   ^^^^^^^ display Middle
+           ^^^^^^^^^^^^^ starting_grid Middle
+                        ^ ) Middle
+                         ^ ) End
+  (push  (create_grid 90 " ") "#");
+  ^ ( Middle
+   ^^^^ push Middle
+         ^ ( Middle
+          ^^^^^^^^^^^ create_grid Middle
+                      ^^ 90 Middle
+                         ^^^ " " Middle
+                            ^ ) Middle
+                              ^^^ "#" Middle
+                                 ^ ) Middle
+                                  ^ ; End
+-- TODO: Check for function arg length ERROR.
+
