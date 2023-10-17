@@ -22,16 +22,16 @@ pub enum Op {
     Mod,
 }
 
-impl TryFrom<&Token> for Op {
-    type Error = &'static str;
-    fn try_from(token: &Token) -> Result<Self, Self::Error> {
-        match token {
-            Token::Op(ref op, ..) => Self::try_from(op),
-            Token::KeyWord(ref keyword, ..) => Self::try_from(keyword),
-            _ => Err("not a operator"),
-        }
-    }
-}
+// impl TryFrom<&Token> for Op {
+//     type Error = &'static str;
+//     fn try_from(token: &Token) -> Result<Self, Self::Error> {
+//         match token {
+//             Token::Op(ref op, ..) => Self::try_from(op),
+//             Token::KeyWord(ref keyword, ..) => Self::try_from(keyword),
+//             _ => Err("not a operator"),
+//         }
+//     }
+// }
 
 impl TryFrom<&str> for Op {
     type Error = &'static str;

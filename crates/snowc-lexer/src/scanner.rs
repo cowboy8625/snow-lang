@@ -1,6 +1,6 @@
 use crate::token::TokenPosition;
 
-use super::{Span, Token};
+use super::{Char, Ctrl, Error, Float, Ident, Int, KeyWord, Op, Span, Str, Token};
 use std::iter::Peekable;
 use std::str::Chars;
 
@@ -65,22 +65,22 @@ impl<'a> Scanner<'a> {
     }
 
     fn number(&mut self, c: char) -> Option<Token> {
-        let mut number = c.to_string();
+        let mut lexme = c.to_string();
         while let Some(c) = self.next_char_if(|c| c.is_ascii_digit() || c == '_') {
-            number.push(c);
+            lexme.push(c);
         }
         let span = self.span();
         let pos = self.get_token_position();
-        if number.contains('.') {
-            return Some(Token::Float(number, pos, span));
+        if lexme.contains('.') {
+            return Some(Token::Float(Float { lexme, pos, span }));
         }
-        Some(Token::Int(number, pos, span))
+        Some(Token::Int(Int { lexme, pos, span }))
     }
 
     fn ident(&mut self, c: char) -> Option<Token> {
-        let mut id = c.to_string();
+        let mut lexme = c.to_string();
         while let Some(c) = self.next_char_if(|c| c.is_ascii_alphanumeric() || c == '_') {
-            id.push(c);
+            lexme.push(c);
         }
         let span = self.span();
         let keywords = [
@@ -88,31 +88,33 @@ impl<'a> Scanner<'a> {
             "if", "then", "else", "fn", "mod",
         ];
         let pos = self.get_token_position();
-        if keywords.contains(&id.as_str()) {
-            return Some(Token::KeyWord(id, pos, span));
+        if keywords.contains(&lexme.as_str()) {
+            return Some(Token::KeyWord(KeyWord { lexme, pos, span }));
         }
-        Some(Token::Id(id, pos, span))
+        Some(Token::Ident(Ident { lexme, pos, span }))
     }
 
     fn string(&mut self) -> Option<Token> {
-        let mut string = String::new();
+        let mut lexme = String::new();
         while let Some(c) = self.next_char_if(|c| c != '"') {
-            string.push(c);
+            lexme.push(c);
         }
         self.next_char();
-        let string = string.replace("\\n", "\n");
+        let lexme = lexme.replace("\\n", "\n");
         let pos = self.get_token_position();
-        Some(Token::String(string, pos, self.span()))
+        let span = self.span();
+        Some(Token::Str(Str { lexme, pos, span }))
     }
 
     fn chr(&mut self) -> Option<Token> {
-        let mut string = String::new();
+        let mut lexme = String::new();
         while let Some(c) = self.next_char_if(|c| c != '\'') {
-            string.push(c);
+            lexme.push(c);
         }
         self.next_char();
         let pos = self.get_token_position();
-        Some(Token::Char(string, pos, self.span()))
+        let span = self.span();
+        Some(Token::Char(Char { lexme, pos, span }))
     }
 
     fn take_while(&mut self, expected: char) {
@@ -135,7 +137,9 @@ impl<'a> Scanner<'a> {
             self.next_char();
         }
         let pos = self.get_token_position();
-        Some(tok(op.to_string(), pos, self.span()))
+        let lexme = op.to_string();
+        let span = self.span();
+        Some(tok(lexme, pos, span))
     }
 
     fn matched(&mut self, ch: char) -> bool {
@@ -149,34 +153,68 @@ impl<'a> Scanner<'a> {
             '"' => self.string(),
             '\'' => self.chr(),
             '-' if self.matched('-') => self.comment(),
-            '-' if self.matched('>') => self.token("->", Token::Op),
-            '>' if self.matched('=') => self.token(">=", Token::Op),
-            '<' if self.matched('=') => self.token("<=", Token::Op),
-            '=' if self.matched('=') => self.token("==", Token::Op),
-            '!' if self.matched('=') => self.token("!=", Token::Op),
-            ':' if self.matched(':') => self.token("::", Token::Op),
-            '|' => self.token("|", Token::Op),
-            '-' => self.token("-", Token::Op),
-            '+' => self.token("+", Token::Op),
-            '*' => self.token("*", Token::Op),
-            '/' => self.token("/", Token::Op),
-            '>' => self.token(">", Token::Op),
-            '<' => self.token("<", Token::Op),
-            '=' => self.token("=", Token::Op),
-            '!' => self.token("!", Token::Op),
-            '%' => self.token("%", Token::Op),
-            '.' => self.token(".", Token::Op),
-            ',' => self.token(",", Token::Op),
-            '(' => self.token("(", Token::Op),
-            ')' => self.token(")", Token::Op),
-            '{' => self.token("{", Token::Op),
-            '}' => self.token("}", Token::Op),
-            '[' => self.token("[", Token::Op),
-            ']' => self.token("]", Token::Op),
-            ':' => self.token(":", Token::Op),
-            ';' => self.token(";", Token::Op),
-            'λ' => self.token("λ", Token::Op),
-            '\\' => self.token("\\", Token::Op),
+            '-' if self.matched('>') => {
+                self.token("->", |lexme, pos, span| Token::Op(Op { lexme, pos, span }))
+            }
+            '>' if self.matched('=') => {
+                self.token(">=", |lexme, pos, span| Token::Op(Op { lexme, pos, span }))
+            }
+            '<' if self.matched('=') => {
+                self.token("<=", |lexme, pos, span| Token::Op(Op { lexme, pos, span }))
+            }
+            '=' if self.matched('=') => {
+                self.token("==", |lexme, pos, span| Token::Op(Op { lexme, pos, span }))
+            }
+            '!' if self.matched('=') => {
+                self.token("!=", |lexme, pos, span| Token::Op(Op { lexme, pos, span }))
+            }
+            ':' if self.matched(':') => self.token("::", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            '|' => self.token("|", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '-' => self.token("-", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '+' => self.token("+", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '*' => self.token("*", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '/' => self.token("/", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '>' => self.token(">", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '<' => self.token("<", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '=' => self.token("=", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '!' => self.token("!", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '%' => self.token("%", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '.' => self.token(".", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            ',' => self.token(",", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            '(' => self.token("(", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            ')' => self.token(")", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            '{' => self.token("{", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            '}' => self.token("}", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            '[' => self.token("[", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            ']' => self.token("]", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            ':' => self.token(":", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            ';' => self.token(";", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            'λ' => self.token("λ", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
+            '\\' => self.token("\\", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
             '\n' | '\r' | ' ' | '\0' => {
                 self.last_char = ch;
                 let Some(ch) = self.next_char() else {
@@ -185,7 +223,11 @@ impl<'a> Scanner<'a> {
                 self.span.reset(Some(self.last_chr_len));
                 self.parse(ch)
             }
-            _ => Some(Token::Error(ch.to_string(), self.span())),
+            _ => Some(Token::Error(Error {
+                lexme: ch.to_string(),
+                pos: self.get_token_position(),
+                span: self.span(),
+            })),
         }
     }
 }

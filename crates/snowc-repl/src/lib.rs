@@ -42,19 +42,19 @@ pub fn repl() -> Result<()> {
             Command::Quit => repl.quit(),
         }
 
-        if !matches!(command, Command::Return) {
-            let mut s = scope.clone();
-            match compile(&format!("{}  ", repl.input), &mut s) {
-                Ok(Some(v)) => {
-                    let y = terminal.y() + 1;
-                    terminal.scroll_up_if_needed(y)?;
-                    terminal.print_at(0, y, &v.to_string().grey().to_string())?;
-                }
-                _ => {
-                    terminal.clear_from_cursor_down()?;
-                }
-            }
-        }
+        // if !matches!(command, Command::Return) {
+        //     let mut s = scope.clone();
+        //     match compile(&format!("{}  ", repl.input), &mut s) {
+        //         Ok(Some(v)) => {
+        //             let y = terminal.y() + 1;
+        //             terminal.scroll_up_if_needed(y)?;
+        //             terminal.print_at(0, y, &v.to_string().grey().to_string())?;
+        //         }
+        //         _ => {
+        //             terminal.clear_from_cursor_down()?;
+        //         }
+        //     }
+        // }
 
         terminal.print(&format!("{PROMPT}{}", &repl.input))?;
         terminal.flush()?;

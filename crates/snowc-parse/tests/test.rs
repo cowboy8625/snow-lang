@@ -1,9 +1,7 @@
-use snowc_lexer::Scanner;
 use snowc_parse::{parse, Expr};
 
 pub fn snapshot_parsing(input: &str) -> String {
-    let lexer = Scanner::new(input);
-    let ast = match parse(lexer) {
+    let ast = match parse(input) {
         Ok(ast) => ast,
         Err(errors) => {
             return errors
