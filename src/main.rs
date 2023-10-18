@@ -1,7 +1,7 @@
 mod args;
 use snowc::error::Error;
 use snowc::{parse, type_check, walk, Expr, Scanner};
-use snowc_repl::repl;
+// use snowc_repl::repl;
 #[derive(Debug)]
 enum CompilerError {
     NoFileGive,
@@ -85,14 +85,12 @@ fn main() {
         .filename
         .clone()
         .ok_or_else(|| {
-            let _ = repl();
+            // let _ = repl();
             CompilerError::NoFileGive
         })
         .and_then(get_src(setting.option_compile_string))
         .and_then(debug_tokens(setting.debug_token))
-        .and_then(|src| {
-            timer("Parsing", || parse(Scanner::new(&src))).map_err(Into::into)
-        })
+        .and_then(|src| timer("Parsing", || parse(&src)).map_err(Into::into))
         .and_then(debug_ast(setting.debug_ast))
         .and_then(|ast| {
             if !setting.option_no_type_check {

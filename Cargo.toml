@@ -7,7 +7,7 @@ edition = "2021"
 snowc-parse = { path="./crates/snowc-parse" }
 snowc-type-checker = { path="./crates/snowc-type-checker" }
 snowc-byte-code-gen = { path="./crates/snowc-byte-code-gen" }
-snowc-repl = { path = "./crates/snowc-repl" }
+#snowc-repl = { path = "./crates/snowc-repl" }
 snowc-tree-walker = { path = "./crates/snowc-tree-walker" }
 clap = { version = "4.0.29", features = ["cargo"] }
 anyhow = "1.0.75"
@@ -15,6 +15,11 @@ anyhow = "1.0.75"
 [workspace]
 members = [
     "./crates/*",
+]
+
+[ignore]
+default-members = [
+    "crates/snowc-repl",
 ]
 
 

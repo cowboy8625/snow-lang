@@ -178,16 +178,18 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                     .enumerate()
                     .fold("".into(), |acc, (idx, item)| {
                         let item = match item {
-                            Value::Array(array, ..) => {
-                                array.iter().enumerate().map(|(idx, i)| {
+                            Value::Array(array, ..) => array
+                                .iter()
+                                .enumerate()
+                                .map(|(idx, i)| {
                                     if idx == 0 {
-                                        return format!("[{i}, ")
+                                        return format!("[{i}, ");
                                     } else if idx == array.len().saturating_sub(1) {
-                                        return format!("{i}]")
+                                        return format!("{i}]");
                                     }
                                     format!("{i}, ")
-                                }).collect::<String>()
-                            }
+                                })
+                                .collect::<String>(),
                             _ => item.to_string(),
                         };
                         if idx == 0 {
@@ -231,10 +233,10 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                     string.push_str(&value);
                     Ok(Value::String(string, span))
                 }
-                (Value::Array(mut array, span), value) =>{
+                (Value::Array(mut array, span), value) => {
                     array.push(value);
                     Ok(Value::Array(array, span))
-                },
+                }
                 _ => Err(RuntimeError::InvalidArguments(*span)),
             }
         }
@@ -244,24 +246,20 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                 Value::String(string, span) => {
                     Ok(Value::String(string[1..].to_string(), span))
                 }
-                Value::Array(array, span) => {
-                    Ok(Value::Array(array[1..].to_vec(), span))
-                },
+                Value::Array(array, span) => Ok(Value::Array(array[1..].to_vec(), span)),
                 _ => Err(RuntimeError::InvalidArguments(*span)),
             }
-        },
+        }
         "head" => {
             let iter = walk_expr(&args[0], scope)?;
             match iter {
                 Value::String(string, span) => {
                     Ok(Value::String(string[0..1].to_string(), span))
                 }
-                Value::Array(array, ..) => {
-                    Ok(array[0].clone())
-                },
+                Value::Array(array, ..) => Ok(array[0].clone()),
                 _ => Err(RuntimeError::InvalidArguments(*span)),
             }
-        },
+        }
         _ => {
             let Some(mut func) = scope.get(name) else {
                 return Err(RuntimeError::Undefined(name.into(), *span));
@@ -365,7 +363,7 @@ pub fn walk(ast: &[Expr]) -> std::result::Result<Option<Value>, Vec<RuntimeError
                 scope.insert_global(name.to_string(), *closure.clone());
             }
             Expr::TypeDec(..) => {}
-            _ => unreachable!(),
+            _ => unreachable!("{:?}", expr),
         }
     }
 

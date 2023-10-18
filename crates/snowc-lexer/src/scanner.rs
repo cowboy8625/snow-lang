@@ -178,7 +178,9 @@ impl<'a> Scanner<'a> {
             '/' => self.token("/", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
             '>' => self.token(">", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
             '<' => self.token("<", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
-            '=' => self.token("=", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
+            '=' => self.token("=", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
             '!' => self.token("!", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
             '%' => self.token("%", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
             '.' => self.token(".", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
