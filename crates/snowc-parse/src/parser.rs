@@ -29,10 +29,8 @@ fn function(tokens: &mut Vec<Token>) -> Option<Expr> {
     };
     tokens.remove(0);
     let args = get_function_args(tokens);
-    consume(
-        tokens,
-        |t| matches!(t, Token::Ctrl(Ctrl{lexme, ..}) if lexme == "="),
-    );
+    let typed = get_function_type(tokens);
+    consume(tokens, "=");
     let body = get_block(tokens);
     let end = body.span();
     let closures = create_closures(args, body);
@@ -61,15 +59,23 @@ fn get_function_args(tokens: &mut Vec<Token>) -> Vec<Expr> {
     args
 }
 
-fn a_operator(token: Option<&Token>) -> bool {
-    match token {
-        Some(Token::Op(_)) => true,
-        Some(Token::Ctrl(Ctrl { lexme, .. })) if lexme != "(" => false,
-        _ => false,
+fn get_function_type(tokens: &mut Vec<Token>) -> Vec<Ident> {
+    let mut types = Vec::new();
+    if !matches!(tokens.get(0), Some(Token::Ctrl(Ctrl{lexme, ..})) if lexme == ":") {
+        return types;
     }
+    tokens.remove(0);
+
+    while !matches!(tokens.get(0), Some(Token::Ctrl(Ctrl{lexme, ..})) if lexme == "=") {
+        let Some(Token::Ident(ident)) = tokens.get(0).cloned() else {
+            break
+        };
+        types.push(ident);
+        tokens.remove(0);
+    }
+    types
 }
 
-// TODO: move call logic into its own function and move that call to be in the primary function.
 fn expression(tokens: &mut Vec<Token>) -> Expr {
     equality(tokens)
 }
@@ -180,7 +186,6 @@ fn primary(tokens: &mut Vec<Token>) -> Expr {
             Expr::Atom(Atom::Char(c.lexme.parse().unwrap_or_default()), c.span)
         }
         Token::Ctrl(c) if c.lexme == "(" => {
-            // TODO: handle parens a bit better
             let expr = expression(tokens);
             let left_paren = tokens.remove(0);
             // TODO: report error in one location for parens
@@ -213,14 +218,11 @@ fn get_op(token: Option<&Token>) -> Option<Oper> {
     })
 }
 
-fn consume<F>(tokens: &mut Vec<Token>, func: F)
-where
-    F: FnOnce(&Token) -> bool,
-{
-    if func(&tokens.remove(0)) {
-        return;
+fn consume(tokens: &mut Vec<Token>, expected: &str) {
+    let token = tokens.remove(0);
+    if !matches!(&token, Token::Ctrl(Ctrl{lexme, ..}) if lexme == expected) {
+        panic!("expected {expected} but got {:?}", token);
     }
-    panic!("unexpected token {:?}", tokens[0]);
 }
 
 fn is_deliminator(tokens: &[Token]) -> bool {

@@ -1,14 +1,18 @@
 ```ebnf
-program              ::= function_definition* expression
-function_definition  ::= ident pattern* "=" expression
-expression           ::= function_call | binary_operation | atom
-function_call        ::= ident atom*
+program              ::= function_definition*
+function_definition  ::= ident ident* ( ":" type )? "=" expression
+expression           ::= binary_operation | atom
 binary_operation     ::= expression operator expression
-operator             ::= "+" | "-" | "*" | "/" | "="
-atom                 ::= int | bool | string | ident
-int                  ::= [0-9]+
+unary_operation      ::= ("!" | "-") unary_operation | app
+app                  ::= ident atom* | primary
+atom                 ::= int | bool | string | ident | "(" expression ")"
+int                  ::= digit+
 bool                 ::= "true" | "false"
 string               ::= '"' [^"]* '"'
-ident                ::= [a-zA-Z][a-zA-Z0-9]*
-pattern              ::= ident
+ident                ::= letter (letter | digit)*
+type_specifier      ::= "Int" | "Bool" | "String" | "IO" | ident
+type                ::= type_specifier ("->" type)?
+operator             ::= "+" | "-" | "*" | "/" | "="
+letter              ::= "a".."z" | "A".."Z"
+digit               ::= "0".."9"
 ```
