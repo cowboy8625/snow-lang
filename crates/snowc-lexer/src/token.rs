@@ -76,6 +76,21 @@ impl Token {
             Self::Error(Error { span, .. }) => *span,
         }
     }
+
+    pub fn position(&self) -> &TokenPosition {
+        match self {
+            Self::KeyWord(KeyWord { pos, .. }) => pos,
+            Self::Ident(Ident { pos, .. }) => pos,
+            Self::Op(Op { pos, .. }) => pos,
+            Self::Ctrl(Ctrl { pos, .. }) => pos,
+            Self::Int(Int { pos, .. }) => pos,
+            Self::Float(Float { pos, .. }) => pos,
+            Self::Str(Str { pos, .. }) => pos,
+            Self::Char(Char { pos, .. }) => pos,
+            // FIXME: I don't like this
+            Self::Error(..) => &TokenPosition::End,
+        }
+    }
 }
 
 impl fmt::Display for Token {

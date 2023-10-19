@@ -1,1 +1,2 @@
+-- main :: IO
 main = print "Winter is Coming!"

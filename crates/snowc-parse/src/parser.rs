@@ -1,7 +1,7 @@
 use super::expr::{Atom, Expr};
 use super::op::Op as Oper;
 use super::op::Op::*;
-use snowc_lexer::{Ctrl, Ident, Op, Scanner, Span, Token};
+use snowc_lexer::{Ctrl, Ident, KeyWord, Op, Scanner, Span, Token, TokenPosition};
 
 pub fn parse(src: &str) -> Result<Vec<Expr>, Vec<crate::error::Error>> {
     let mut tokens: Vec<Token> = Scanner::new(src).collect();
@@ -61,31 +61,16 @@ fn get_function_args(tokens: &mut Vec<Token>) -> Vec<Expr> {
     args
 }
 
-fn expression(tokens: &mut Vec<Token>) -> Expr {
-    if let Some(Token::Ident(id)) = tokens.get(0) {
-        let func_name = id.lexme.clone();
-        let start = id.span;
-        tokens.remove(0);
-
-        if !tokens.is_empty() {
-            // Extract arguments until the next operator or keyword
-            let mut args = Vec::new();
-            while let Some(token) = tokens.get(0) {
-                if let Token::Op(_) | Token::KeyWord(_) = token {
-                    break;
-                }
-                let arg = primary(tokens);
-                args.push(arg);
-            }
-            let end = args.last().map(|e| e.span()).unwrap_or_default();
-
-            return Expr::App(
-                Box::new(Expr::Atom(Atom::Id(func_name), start)),
-                args,
-                Span::from((start, end)), // You need to calculate the span
-            );
-        }
+fn a_operator(token: Option<&Token>) -> bool {
+    match token {
+        Some(Token::Op(_)) => true,
+        Some(Token::Ctrl(Ctrl { lexme, .. })) if lexme != "(" => false,
+        _ => false,
     }
+}
+
+// TODO: move call logic into its own function and move that call to be in the primary function.
+fn expression(tokens: &mut Vec<Token>) -> Expr {
     equality(tokens)
 }
 
@@ -140,7 +125,38 @@ fn unary(tokens: &mut Vec<Token>) -> Expr {
         let span = Span::from((token.span(), rhs.span()));
         return Expr::Unary(op, Box::new(rhs), span);
     }
-    primary(tokens)
+    call(tokens)
+}
+
+fn call(tokens: &mut Vec<Token>) -> Expr {
+    let expr = primary(tokens);
+    let Expr::Atom(Atom::Id(func_name), start) = expr.clone() else {
+        return expr;
+    };
+
+    if !is_atom(tokens.get(0)) || is_deliminator(&tokens) {
+        return expr;
+    }
+
+    let mut args = Vec::new();
+    while !tokens.is_empty() {
+        if !is_atom(tokens.get(0)) || is_deliminator(&tokens) {
+            break;
+        }
+
+        args.push(primary(tokens));
+
+        if !is_atom(tokens.get(0)) || is_deliminator(&tokens) {
+            break;
+        }
+    }
+    let end = args.last().map(|e| e.span()).unwrap_or(start);
+
+    return Expr::App(
+        Box::new(Expr::Atom(Atom::Id(func_name), start)),
+        args,
+        Span::from((start, end)),
+    );
 }
 
 fn primary(tokens: &mut Vec<Token>) -> Expr {
@@ -178,8 +194,16 @@ fn primary(tokens: &mut Vec<Token>) -> Expr {
             }
             expr
         }
-        _ => unreachable!(),
+        _ => unreachable!("unexpected token {:?}", tokens.get(0)),
     }
+}
+
+fn is_atom(token: Option<&Token>) -> bool {
+    matches!(
+        token,
+        Some(Token::Int(_) | Token::Float(_) | Token::Char(_) | Token::Str(_))
+    ) || matches!(token, Some(Token::KeyWord(KeyWord { lexme, .. })) if matches!(lexme.as_str(), "true" | "false"))
+        || matches!(token, Some(Token::Ctrl(Ctrl { lexme, .. })) if lexme.as_str() == "(")
 }
 
 fn get_op(token: Option<&Token>) -> Option<Oper> {
@@ -199,14 +223,29 @@ where
     panic!("unexpected token {:?}", tokens[0]);
 }
 
-// #[test]
-// fn parse_test() {
-//     use pretty_assertions::assert_eq;
-//     let ast = parse("main = print \"WOW\"");
-//     let left = ast
-//         .unwrap_or_default()
-//         .iter()
-//         .map(ToString::to_string)
-//         .collect::<Vec<_>>();
-//     assert_eq!(left, vec!["<add: (\\x -> (\\y -> (+ x y)))>"]);
-// }
+fn is_deliminator(tokens: &[Token]) -> bool {
+    let Some(first) = tokens.get(0) else {
+        return false;
+    };
+    let pos1 = first.position();
+
+    let Some(second) = tokens.get(1) else {
+        return false;
+    };
+
+    let pos2 = second.position();
+
+    matches!((pos1, pos2), (TokenPosition::End, TokenPosition::Start))
+}
+
+#[test]
+fn parse_test() {
+    use pretty_assertions::assert_eq;
+    let ast = parse("add x y = x + y\nmain = print (add 1 2)");
+    let left = ast
+        .unwrap_or_default()
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    assert_eq!(left, vec!["<add: (\\x -> (\\y -> (+ x y)))>"]);
+}
