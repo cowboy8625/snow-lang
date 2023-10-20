@@ -1,9 +1,0 @@
-[package]
-name = "snowc-byte-code-gen"
-version = "0.0.0"
-edition = "2021"
-
-[dependencies]
-snowc-parse = { path = "../snowc-parse" }
-snowc-type-checker = { path = "../snowc-type-checker" }
-# inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm12-0"] }

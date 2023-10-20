@@ -1,6 +1,6 @@
 mod args;
 use snowc::error::Error;
-use snowc::{parse, type_check, walk, Expr, Scanner};
+use snowc::{parse, walk, Expr, Scanner};
 // use snowc_repl::repl;
 #[derive(Debug)]
 enum CompilerError {
@@ -92,13 +92,13 @@ fn main() {
         .and_then(debug_tokens(setting.debug_token))
         .and_then(|src| timer("Parsing", || parse(&src)).map_err(Into::into))
         .and_then(debug_ast(setting.debug_ast))
-        .and_then(|ast| {
-            if !setting.option_no_type_check {
-                timer("Type Checking", || type_check(&ast))
-                    .map_err(Into::<CompilerError>::into)?;
-            }
-            Ok(ast)
-        })
+        // .and_then(|ast| {
+        //     if !setting.option_no_type_check {
+        //         timer("Type Checking", || type_check(&ast))
+        //             .map_err(Into::<CompilerError>::into)?;
+        //     }
+        //     Ok(ast)
+        // })
         .map_or_else(
             handle_compiler_errors(setting.filename.clone().unwrap_or_default()),
             |ast| {

@@ -1,5 +1,5 @@
 -- create a grid of size
-create_grid :: Int -> Int -> Array;
+-- create_grid :: Int -> Int -> Array;
 create_grid size char =
   if 0 < (size - 1)
   then (push (create_grid (size - 1) char) char)
@@ -7,7 +7,7 @@ create_grid size char =
 
 -- 111   110   101   100   011   010   001   000
 --  0     1     1     0     1     1     1     0
-is_alive :: Str -> Str -> Str -> Bool;
+-- is_alive :: Str -> Str -> Str -> Bool;
 is_alive a b c =
   if      a == "#"
     and   b == "#"
@@ -39,12 +39,12 @@ is_alive a b c =
   then true
   else false;
 
-idx_of :: Int -> Int -> Int;
+-- idx_of :: Int -> Int -> Int;
 idx_of i len = (i + len) mod len;
 -- idx_of = (\i -> (\len -> (i + len) mod len));
 -- ((i - 1) + len) % len
 
-next_cell :: Array -> Int -> Bool;
+-- next_cell :: Array -> Int -> Bool;
 next_cell grid x =
 -- let len = length grid in
 -- let a = nth grid (idx_of (x - 1) len) in
@@ -60,31 +60,31 @@ next_cell grid x =
   (nth grid (idx_of (x + 1) len)))
   (length grid);
 
-cell_type :: Array -> Int -> Str;
+-- cell_type :: Array -> Int -> Str;
 cell_type grid idx =
   if (next_cell grid idx)
   then "#"
   else " ";
 
-next_gen :: Array -> Int -> Array;
+-- next_gen :: Array -> Int -> Array;
 next_gen grid idx =
   if (idx + 1) < (length grid)
   then (push (next_gen grid (idx + 1)) (cell_type grid idx))
   else [cell_type grid idx];
 
-str_join :: Str -> Array -> Str;
+-- str_join :: Str -> Array -> Str;
 str_join sep arr =
   if (length arr) > 0
   then (str_join sep (tail arr)) + (sep + (head arr))
   else "";
 
-display :: Array -> IO;
+-- display :: Array -> IO;
 display grid = head [grid, (print (str_join "" grid) "\n")];
 
-run :: Array -> Array;
+-- run :: Array -> Array;
 run grid = run (next_gen (display grid) 0);
 
-main = IO;
+-- main = IO;
 main =
   -- let start = create_grid 9 " " in
   -- let starting_grid = push start "#" in

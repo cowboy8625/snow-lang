@@ -36,7 +36,7 @@ fn function(tokens: &mut Vec<Token>) -> Option<Expr> {
     let closures = create_closures(args, body);
     let span = Span::from((start, end));
     // Func(String, Box<Self>, Span),
-    Some(Expr::Func(name, Box::new(closures), span))
+    Some(Expr::Func(name, typed, Box::new(closures), span))
 }
 
 fn get_block(tokens: &mut Vec<Token>) -> Expr {

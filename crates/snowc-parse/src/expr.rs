@@ -1,5 +1,5 @@
-use super::Op;
 use super::Span;
+use super::{Ident, Op};
 use std::fmt;
 
 macro_rules! is_expr {
@@ -56,11 +56,10 @@ pub enum Expr {
     Binary(Op, Box<Self>, Box<Self>, Span),
     IfElse(Box<Self>, Box<Self>, Box<Self>, Span),
     Closure(Box<Self>, Box<Self>, Span),
-    Func(String, Box<Self>, Span),
+    Func(String, Vec<Ident>, Box<Self>, Span),
     App(Box<Self>, Vec<Self>, Span),
     Array(Vec<Self>, Span),
     Enum(String, Vec<(String, Vec<String>)>, Span),
-    TypeDec(String, Vec<String>, Span),
     Error(Span),
 }
 
@@ -90,7 +89,6 @@ impl Expr {
             Self::App(.., span) => *span,
             Self::Array(.., span) => *span,
             Self::Enum(.., span) => *span,
-            Self::TypeDec(.., span) => *span,
             Self::Error(span) => *span,
         }
     }
@@ -103,7 +101,6 @@ impl Expr {
     is_expr!(is_app, App);
     is_expr!(is_type, Enum);
     is_expr!(is_array, Array);
-    is_expr!(is_type_dec, TypeDec);
 
     pub fn is_error(&self) -> bool {
         match self {
@@ -111,7 +108,7 @@ impl Expr {
             Self::Binary(_, l, r, _) => l.is_error() || r.is_error(),
             Self::IfElse(c, t, e, ..) => c.is_error() || t.is_error() || e.is_error(),
             Self::Closure(h, t, ..) => h.is_error() || t.is_error(),
-            Self::Func(_, e, ..) => e.is_error(),
+            Self::Func(_, _, e, ..) => e.is_error(),
             Self::App(e, ..) => e.is_error(),
             Self::Array(array, ..) => array.iter().any(|e| e.is_error()),
             Self::Error(..) => true,
@@ -153,8 +150,14 @@ impl fmt::Display for Expr {
             Self::Closure(head, tail, ..) => {
                 write!(f, "(\\{head} -> {tail})")
             }
-            Self::Func(name, clouser, ..) => {
-                write!(f, "<{name}: {clouser}>")
+            Self::Func(name, typed, clouser, ..) => {
+                let t = typed.iter().fold("".to_string(), |acc, name| {
+                    if acc.is_empty() {
+                        return name.to_string();
+                    }
+                    format!("{acc} -> {name}")
+                });
+                write!(f, "<{name}: {t} = {clouser}>")
             }
             Self::App(name, args, ..) => {
                 write!(f, "<{name}: (")?;
@@ -203,16 +206,6 @@ impl fmt::Display for Expr {
                     },
                 );
                 write!(f, "{fstring}>")
-            }
-            Self::TypeDec(name, type_list, ..) => {
-                let types = type_list.iter().fold("".to_string(), |fstring, item| {
-                    if fstring.is_empty() {
-                        item.to_string()
-                    } else {
-                        format!("{fstring} -> {item}")
-                    }
-                });
-                write!(f, "<{name} :: {types}>")
             }
             Self::Error(..) => write!(f, "Error"),
         }
@@ -281,16 +274,6 @@ impl fmt::Debug for Expr {
                     },
                 );
                 write!(f, "{fstring}>")
-            }
-            Self::TypeDec(name, type_list, ..) => {
-                let types = type_list.iter().fold(String::new(), |fstring, item| {
-                    if fstring.is_empty() {
-                        item.to_string()
-                    } else {
-                        format!("{fstring:?} -> {item:?}")
-                    }
-                });
-                write!(f, "<{name:?} :: {types:?}>")
             }
             Self::Error(..) => write!(f, "Error"),
         }

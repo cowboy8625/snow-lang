@@ -343,8 +343,6 @@ fn walk_expr(expr: &Expr, scope: &Scope) -> Result<Value> {
         }
         Expr::Enum(..) => unimplemented!("enum"),
 
-        // this should only be for type checker.
-        Expr::TypeDec(..) => unreachable!("type dec"),
         // should never get to theres
         Expr::Func(..) => unreachable!("func"),
         Expr::Error(..) => unreachable!("error"),
@@ -359,10 +357,9 @@ pub fn walk(ast: &[Expr]) -> std::result::Result<Option<Value>, Vec<RuntimeError
             Expr::Func(name, ..) if name == "main" => {
                 main_idx = Some(idx);
             }
-            Expr::Func(name, closure, ..) => {
+            Expr::Func(name, _, closure, ..) => {
                 scope.insert_global(name.to_string(), *closure.clone());
             }
-            Expr::TypeDec(..) => {}
             _ => unreachable!("{:?}", expr),
         }
     }
@@ -376,7 +373,7 @@ pub fn walk(ast: &[Expr]) -> std::result::Result<Option<Value>, Vec<RuntimeError
         return Err(errors);
     }
     let main_function = &ast[idx];
-    let Expr::Func(_, closure, ..) = main_function else {
+    let Expr::Func(_, _, closure, ..) = main_function else {
         panic!("really bad things are happening");
     };
     match walk_expr(closure, &scope) {
@@ -393,11 +390,10 @@ pub fn eval_expr_with_scope(
     scope: &mut Scope,
 ) -> std::result::Result<Option<Value>, RuntimeError> {
     match expr {
-        Expr::Func(name, closure, ..) => {
+        Expr::Func(name, _, closure, ..) => {
             scope.insert_global(name.to_string(), *closure.clone());
             Ok(None)
         }
-        Expr::TypeDec(..) => Ok(None),
         _ => walk_expr(expr, scope).map(Some),
     }
 }

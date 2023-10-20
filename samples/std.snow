@@ -1,33 +1,37 @@
-enum Option a = Some a | None
-Option.map f = match self on
-  | Some x -> Some (f x)
-  | None -> None
+-- enum Option a = Some a | None
+-- Option.map f = match self on
+--   | Some x -> Some (f x)
+--   | None -> None
 
-enum Bool = True | False
+-- enum Bool = True | False
 
-max :> Int -> Int -> Int
-max x y = if x > y then x else y
+-- `==` :> a -> a -> Bool
+-- `==` x y = core::equal x y Bool::True Bool::False
 
-min :> Int -> Int -> Int
-min x y = if x < y then x else y
+-- `<=` :> a -> a -> Bool
+-- `<=` x y = core::less_equal x y Bool::True Bool::False
 
-clamp :> Int -> Int -> Int -> Int
-clamp input low high = max low (min input high)
+-- `>=` :> a -> a -> Bool
+-- `>=` x y = core::greater_equal x y Bool::True Bool::False
 
-is_digit :> Char -> Bool
-is_digit c = c >= '0' && c <= '9'
+-- `>` :> a -> a -> Bool
+-- `>` x y = core::greater x y Bool::True Bool::False
 
-`==` :> a -> a -> Bool
-`==` x y = core::equal x y Bool::True Bool::False
+-- `<` :> a -> a -> Bool
+-- `<` x y = core::less x y Bool::True Bool::False
 
-`<=` :> a -> a -> Bool
-`<=` x y = core::less_equal x y Bool::True Bool::False
+max x y
+  : Int -> Int -> Int
+  = if x > y then x else y
 
-`>=` :> a -> a -> Bool
-`>=` x y = core::greater_equal x y Bool::True Bool::False
+min x y
+ : Int -> Int -> Int
+ = if x < y then x else y
 
-`>` :> a -> a -> Bool
-`>` x y = core::greater x y Bool::True Bool::False
+clamp input low high
+  : Int -> Int -> Int -> Int
+  = max low (min input high)
 
-`<` :> a -> a -> Bool
-`<` x y = core::less x y Bool::True Bool::False
+is_digit c
+  : Char -> Bool
+  = c >= '0' && c <= '9'

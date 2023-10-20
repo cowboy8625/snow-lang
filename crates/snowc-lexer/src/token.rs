@@ -14,7 +14,7 @@ macro_rules! map_a {
 
 macro_rules! init_token {
     ($name:ident) => {
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $name {
             pub lexme: String,
             pub pos: TokenPosition,
@@ -109,7 +109,7 @@ impl fmt::Display for Token {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TokenPosition {
     Start,
     Middle,
