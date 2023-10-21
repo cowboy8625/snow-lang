@@ -55,7 +55,7 @@ clamp input low high
 
 is_digit c
     : Char -> Bool
-    = c >= '0' && c <= '9'
+    = c >= '0' and c <= '9'
 ```
 
 ##### **Experimental:**
