@@ -3,539 +3,465 @@ source: crates/snowc-lexer/tests/test.rs
 expression: snapshot_lexing(contents)
 ---
 -- create a grid of size
-create_grid :: Int -> Int -> Array;
-^^^^^^^^^^^ create_grid Start
-            ^^ :: Middle
-               ^^^ Int Middle
-                   ^^ -> Middle
-                      ^^^ Int Middle
-                          ^^ -> Middle
-                             ^^^^^ Array Middle
-                                  ^ ; End
+-- create_grid :: Int -> Int -> Array;
 create_grid size char =
-^^^^^^^^^^^ create_grid Start
-            ^^^^ size Middle
-                 ^^^^ char Middle
-                      ^ = End
+^^^^^^^^^^^ Ident(Ident { lexme: "create_grid", pos: Start, span: (0,2)->(11,2) })
+            ^^^^ Ident(Ident { lexme: "size", pos: Middle, span: (12,2)->(16,2) })
+                 ^^^^ Ident(Ident { lexme: "char", pos: Middle, span: (17,2)->(21,2) })
+                      ^ Ctrl(Ctrl { lexme: "=", pos: End, span: (22,2)->(23,2) })
   if 0 < (size - 1)
-  ^^ if Middle
-     ^ 0 Middle
-       ^ < Middle
-         ^ ( Middle
-          ^^^^ size Middle
-               ^ - Middle
-                 ^ 1 Middle
-                  ^ ) End
+  ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (2,3)->(4,3) })
+     ^ Int(Int { lexme: "0", pos: Middle, span: (5,3)->(6,3) })
+       ^ Op(Op { lexme: "<", pos: Middle, span: (7,3)->(8,3) })
+         ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (9,3)->(10,3) })
+          ^^^^ Ident(Ident { lexme: "size", pos: Middle, span: (10,3)->(14,3) })
+               ^ Op(Op { lexme: "-", pos: Middle, span: (15,3)->(16,3) })
+                 ^ Int(Int { lexme: "1", pos: Middle, span: (17,3)->(18,3) })
+                  ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (18,3)->(19,3) })
   then (push (create_grid (size - 1) char) char)
-  ^^^^ then Middle
-       ^ ( Middle
-        ^^^^ push Middle
-             ^ ( Middle
-              ^^^^^^^^^^^ create_grid Middle
-                          ^ ( Middle
-                           ^^^^ size Middle
-                                ^ - Middle
-                                  ^ 1 Middle
-                                   ^ ) Middle
-                                     ^^^^ char Middle
-                                         ^ ) Middle
-                                           ^^^^ char Middle
-                                               ^ ) End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,4)->(6,4) })
+       ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (7,4)->(8,4) })
+        ^^^^ Ident(Ident { lexme: "push", pos: Middle, span: (8,4)->(12,4) })
+             ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (13,4)->(14,4) })
+              ^^^^^^^^^^^ Ident(Ident { lexme: "create_grid", pos: Middle, span: (14,4)->(25,4) })
+                          ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (26,4)->(27,4) })
+                           ^^^^ Ident(Ident { lexme: "size", pos: Middle, span: (27,4)->(31,4) })
+                                ^ Op(Op { lexme: "-", pos: Middle, span: (32,4)->(33,4) })
+                                  ^ Int(Int { lexme: "1", pos: Middle, span: (34,4)->(35,4) })
+                                   ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (35,4)->(36,4) })
+                                     ^^^^ Ident(Ident { lexme: "char", pos: Middle, span: (37,4)->(41,4) })
+                                         ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (41,4)->(42,4) })
+                                           ^^^^ Ident(Ident { lexme: "char", pos: Middle, span: (43,4)->(47,4) })
+                                               ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (47,4)->(48,4) })
   else [char];
-  ^^^^ else Middle
-       ^ [ Middle
-        ^^^^ char Middle
-            ^ ] Middle
-             ^ ; End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,5)->(6,5) })
+       ^ Ctrl(Ctrl { lexme: "[", pos: Middle, span: (7,5)->(8,5) })
+        ^^^^ Ident(Ident { lexme: "char", pos: Middle, span: (8,5)->(12,5) })
+            ^ Ctrl(Ctrl { lexme: "]", pos: Middle, span: (12,5)->(13,5) })
+             ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (13,5)->(14,5) })
 
 -- 111   110   101   100   011   010   001   000
 --  0     1     1     0     1     1     1     0
-is_alive :: Str -> Str -> Str -> Bool;
-^^^^^^^^ is_alive Start
-         ^^ :: Middle
-            ^^^ Str Middle
-                ^^ -> Middle
-                   ^^^ Str Middle
-                       ^^ -> Middle
-                          ^^^ Str Middle
-                              ^^ -> Middle
-                                 ^^^^ Bool Middle
-                                     ^ ; End
+-- is_alive :: Str -> Str -> Str -> Bool;
 is_alive a b c =
-^^^^^^^^ is_alive Start
-         ^ a Middle
-           ^ b Middle
-             ^ c Middle
-               ^ = End
+^^^^^^^^ Ident(Ident { lexme: "is_alive", pos: Start, span: (0,10)->(8,10) })
+         ^ Ident(Ident { lexme: "a", pos: Middle, span: (9,10)->(10,10) })
+           ^ Ident(Ident { lexme: "b", pos: Middle, span: (11,10)->(12,10) })
+             ^ Ident(Ident { lexme: "c", pos: Middle, span: (13,10)->(14,10) })
+               ^ Ctrl(Ctrl { lexme: "=", pos: End, span: (15,10)->(16,10) })
   if      a == "#"
-  ^^ if Middle
-          ^ a Middle
-            ^^ == Middle
-               ^^^ "#" End
+  ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (2,11)->(4,11) })
+          ^ Ident(Ident { lexme: "a", pos: Middle, span: (10,11)->(11,11) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,11)->(14,11) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,11)->(18,11) })
     and   b == "#"
-    ^^^ and Middle
-          ^ b Middle
-            ^^ == Middle
-               ^^^ "#" End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,12)->(7,12) })
+          ^ Ident(Ident { lexme: "b", pos: Middle, span: (10,12)->(11,12) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,12)->(14,12) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,12)->(18,12) })
     and   c == "#"
-    ^^^ and Middle
-          ^ c Middle
-            ^^ == Middle
-               ^^^ "#" End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,13)->(7,13) })
+          ^ Ident(Ident { lexme: "c", pos: Middle, span: (10,13)->(11,13) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,13)->(14,13) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,13)->(18,13) })
   then false
-  ^^^^ then Middle
-       ^^^^^ false End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,14)->(6,14) })
+       ^^^^^ KeyWord(KeyWord { lexme: "false", pos: End, span: (7,14)->(12,14) })
   else if a == "#"
-  ^^^^ else Middle
-       ^^ if Middle
-          ^ a Middle
-            ^^ == Middle
-               ^^^ "#" End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,15)->(6,15) })
+       ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (7,15)->(9,15) })
+          ^ Ident(Ident { lexme: "a", pos: Middle, span: (10,15)->(11,15) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,15)->(14,15) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,15)->(18,15) })
     and   b == "#"
-    ^^^ and Middle
-          ^ b Middle
-            ^^ == Middle
-               ^^^ "#" End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,16)->(7,16) })
+          ^ Ident(Ident { lexme: "b", pos: Middle, span: (10,16)->(11,16) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,16)->(14,16) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,16)->(18,16) })
     and   c == " "
-    ^^^ and Middle
-          ^ c Middle
-            ^^ == Middle
-               ^^^ " " End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,17)->(7,17) })
+          ^ Ident(Ident { lexme: "c", pos: Middle, span: (10,17)->(11,17) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,17)->(14,17) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,17)->(18,17) })
   then true
-  ^^^^ then Middle
-       ^^^^ true End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,18)->(6,18) })
+       ^^^^ KeyWord(KeyWord { lexme: "true", pos: End, span: (7,18)->(11,18) })
   else if a == "#"
-  ^^^^ else Middle
-       ^^ if Middle
-          ^ a Middle
-            ^^ == Middle
-               ^^^ "#" End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,19)->(6,19) })
+       ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (7,19)->(9,19) })
+          ^ Ident(Ident { lexme: "a", pos: Middle, span: (10,19)->(11,19) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,19)->(14,19) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,19)->(18,19) })
     and   b == " "
-    ^^^ and Middle
-          ^ b Middle
-            ^^ == Middle
-               ^^^ " " End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,20)->(7,20) })
+          ^ Ident(Ident { lexme: "b", pos: Middle, span: (10,20)->(11,20) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,20)->(14,20) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,20)->(18,20) })
     and   c == "#"
-    ^^^ and Middle
-          ^ c Middle
-            ^^ == Middle
-               ^^^ "#" End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,21)->(7,21) })
+          ^ Ident(Ident { lexme: "c", pos: Middle, span: (10,21)->(11,21) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,21)->(14,21) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,21)->(18,21) })
   then true
-  ^^^^ then Middle
-       ^^^^ true End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,22)->(6,22) })
+       ^^^^ KeyWord(KeyWord { lexme: "true", pos: End, span: (7,22)->(11,22) })
   else if a == "#"
-  ^^^^ else Middle
-       ^^ if Middle
-          ^ a Middle
-            ^^ == Middle
-               ^^^ "#" End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,23)->(6,23) })
+       ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (7,23)->(9,23) })
+          ^ Ident(Ident { lexme: "a", pos: Middle, span: (10,23)->(11,23) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,23)->(14,23) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,23)->(18,23) })
     and   b == " "
-    ^^^ and Middle
-          ^ b Middle
-            ^^ == Middle
-               ^^^ " " End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,24)->(7,24) })
+          ^ Ident(Ident { lexme: "b", pos: Middle, span: (10,24)->(11,24) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,24)->(14,24) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,24)->(18,24) })
     and   c == " "
-    ^^^ and Middle
-          ^ c Middle
-            ^^ == Middle
-               ^^^ " " End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,25)->(7,25) })
+          ^ Ident(Ident { lexme: "c", pos: Middle, span: (10,25)->(11,25) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,25)->(14,25) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,25)->(18,25) })
   then false
-  ^^^^ then Middle
-       ^^^^^ false End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,26)->(6,26) })
+       ^^^^^ KeyWord(KeyWord { lexme: "false", pos: End, span: (7,26)->(12,26) })
   else if a == " "
-  ^^^^ else Middle
-       ^^ if Middle
-          ^ a Middle
-            ^^ == Middle
-               ^^^ " " End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,27)->(6,27) })
+       ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (7,27)->(9,27) })
+          ^ Ident(Ident { lexme: "a", pos: Middle, span: (10,27)->(11,27) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,27)->(14,27) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,27)->(18,27) })
     and   b == "#"
-    ^^^ and Middle
-          ^ b Middle
-            ^^ == Middle
-               ^^^ "#" End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,28)->(7,28) })
+          ^ Ident(Ident { lexme: "b", pos: Middle, span: (10,28)->(11,28) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,28)->(14,28) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,28)->(18,28) })
     and   c == "#"
-    ^^^ and Middle
-          ^ c Middle
-            ^^ == Middle
-               ^^^ "#" End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,29)->(7,29) })
+          ^ Ident(Ident { lexme: "c", pos: Middle, span: (10,29)->(11,29) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,29)->(14,29) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,29)->(18,29) })
   then true
-  ^^^^ then Middle
-       ^^^^ true End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,30)->(6,30) })
+       ^^^^ KeyWord(KeyWord { lexme: "true", pos: End, span: (7,30)->(11,30) })
   else if a == " "
-  ^^^^ else Middle
-       ^^ if Middle
-          ^ a Middle
-            ^^ == Middle
-               ^^^ " " End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,31)->(6,31) })
+       ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (7,31)->(9,31) })
+          ^ Ident(Ident { lexme: "a", pos: Middle, span: (10,31)->(11,31) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,31)->(14,31) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,31)->(18,31) })
     and   b == "#"
-    ^^^ and Middle
-          ^ b Middle
-            ^^ == Middle
-               ^^^ "#" End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,32)->(7,32) })
+          ^ Ident(Ident { lexme: "b", pos: Middle, span: (10,32)->(11,32) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,32)->(14,32) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,32)->(18,32) })
     and   c == " "
-    ^^^ and Middle
-          ^ c Middle
-            ^^ == Middle
-               ^^^ " " End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,33)->(7,33) })
+          ^ Ident(Ident { lexme: "c", pos: Middle, span: (10,33)->(11,33) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,33)->(14,33) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,33)->(18,33) })
   then true
-  ^^^^ then Middle
-       ^^^^ true End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,34)->(6,34) })
+       ^^^^ KeyWord(KeyWord { lexme: "true", pos: End, span: (7,34)->(11,34) })
   else if a == " "
-  ^^^^ else Middle
-       ^^ if Middle
-          ^ a Middle
-            ^^ == Middle
-               ^^^ " " End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,35)->(6,35) })
+       ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (7,35)->(9,35) })
+          ^ Ident(Ident { lexme: "a", pos: Middle, span: (10,35)->(11,35) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,35)->(14,35) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,35)->(18,35) })
     and   b == " "
-    ^^^ and Middle
-          ^ b Middle
-            ^^ == Middle
-               ^^^ " " End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,36)->(7,36) })
+          ^ Ident(Ident { lexme: "b", pos: Middle, span: (10,36)->(11,36) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,36)->(14,36) })
+               ^^^ Str(Str { lexme: " ", pos: End, span: (15,36)->(18,36) })
     and   c == "#"
-    ^^^ and Middle
-          ^ c Middle
-            ^^ == Middle
-               ^^^ "#" End
+    ^^^ KeyWord(KeyWord { lexme: "and", pos: Middle, span: (4,37)->(7,37) })
+          ^ Ident(Ident { lexme: "c", pos: Middle, span: (10,37)->(11,37) })
+            ^^ Op(Op { lexme: "==", pos: Middle, span: (12,37)->(14,37) })
+               ^^^ Str(Str { lexme: "#", pos: End, span: (15,37)->(18,37) })
   then true
-  ^^^^ then Middle
-       ^^^^ true End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,38)->(6,38) })
+       ^^^^ KeyWord(KeyWord { lexme: "true", pos: End, span: (7,38)->(11,38) })
   else false;
-  ^^^^ else Middle
-       ^^^^^ false Middle
-            ^ ; End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,39)->(6,39) })
+       ^^^^^ KeyWord(KeyWord { lexme: "false", pos: Middle, span: (7,39)->(12,39) })
+            ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (12,39)->(13,39) })
 
-idx_of :: Int -> Int -> Int;
-^^^^^^ idx_of Start
-       ^^ :: Middle
-          ^^^ Int Middle
-              ^^ -> Middle
-                 ^^^ Int Middle
-                     ^^ -> Middle
-                        ^^^ Int Middle
-                           ^ ; End
+-- idx_of :: Int -> Int -> Int;
 idx_of i len = (i + len) mod len;
-^^^^^^ idx_of Start
-       ^ i Middle
-         ^^^ len Middle
-             ^ = Middle
-               ^ ( Middle
-                ^ i Middle
-                  ^ + Middle
-                    ^^^ len Middle
-                       ^ ) Middle
-                         ^^^ mod Middle
-                             ^^^ len Middle
-                                ^ ; End
+^^^^^^ Ident(Ident { lexme: "idx_of", pos: Start, span: (0,42)->(6,42) })
+       ^ Ident(Ident { lexme: "i", pos: Middle, span: (7,42)->(8,42) })
+         ^^^ Ident(Ident { lexme: "len", pos: Middle, span: (9,42)->(12,42) })
+             ^ Ctrl(Ctrl { lexme: "=", pos: Middle, span: (13,42)->(14,42) })
+               ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (15,42)->(16,42) })
+                ^ Ident(Ident { lexme: "i", pos: Middle, span: (16,42)->(17,42) })
+                  ^ Op(Op { lexme: "+", pos: Middle, span: (18,42)->(19,42) })
+                    ^^^ Ident(Ident { lexme: "len", pos: Middle, span: (20,42)->(23,42) })
+                       ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (23,42)->(24,42) })
+                         ^^^ KeyWord(KeyWord { lexme: "mod", pos: Middle, span: (25,42)->(28,42) })
+                             ^^^ Ident(Ident { lexme: "len", pos: Middle, span: (29,42)->(32,42) })
+                                ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (32,42)->(33,42) })
 -- idx_of = (\i -> (\len -> (i + len) mod len));
 -- ((i - 1) + len) % len
 
-next_cell :: Array -> Int -> Bool;
-^^^^^^^^^ next_cell Start
-          ^^ :: Middle
-             ^^^^^ Array Middle
-                   ^^ -> Middle
-                      ^^^ Int Middle
-                          ^^ -> Middle
-                             ^^^^ Bool Middle
-                                 ^ ; End
+-- next_cell :: Array -> Int -> Bool;
 next_cell grid x =
-^^^^^^^^^ next_cell Start
-          ^^^^ grid Middle
-               ^ x Middle
-                 ^ = End
+^^^^^^^^^ Ident(Ident { lexme: "next_cell", pos: Start, span: (0,47)->(9,47) })
+          ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (10,47)->(14,47) })
+               ^ Ident(Ident { lexme: "x", pos: Middle, span: (15,47)->(16,47) })
+                 ^ Ctrl(Ctrl { lexme: "=", pos: End, span: (17,47)->(18,47) })
 -- let len = length grid in
 -- let a = nth grid (idx_of (x - 1) len) in
 -- let b = nth grid x in
 -- let c = nth grid (idx_of (x + 1) len) in
 -- is_alive a b c
   (λlen ->
-  ^ ( Middle
-   ^^ λ Middle
-     ^^^ len Middle
-         ^^ -> End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,53)->(3,53) })
+   ^^ Ctrl(Ctrl { lexme: "λ", pos: Middle, span: (3,53)->(5,53) })
+     ^^^ Ident(Ident { lexme: "len", pos: Middle, span: (5,53)->(8,53) })
+         ^^ Ctrl(Ctrl { lexme: "->", pos: End, span: (9,53)->(11,53) })
   (λa   ->
-  ^ ( Middle
-   ^^ λ Middle
-     ^ a Middle
-         ^^ -> End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,54)->(3,54) })
+   ^^ Ctrl(Ctrl { lexme: "λ", pos: Middle, span: (3,54)->(5,54) })
+     ^ Ident(Ident { lexme: "a", pos: Middle, span: (5,54)->(6,54) })
+         ^^ Ctrl(Ctrl { lexme: "->", pos: End, span: (9,54)->(11,54) })
   (λb   ->
-  ^ ( Middle
-   ^^ λ Middle
-     ^ b Middle
-         ^^ -> End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,55)->(3,55) })
+   ^^ Ctrl(Ctrl { lexme: "λ", pos: Middle, span: (3,55)->(5,55) })
+     ^ Ident(Ident { lexme: "b", pos: Middle, span: (5,55)->(6,55) })
+         ^^ Ctrl(Ctrl { lexme: "->", pos: End, span: (9,55)->(11,55) })
   (λc   -> is_alive a b c)
-  ^ ( Middle
-   ^^ λ Middle
-     ^ c Middle
-         ^^ -> Middle
-            ^^^^^^^^ is_alive Middle
-                     ^ a Middle
-                       ^ b Middle
-                         ^ c Middle
-                          ^ ) End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,56)->(3,56) })
+   ^^ Ctrl(Ctrl { lexme: "λ", pos: Middle, span: (3,56)->(5,56) })
+     ^ Ident(Ident { lexme: "c", pos: Middle, span: (5,56)->(6,56) })
+         ^^ Ctrl(Ctrl { lexme: "->", pos: Middle, span: (9,56)->(11,56) })
+            ^^^^^^^^ Ident(Ident { lexme: "is_alive", pos: Middle, span: (12,56)->(20,56) })
+                     ^ Ident(Ident { lexme: "a", pos: Middle, span: (21,56)->(22,56) })
+                       ^ Ident(Ident { lexme: "b", pos: Middle, span: (23,56)->(24,56) })
+                         ^ Ident(Ident { lexme: "c", pos: Middle, span: (25,56)->(26,56) })
+                          ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (26,56)->(27,56) })
   (nth grid (idx_of (x - 1) len)))
-  ^ ( Middle
-   ^^^ nth Middle
-       ^^^^ grid Middle
-            ^ ( Middle
-             ^^^^^^ idx_of Middle
-                    ^ ( Middle
-                     ^ x Middle
-                       ^ - Middle
-                         ^ 1 Middle
-                          ^ ) Middle
-                            ^^^ len Middle
-                               ^ ) Middle
-                                ^ ) Middle
-                                 ^ ) End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,57)->(3,57) })
+   ^^^ Ident(Ident { lexme: "nth", pos: Middle, span: (3,57)->(6,57) })
+       ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (7,57)->(11,57) })
+            ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (12,57)->(13,57) })
+             ^^^^^^ Ident(Ident { lexme: "idx_of", pos: Middle, span: (13,57)->(19,57) })
+                    ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (20,57)->(21,57) })
+                     ^ Ident(Ident { lexme: "x", pos: Middle, span: (21,57)->(22,57) })
+                       ^ Op(Op { lexme: "-", pos: Middle, span: (23,57)->(24,57) })
+                         ^ Int(Int { lexme: "1", pos: Middle, span: (25,57)->(26,57) })
+                          ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (26,57)->(27,57) })
+                            ^^^ Ident(Ident { lexme: "len", pos: Middle, span: (28,57)->(31,57) })
+                               ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (31,57)->(32,57) })
+                                ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (32,57)->(33,57) })
+                                 ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (33,57)->(34,57) })
   (nth grid x))
-  ^ ( Middle
-   ^^^ nth Middle
-       ^^^^ grid Middle
-            ^ x Middle
-             ^ ) Middle
-              ^ ) End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,58)->(3,58) })
+   ^^^ Ident(Ident { lexme: "nth", pos: Middle, span: (3,58)->(6,58) })
+       ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (7,58)->(11,58) })
+            ^ Ident(Ident { lexme: "x", pos: Middle, span: (12,58)->(13,58) })
+             ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (13,58)->(14,58) })
+              ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (14,58)->(15,58) })
   (nth grid (idx_of (x + 1) len)))
-  ^ ( Middle
-   ^^^ nth Middle
-       ^^^^ grid Middle
-            ^ ( Middle
-             ^^^^^^ idx_of Middle
-                    ^ ( Middle
-                     ^ x Middle
-                       ^ + Middle
-                         ^ 1 Middle
-                          ^ ) Middle
-                            ^^^ len Middle
-                               ^ ) Middle
-                                ^ ) Middle
-                                 ^ ) End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,59)->(3,59) })
+   ^^^ Ident(Ident { lexme: "nth", pos: Middle, span: (3,59)->(6,59) })
+       ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (7,59)->(11,59) })
+            ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (12,59)->(13,59) })
+             ^^^^^^ Ident(Ident { lexme: "idx_of", pos: Middle, span: (13,59)->(19,59) })
+                    ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (20,59)->(21,59) })
+                     ^ Ident(Ident { lexme: "x", pos: Middle, span: (21,59)->(22,59) })
+                       ^ Op(Op { lexme: "+", pos: Middle, span: (23,59)->(24,59) })
+                         ^ Int(Int { lexme: "1", pos: Middle, span: (25,59)->(26,59) })
+                          ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (26,59)->(27,59) })
+                            ^^^ Ident(Ident { lexme: "len", pos: Middle, span: (28,59)->(31,59) })
+                               ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (31,59)->(32,59) })
+                                ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (32,59)->(33,59) })
+                                 ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (33,59)->(34,59) })
   (length grid);
-  ^ ( Middle
-   ^^^^^^ length Middle
-          ^^^^ grid Middle
-              ^ ) Middle
-               ^ ; End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,60)->(3,60) })
+   ^^^^^^ Ident(Ident { lexme: "length", pos: Middle, span: (3,60)->(9,60) })
+          ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (10,60)->(14,60) })
+              ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (14,60)->(15,60) })
+               ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (15,60)->(16,60) })
 
-cell_type :: Array -> Int -> Str;
-^^^^^^^^^ cell_type Start
-          ^^ :: Middle
-             ^^^^^ Array Middle
-                   ^^ -> Middle
-                      ^^^ Int Middle
-                          ^^ -> Middle
-                             ^^^ Str Middle
-                                ^ ; End
+-- cell_type :: Array -> Int -> Str;
 cell_type grid idx =
-^^^^^^^^^ cell_type Start
-          ^^^^ grid Middle
-               ^^^ idx Middle
-                   ^ = End
+^^^^^^^^^ Ident(Ident { lexme: "cell_type", pos: Start, span: (0,63)->(9,63) })
+          ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (10,63)->(14,63) })
+               ^^^ Ident(Ident { lexme: "idx", pos: Middle, span: (15,63)->(18,63) })
+                   ^ Ctrl(Ctrl { lexme: "=", pos: End, span: (19,63)->(20,63) })
   if (next_cell grid idx)
-  ^^ if Middle
-     ^ ( Middle
-      ^^^^^^^^^ next_cell Middle
-                ^^^^ grid Middle
-                     ^^^ idx Middle
-                        ^ ) End
+  ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (2,64)->(4,64) })
+     ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (5,64)->(6,64) })
+      ^^^^^^^^^ Ident(Ident { lexme: "next_cell", pos: Middle, span: (6,64)->(15,64) })
+                ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (16,64)->(20,64) })
+                     ^^^ Ident(Ident { lexme: "idx", pos: Middle, span: (21,64)->(24,64) })
+                        ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (24,64)->(25,64) })
   then "#"
-  ^^^^ then Middle
-       ^^^ "#" End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,65)->(6,65) })
+       ^^^ Str(Str { lexme: "#", pos: End, span: (7,65)->(10,65) })
   else " ";
-  ^^^^ else Middle
-       ^^^ " " Middle
-          ^ ; End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,66)->(6,66) })
+       ^^^ Str(Str { lexme: " ", pos: Middle, span: (7,66)->(10,66) })
+          ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (10,66)->(11,66) })
 
-next_gen :: Array -> Int -> Array;
-^^^^^^^^ next_gen Start
-         ^^ :: Middle
-            ^^^^^ Array Middle
-                  ^^ -> Middle
-                     ^^^ Int Middle
-                         ^^ -> Middle
-                            ^^^^^ Array Middle
-                                 ^ ; End
+-- next_gen :: Array -> Int -> Array;
 next_gen grid idx =
-^^^^^^^^ next_gen Start
-         ^^^^ grid Middle
-              ^^^ idx Middle
-                  ^ = End
+^^^^^^^^ Ident(Ident { lexme: "next_gen", pos: Start, span: (0,69)->(8,69) })
+         ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (9,69)->(13,69) })
+              ^^^ Ident(Ident { lexme: "idx", pos: Middle, span: (14,69)->(17,69) })
+                  ^ Ctrl(Ctrl { lexme: "=", pos: End, span: (18,69)->(19,69) })
   if (idx + 1) < (length grid)
-  ^^ if Middle
-     ^ ( Middle
-      ^^^ idx Middle
-          ^ + Middle
-            ^ 1 Middle
-             ^ ) Middle
-               ^ < Middle
-                 ^ ( Middle
-                  ^^^^^^ length Middle
-                         ^^^^ grid Middle
-                             ^ ) End
+  ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (2,70)->(4,70) })
+     ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (5,70)->(6,70) })
+      ^^^ Ident(Ident { lexme: "idx", pos: Middle, span: (6,70)->(9,70) })
+          ^ Op(Op { lexme: "+", pos: Middle, span: (10,70)->(11,70) })
+            ^ Int(Int { lexme: "1", pos: Middle, span: (12,70)->(13,70) })
+             ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (13,70)->(14,70) })
+               ^ Op(Op { lexme: "<", pos: Middle, span: (15,70)->(16,70) })
+                 ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (17,70)->(18,70) })
+                  ^^^^^^ Ident(Ident { lexme: "length", pos: Middle, span: (18,70)->(24,70) })
+                         ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (25,70)->(29,70) })
+                             ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (29,70)->(30,70) })
   then (push (next_gen grid (idx + 1)) (cell_type grid idx))
-  ^^^^ then Middle
-       ^ ( Middle
-        ^^^^ push Middle
-             ^ ( Middle
-              ^^^^^^^^ next_gen Middle
-                       ^^^^ grid Middle
-                            ^ ( Middle
-                             ^^^ idx Middle
-                                 ^ + Middle
-                                   ^ 1 Middle
-                                    ^ ) Middle
-                                     ^ ) Middle
-                                       ^ ( Middle
-                                        ^^^^^^^^^ cell_type Middle
-                                                  ^^^^ grid Middle
-                                                       ^^^ idx Middle
-                                                          ^ ) Middle
-                                                           ^ ) End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,71)->(6,71) })
+       ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (7,71)->(8,71) })
+        ^^^^ Ident(Ident { lexme: "push", pos: Middle, span: (8,71)->(12,71) })
+             ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (13,71)->(14,71) })
+              ^^^^^^^^ Ident(Ident { lexme: "next_gen", pos: Middle, span: (14,71)->(22,71) })
+                       ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (23,71)->(27,71) })
+                            ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (28,71)->(29,71) })
+                             ^^^ Ident(Ident { lexme: "idx", pos: Middle, span: (29,71)->(32,71) })
+                                 ^ Op(Op { lexme: "+", pos: Middle, span: (33,71)->(34,71) })
+                                   ^ Int(Int { lexme: "1", pos: Middle, span: (35,71)->(36,71) })
+                                    ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (36,71)->(37,71) })
+                                     ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (37,71)->(38,71) })
+                                       ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (39,71)->(40,71) })
+                                        ^^^^^^^^^ Ident(Ident { lexme: "cell_type", pos: Middle, span: (40,71)->(49,71) })
+                                                  ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (50,71)->(54,71) })
+                                                       ^^^ Ident(Ident { lexme: "idx", pos: Middle, span: (55,71)->(58,71) })
+                                                          ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (58,71)->(59,71) })
+                                                           ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (59,71)->(60,71) })
   else [cell_type grid idx];
-  ^^^^ else Middle
-       ^ [ Middle
-        ^^^^^^^^^ cell_type Middle
-                  ^^^^ grid Middle
-                       ^^^ idx Middle
-                          ^ ] Middle
-                           ^ ; End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,72)->(6,72) })
+       ^ Ctrl(Ctrl { lexme: "[", pos: Middle, span: (7,72)->(8,72) })
+        ^^^^^^^^^ Ident(Ident { lexme: "cell_type", pos: Middle, span: (8,72)->(17,72) })
+                  ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (18,72)->(22,72) })
+                       ^^^ Ident(Ident { lexme: "idx", pos: Middle, span: (23,72)->(26,72) })
+                          ^ Ctrl(Ctrl { lexme: "]", pos: Middle, span: (26,72)->(27,72) })
+                           ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (27,72)->(28,72) })
 
-str_join :: Str -> Array -> Str;
-^^^^^^^^ str_join Start
-         ^^ :: Middle
-            ^^^ Str Middle
-                ^^ -> Middle
-                   ^^^^^ Array Middle
-                         ^^ -> Middle
-                            ^^^ Str Middle
-                               ^ ; End
+-- str_join :: Str -> Array -> Str;
 str_join sep arr =
-^^^^^^^^ str_join Start
-         ^^^ sep Middle
-             ^^^ arr Middle
-                 ^ = End
+^^^^^^^^ Ident(Ident { lexme: "str_join", pos: Start, span: (0,75)->(8,75) })
+         ^^^ Ident(Ident { lexme: "sep", pos: Middle, span: (9,75)->(12,75) })
+             ^^^ Ident(Ident { lexme: "arr", pos: Middle, span: (13,75)->(16,75) })
+                 ^ Ctrl(Ctrl { lexme: "=", pos: End, span: (17,75)->(18,75) })
   if (length arr) > 0
-  ^^ if Middle
-     ^ ( Middle
-      ^^^^^^ length Middle
-             ^^^ arr Middle
-                ^ ) Middle
-                  ^ > Middle
-                    ^ 0 End
+  ^^ KeyWord(KeyWord { lexme: "if", pos: Middle, span: (2,76)->(4,76) })
+     ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (5,76)->(6,76) })
+      ^^^^^^ Ident(Ident { lexme: "length", pos: Middle, span: (6,76)->(12,76) })
+             ^^^ Ident(Ident { lexme: "arr", pos: Middle, span: (13,76)->(16,76) })
+                ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (16,76)->(17,76) })
+                  ^ Op(Op { lexme: ">", pos: Middle, span: (18,76)->(19,76) })
+                    ^ Int(Int { lexme: "0", pos: End, span: (20,76)->(21,76) })
   then (str_join sep (tail arr)) + (sep + (head arr))
-  ^^^^ then Middle
-       ^ ( Middle
-        ^^^^^^^^ str_join Middle
-                 ^^^ sep Middle
-                     ^ ( Middle
-                      ^^^^ tail Middle
-                           ^^^ arr Middle
-                              ^ ) Middle
-                               ^ ) Middle
-                                 ^ + Middle
-                                   ^ ( Middle
-                                    ^^^ sep Middle
-                                        ^ + Middle
-                                          ^ ( Middle
-                                           ^^^^ head Middle
-                                                ^^^ arr Middle
-                                                   ^ ) Middle
-                                                    ^ ) End
+  ^^^^ KeyWord(KeyWord { lexme: "then", pos: Middle, span: (2,77)->(6,77) })
+       ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (7,77)->(8,77) })
+        ^^^^^^^^ Ident(Ident { lexme: "str_join", pos: Middle, span: (8,77)->(16,77) })
+                 ^^^ Ident(Ident { lexme: "sep", pos: Middle, span: (17,77)->(20,77) })
+                     ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (21,77)->(22,77) })
+                      ^^^^ Ident(Ident { lexme: "tail", pos: Middle, span: (22,77)->(26,77) })
+                           ^^^ Ident(Ident { lexme: "arr", pos: Middle, span: (27,77)->(30,77) })
+                              ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (30,77)->(31,77) })
+                               ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (31,77)->(32,77) })
+                                 ^ Op(Op { lexme: "+", pos: Middle, span: (33,77)->(34,77) })
+                                   ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (35,77)->(36,77) })
+                                    ^^^ Ident(Ident { lexme: "sep", pos: Middle, span: (36,77)->(39,77) })
+                                        ^ Op(Op { lexme: "+", pos: Middle, span: (40,77)->(41,77) })
+                                          ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (42,77)->(43,77) })
+                                           ^^^^ Ident(Ident { lexme: "head", pos: Middle, span: (43,77)->(47,77) })
+                                                ^^^ Ident(Ident { lexme: "arr", pos: Middle, span: (48,77)->(51,77) })
+                                                   ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (51,77)->(52,77) })
+                                                    ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (52,77)->(53,77) })
   else "";
-  ^^^^ else Middle
-       ^^ "" Middle
-         ^ ; End
+  ^^^^ KeyWord(KeyWord { lexme: "else", pos: Middle, span: (2,78)->(6,78) })
+       ^^ Str(Str { lexme: "", pos: Middle, span: (7,78)->(9,78) })
+         ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (9,78)->(10,78) })
 
-display :: Array -> IO;
-^^^^^^^ display Start
-        ^^ :: Middle
-           ^^^^^ Array Middle
-                 ^^ -> Middle
-                    ^^ IO Middle
-                      ^ ; End
+-- display :: Array -> IO;
 display grid = head [grid, (print (str_join "" grid) "\n")];
-^^^^^^^ display Start
-        ^^^^ grid Middle
-             ^ = Middle
-               ^^^^ head Middle
-                    ^ [ Middle
-                     ^^^^ grid Middle
-                         ^ , Middle
-                           ^ ( Middle
-                            ^^^^^ print Middle
-                                  ^ ( Middle
-                                   ^^^^^^^^ str_join Middle
-                                            ^^ "" Middle
-                                               ^^^^ grid Middle
-                                                   ^ ) Middle
-                                                     ^^^^ "\n" Middle
-                                                         ^ ) Middle
-                                                          ^ ] Middle
-                                                           ^ ; End
+^^^^^^^ Ident(Ident { lexme: "display", pos: Start, span: (0,81)->(7,81) })
+        ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (8,81)->(12,81) })
+             ^ Ctrl(Ctrl { lexme: "=", pos: Middle, span: (13,81)->(14,81) })
+               ^^^^ Ident(Ident { lexme: "head", pos: Middle, span: (15,81)->(19,81) })
+                    ^ Ctrl(Ctrl { lexme: "[", pos: Middle, span: (20,81)->(21,81) })
+                     ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (21,81)->(25,81) })
+                         ^ Ctrl(Ctrl { lexme: ",", pos: Middle, span: (25,81)->(26,81) })
+                           ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (27,81)->(28,81) })
+                            ^^^^^ Ident(Ident { lexme: "print", pos: Middle, span: (28,81)->(33,81) })
+                                  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (34,81)->(35,81) })
+                                   ^^^^^^^^ Ident(Ident { lexme: "str_join", pos: Middle, span: (35,81)->(43,81) })
+                                            ^^ Str(Str { lexme: "", pos: Middle, span: (44,81)->(46,81) })
+                                               ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (47,81)->(51,81) })
+                                                   ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (51,81)->(52,81) })
+                                                     ^^^^ Str(Str { lexme: "\n", pos: Middle, span: (53,81)->(57,81) })
+                                                         ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (57,81)->(58,81) })
+                                                          ^ Ctrl(Ctrl { lexme: "]", pos: Middle, span: (58,81)->(59,81) })
+                                                           ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (59,81)->(60,81) })
 
-run :: Array -> Array;
-^^^ run Start
-    ^^ :: Middle
-       ^^^^^ Array Middle
-             ^^ -> Middle
-                ^^^^^ Array Middle
-                     ^ ; End
+-- run :: Array -> Array;
 run grid = run (next_gen (display grid) 0);
-^^^ run Start
-    ^^^^ grid Middle
-         ^ = Middle
-           ^^^ run Middle
-               ^ ( Middle
-                ^^^^^^^^ next_gen Middle
-                         ^ ( Middle
-                          ^^^^^^^ display Middle
-                                  ^^^^ grid Middle
-                                      ^ ) Middle
-                                        ^ 0 Middle
-                                         ^ ) Middle
-                                          ^ ; End
+^^^ Ident(Ident { lexme: "run", pos: Start, span: (0,84)->(3,84) })
+    ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (4,84)->(8,84) })
+         ^ Ctrl(Ctrl { lexme: "=", pos: Middle, span: (9,84)->(10,84) })
+           ^^^ Ident(Ident { lexme: "run", pos: Middle, span: (11,84)->(14,84) })
+               ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (15,84)->(16,84) })
+                ^^^^^^^^ Ident(Ident { lexme: "next_gen", pos: Middle, span: (16,84)->(24,84) })
+                         ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (25,84)->(26,84) })
+                          ^^^^^^^ Ident(Ident { lexme: "display", pos: Middle, span: (26,84)->(33,84) })
+                                  ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (34,84)->(38,84) })
+                                      ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (38,84)->(39,84) })
+                                        ^ Int(Int { lexme: "0", pos: Middle, span: (40,84)->(41,84) })
+                                         ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (41,84)->(42,84) })
+                                          ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (42,84)->(43,84) })
 
-main = IO;
-^^^^ main Start
-     ^ = Middle
-       ^^ IO Middle
-         ^ ; End
+-- main = IO;
 main =
-^^^^ main Start
-     ^ = End
+^^^^ Ident(Ident { lexme: "main", pos: Start, span: (0,87)->(4,87) })
+     ^ Ctrl(Ctrl { lexme: "=", pos: End, span: (5,87)->(6,87) })
   -- let start = create_grid 9 " " in
   -- let starting_grid = push start "#" in
   -- let grid = display starting_grid in
   -- display <| next_gen grid 0;
   (\starting_grid ->
-  ^ ( Middle
-   ^ \ Middle
-    ^^^^^^^^^^^^^ starting_grid Middle
-                  ^^ -> End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,92)->(3,92) })
+   ^ Ctrl(Ctrl { lexme: "\\", pos: Middle, span: (3,92)->(4,92) })
+    ^^^^^^^^^^^^^ Ident(Ident { lexme: "starting_grid", pos: Middle, span: (4,92)->(17,92) })
+                  ^^ Ctrl(Ctrl { lexme: "->", pos: End, span: (18,92)->(20,92) })
   (\grid -> run grid)
-  ^ ( Middle
-   ^ \ Middle
-    ^^^^ grid Middle
-         ^^ -> Middle
-            ^^^ run Middle
-                ^^^^ grid Middle
-                    ^ ) End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,93)->(3,93) })
+   ^ Ctrl(Ctrl { lexme: "\\", pos: Middle, span: (3,93)->(4,93) })
+    ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (4,93)->(8,93) })
+         ^^ Ctrl(Ctrl { lexme: "->", pos: Middle, span: (9,93)->(11,93) })
+            ^^^ Ident(Ident { lexme: "run", pos: Middle, span: (12,93)->(15,93) })
+                ^^^^ Ident(Ident { lexme: "grid", pos: Middle, span: (16,93)->(20,93) })
+                    ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (20,93)->(21,93) })
   (display starting_grid))
-  ^ ( Middle
-   ^^^^^^^ display Middle
-           ^^^^^^^^^^^^^ starting_grid Middle
-                        ^ ) Middle
-                         ^ ) End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,94)->(3,94) })
+   ^^^^^^^ Ident(Ident { lexme: "display", pos: Middle, span: (3,94)->(10,94) })
+           ^^^^^^^^^^^^^ Ident(Ident { lexme: "starting_grid", pos: Middle, span: (11,94)->(24,94) })
+                        ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (24,94)->(25,94) })
+                         ^ Ctrl(Ctrl { lexme: ")", pos: End, span: (25,94)->(26,94) })
   (push  (create_grid 90 " ") "#");
-  ^ ( Middle
-   ^^^^ push Middle
-         ^ ( Middle
-          ^^^^^^^^^^^ create_grid Middle
-                      ^^ 90 Middle
-                         ^^^ " " Middle
-                            ^ ) Middle
-                              ^^^ "#" Middle
-                                 ^ ) Middle
-                                  ^ ; End
+  ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (2,95)->(3,95) })
+   ^^^^ Ident(Ident { lexme: "push", pos: Middle, span: (3,95)->(7,95) })
+         ^ Ctrl(Ctrl { lexme: "(", pos: Middle, span: (9,95)->(10,95) })
+          ^^^^^^^^^^^ Ident(Ident { lexme: "create_grid", pos: Middle, span: (10,95)->(21,95) })
+                      ^^ Int(Int { lexme: "90", pos: Middle, span: (22,95)->(24,95) })
+                         ^^^ Str(Str { lexme: " ", pos: Middle, span: (25,95)->(28,95) })
+                            ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (28,95)->(29,95) })
+                              ^^^ Str(Str { lexme: "#", pos: Middle, span: (30,95)->(33,95) })
+                                 ^ Ctrl(Ctrl { lexme: ")", pos: Middle, span: (33,95)->(34,95) })
+                                  ^ Ctrl(Ctrl { lexme: ";", pos: End, span: (34,95)->(35,95) })
 -- TODO: Check for function arg length ERROR.
 

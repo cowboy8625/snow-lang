@@ -15,23 +15,36 @@ macro_rules! is_expr {
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Atom {
-    Int(i32),
-    Float(String),
-    Id(String),
-    Bool(bool),
-    String(String),
-    Char(char),
+    Int(i32, Span),
+    Float(String, Span),
+    Id(String, Span),
+    Bool(bool, Span),
+    String(String, Span),
+    Char(char, Span),
+}
+
+impl Atom {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Int(_, span) => *span,
+            Self::Float(_, span) => *span,
+            Self::Id(_, span) => *span,
+            Self::Bool(_, span) => *span,
+            Self::String(_, span) => *span,
+            Self::Char(_, span) => *span,
+        }
+    }
 }
 
 impl fmt::Debug for Atom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Int(i) => write!(f, "{i:?}"),
-            Self::Float(i) => write!(f, "{i:?}"),
-            Self::Id(id) => write!(f, "{id:?}"),
-            Self::Bool(b) => write!(f, "{b:?}"),
-            Self::String(s) => write!(f, "{s:?}"),
-            Self::Char(s) => write!(f, "{s:?}"),
+            Self::Int(i, ..) => write!(f, "{i:?}"),
+            Self::Float(i, ..) => write!(f, "{i:?}"),
+            Self::Id(id, ..) => write!(f, "{id:?}"),
+            Self::Bool(b, ..) => write!(f, "{b:?}"),
+            Self::String(s, ..) => write!(f, "{s:?}"),
+            Self::Char(s, ..) => write!(f, "{s:?}"),
         }
     }
 }
@@ -39,21 +52,40 @@ impl fmt::Debug for Atom {
 impl fmt::Display for Atom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Int(i) => write!(f, "{i}"),
-            Self::Float(i) => write!(f, "{i}"),
-            Self::Id(id) => write!(f, "{id}"),
-            Self::Bool(b) => write!(f, "{b}"),
-            Self::String(s) => write!(f, "{s}"),
-            Self::Char(s) => write!(f, "{s}"),
+            Self::Int(i, ..) => write!(f, "{i}"),
+            Self::Float(i, ..) => write!(f, "{i}"),
+            Self::Id(id, ..) => write!(f, "{id}"),
+            Self::Bool(b, ..) => write!(f, "{b}"),
+            Self::String(s, ..) => write!(f, "{s}"),
+            Self::Char(s, ..) => write!(f, "{s}"),
         }
     }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
+pub struct Unary {
+    pub op: Op,
+    pub expr: Box<Expr>,
+    // pub pos: TokenPosition,
+    pub span: Span,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub struct Binary {
+    pub op: Op,
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
+    // pub pos: TokenPosition,
+    pub span: Span,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Expr {
-    Atom(Atom, Span),
-    Unary(Op, Box<Self>, Span),
-    Binary(Op, Box<Self>, Box<Self>, Span),
+    Atom(Atom),
+    Unary(Unary),
+    // Unary(Op, Box<Self>, Span),
+    Binary(Binary),
+    //Binary(Op, Box<Self>, Box<Self>, Span),
     IfElse(Box<Self>, Box<Self>, Box<Self>, Span),
     Closure(Box<Self>, Box<Self>, Span),
     Func(String, Vec<Ident>, Box<Self>, Span),
@@ -80,9 +112,9 @@ impl Expr {
 
     pub fn span(&self) -> Span {
         match self {
-            Self::Atom(.., span) => *span,
-            Self::Unary(.., span) => *span,
-            Self::Binary(.., span) => *span,
+            Self::Atom(atom) => atom.span(),
+            Self::Unary(unary) => unary.span,
+            Self::Binary(binary) => binary.span,
             Self::IfElse(.., span) => *span,
             Self::Closure(.., span) => *span,
             Self::Func(.., span) => *span,
@@ -104,8 +136,8 @@ impl Expr {
 
     pub fn is_error(&self) -> bool {
         match self {
-            Self::Unary(_, e, _) => e.is_error(),
-            Self::Binary(_, l, r, _) => l.is_error() || r.is_error(),
+            Self::Unary(unary) => unary.expr.is_error(),
+            Self::Binary(binary) => binary.left.is_error() || binary.right.is_error(),
             Self::IfElse(c, t, e, ..) => c.is_error() || t.is_error() || e.is_error(),
             Self::Closure(h, t, ..) => h.is_error() || t.is_error(),
             Self::Func(_, _, e, ..) => e.is_error(),
@@ -117,7 +149,7 @@ impl Expr {
     }
 
     pub fn is_id(&self) -> bool {
-        let Expr::Atom(Atom::Id(_), _) = self else {
+        let Expr::Atom(Atom::Id(_, _)) = self else {
             return false;
         };
         true
@@ -141,9 +173,9 @@ impl Expr {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Atom(i, ..) => write!(f, "{i}"),
-            Self::Unary(op, lhs, ..) => write!(f, "({op} {lhs})"),
-            Self::Binary(op, lhs, rhs, ..) => write!(f, "({op} {lhs} {rhs})"),
+            Self::Atom(atom) => write!(f, "{atom}"),
+            Self::Unary(unary) => write!(f, "({} {})", unary.op, unary.expr),
+            Self::Binary(b) => write!(f, "({} {} {})", b.op, b.left, b.right),
             Self::IfElse(condition, branch1, branch2, ..) => {
                 write!(f, "(if ({condition}) then {branch1} else {branch2})")
             }
@@ -215,17 +247,23 @@ impl fmt::Display for Expr {
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Atom(i, ..) => write!(f, "{i:?}"),
-            Self::Unary(op, lhs, ..) => write!(f, "({op} {lhs:?})"),
-            Self::Binary(op, lhs, rhs, ..) => write!(f, "({op} {lhs:?} {rhs:?})"),
+            Self::Atom(atom) => write!(f, "{atom:?}"),
+            Self::Unary(unary) => write!(f, "({} {:?})", unary.op, unary.expr),
+            Self::Binary(b) => write!(f, "({} {:?} {:?})", b.op, b.left, b.right),
             Self::IfElse(condition, branch1, branch2, ..) => {
                 write!(f, "(if ({condition:?}) then {branch1:?} else {branch2:?})")
             }
             Self::Closure(head, tail, ..) => {
                 write!(f, "(\\{head:?} -> {tail:?})")
             }
-            Self::Func(name, clouser, ..) => {
-                write!(f, "<{name:?}: {clouser:?}>")
+            Self::Func(name, t, clouser, ..) => {
+                let t = t.iter().fold("".to_string(), |acc, name| {
+                    if acc.is_empty() {
+                        return name.to_string();
+                    }
+                    format!("{acc} -> {name}")
+                });
+                write!(f, "<{name:?}: {t} = {clouser:?}>")
             }
             Self::App(name, args, ..) => {
                 write!(f, "<{name:?}: (")?;

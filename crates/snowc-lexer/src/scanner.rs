@@ -153,9 +153,9 @@ impl<'a> Scanner<'a> {
             '"' => self.string(),
             '\'' => self.chr(),
             '-' if self.matched('-') => self.comment(),
-            '-' if self.matched('>') => {
-                self.token("->", |lexme, pos, span| Token::Op(Op { lexme, pos, span }))
-            }
+            '-' if self.matched('>') => self.token("->", |lexme, pos, span| {
+                Token::Ctrl(Ctrl { lexme, pos, span })
+            }),
             '>' if self.matched('=') => {
                 self.token(">=", |lexme, pos, span| Token::Op(Op { lexme, pos, span }))
             }

@@ -3,7 +3,7 @@ mod error;
 mod tests;
 mod value;
 pub use error::RuntimeError;
-use snowc_parse::{Atom, Expr, Op, Span};
+use snowc_parse::{expr::Binary, Atom, Expr, Op, Span, Unary};
 use std::collections::HashMap;
 pub use value::Value;
 
@@ -12,11 +12,17 @@ type Result<T> = std::result::Result<T, RuntimeError>;
 
 fn builtin(op: Op) -> Expr {
     let span = Span::default();
-    let lhs = Expr::Atom(Atom::Id("x".into()), span);
-    let rhs = Expr::Atom(Atom::Id("y".into()), span);
-    let body = Expr::Binary(op, Box::new(lhs.clone()), Box::new(rhs.clone()), span);
-    let x = Expr::Closure(Box::new(lhs), Box::new(body), span);
-    Expr::Closure(Box::new(rhs), Box::new(x), span)
+    let left = Box::new(Expr::Atom(Atom::Id("x".into(), span)));
+    let right = Box::new(Expr::Atom(Atom::Id("y".into(), span)));
+    let binary = Binary {
+        op,
+        left: left.clone(),
+        right: right.clone(),
+        span,
+    };
+    let body = Expr::Binary(binary);
+    let x = Expr::Closure(left, Box::new(body), span);
+    Expr::Closure(right, Box::new(x), span)
 }
 
 #[derive(Debug, Clone)]
@@ -51,8 +57,9 @@ impl Default for Scope {
     }
 }
 
-fn expr_unary(op: &Op, rhs: &Expr, _span: Span, scope: &Scope) -> Result<Value> {
-    let atom = walk_expr(rhs, scope)?;
+fn expr_unary(unary: &Unary, scope: &Scope) -> Result<Value> {
+    let Unary { op, expr, .. } = unary;
+    let atom = walk_expr(expr, scope)?;
     match (op, atom) {
         (Op::Minus, Value::Int(int, span)) => Ok(Value::Int(-int, span)),
         (Op::Not, Value::Bool(b, span)) => Ok(Value::Bool(!b, span)),
@@ -60,63 +67,64 @@ fn expr_unary(op: &Op, rhs: &Expr, _span: Span, scope: &Scope) -> Result<Value> 
     }
 }
 
-fn expr_binary(
-    op: &Op,
-    lhs: &Expr,
-    rhs: &Expr,
-    span: Span,
-    scope: &Scope,
-) -> Result<Value> {
-    let lhs_atom = walk_expr(lhs, scope)?;
-    let rhs_atom = walk_expr(rhs, scope)?;
+fn expr_binary(binary: &Binary, scope: &Scope) -> Result<Value> {
+    let Binary {
+        op,
+        left,
+        right,
+        span,
+        ..
+    } = binary;
+    let lhs_atom = walk_expr(left, scope)?;
+    let rhs_atom = walk_expr(right, scope)?;
     match (op, lhs_atom, rhs_atom) {
         (Op::Plus, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs + rhs, span))
+            Ok(Value::Int(lhs + rhs, *span))
         }
         (Op::Plus, Value::String(lhs, ..), Value::String(rhs, ..)) => {
-            Ok(Value::String(format!("{lhs}{rhs}"), span))
+            Ok(Value::String(format!("{lhs}{rhs}"), *span))
         }
         (Op::Minus, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs - rhs, span))
+            Ok(Value::Int(lhs - rhs, *span))
         }
         (Op::Mult, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs * rhs, span))
+            Ok(Value::Int(lhs * rhs, *span))
         }
         (Op::Div, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs / rhs, span))
+            Ok(Value::Int(lhs / rhs, *span))
         }
         (Op::Mod, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs % rhs, span))
+            Ok(Value::Int(lhs % rhs, *span))
         }
         (Op::Grt, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs > rhs, span))
+            Ok(Value::Bool(lhs > rhs, *span))
         }
         (Op::GrtEq, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs >= rhs, span))
+            Ok(Value::Bool(lhs >= rhs, *span))
         }
         (Op::Les, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs < rhs, span))
+            Ok(Value::Bool(lhs < rhs, *span))
         }
         (Op::LesEq, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs <= rhs, span))
+            Ok(Value::Bool(lhs <= rhs, *span))
         }
         (Op::Eq, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs == rhs, span))
+            Ok(Value::Bool(lhs == rhs, *span))
         }
         (Op::Neq, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs != rhs, span))
+            Ok(Value::Bool(lhs != rhs, *span))
         }
         (Op::Eq, Value::String(lhs, ..), Value::String(rhs, ..)) => {
-            Ok(Value::Bool(lhs == rhs, span))
+            Ok(Value::Bool(lhs == rhs, *span))
         }
         (Op::Neq, Value::String(lhs, ..), Value::String(rhs, ..)) => {
-            Ok(Value::Bool(lhs != rhs, span))
+            Ok(Value::Bool(lhs != rhs, *span))
         }
         (Op::And, Value::Bool(lhs, ..), Value::Bool(rhs, ..)) => {
-            Ok(Value::Bool(lhs && rhs, span))
+            Ok(Value::Bool(lhs && rhs, *span))
         }
         (Op::Or, Value::Bool(lhs, ..), Value::Bool(rhs, ..)) => {
-            Ok(Value::Bool(lhs || rhs, span))
+            Ok(Value::Bool(lhs || rhs, *span))
         }
         (op, r, l) => unimplemented!("{l:?} {op:?} {r:?}"),
     }
@@ -144,7 +152,7 @@ fn expr_closure_with_args(
     let Some(arg) = args.first() else {
         unimplemented!("not sure what to do here");
     };
-    let Expr::Atom(Atom::Id(name), span) = head else {
+    let Expr::Atom(Atom::Id(name, span)) = head else {
         unimplemented!("shouldnt get here i think?");
     };
     let mut scope = scope.clone();
@@ -156,7 +164,7 @@ fn expr_closure_with_args(
 }
 
 fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Value> {
-    let Expr::Atom(Atom::Id(name), span) = name else {
+    let Expr::Atom(Atom::Id(name, span)) = name else {
         let (Some(head), Some(tail)) = (name.get_head(), name.get_tail()) else {
             let Expr::App(name, args, span) = name else {
                 return Err(RuntimeError::InvalidArguments(span));
@@ -266,21 +274,21 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
             };
             let mut scope = scope.clone();
             for arg in args.iter() {
-                let Some(Expr::Atom(Atom::Id(name), ..)) = func.get_head() else {
+                let Some(Expr::Atom(Atom::Id(name, ..))) = func.get_head() else {
                     continue;
                 };
                 let value = walk_expr(&arg.clone(), &scope)?;
                 fn into_expr(v: &Value) -> Expr {
                     match v {
-                        Value::Int(i, span) => Expr::Atom(Atom::Int(*i), *span),
+                        Value::Int(i, span) => Expr::Atom(Atom::Int(*i, *span)),
                         Value::Float(i, span) => {
-                            Expr::Atom(Atom::Float(i.clone()), *span)
+                            Expr::Atom(Atom::Float(i.clone(), *span))
                         }
-                        Value::Bool(i, span) => Expr::Atom(Atom::Bool(*i), *span),
+                        Value::Bool(i, span) => Expr::Atom(Atom::Bool(*i, *span)),
                         Value::String(i, span) => {
-                            Expr::Atom(Atom::String(i.clone()), *span)
+                            Expr::Atom(Atom::String(i.clone(), *span))
                         }
-                        Value::Char(i, span) => Expr::Atom(Atom::Char(*i), *span),
+                        Value::Char(i, span) => Expr::Atom(Atom::Char(*i, *span)),
                         Value::Array(array, span) => {
                             let array = array.iter().map(into_expr).collect();
                             Expr::Array(array, *span)
@@ -304,27 +312,27 @@ fn expr_closure(head: &Expr, tail: &Expr, scope: &Scope) -> Result<Value> {
     walk_expr(tail, scope)
 }
 
-fn walk_atom(atom: &Atom, span: Span, scope: &Scope) -> Result<Value> {
+fn walk_atom(atom: &Atom, scope: &Scope) -> Result<Value> {
     match atom {
-        Atom::Id(name) => {
+        Atom::Id(name, span) => {
             let Some(expr) = scope.get(name) else {
-                return Err(RuntimeError::Undefined(name.into(), span));
+                return Err(RuntimeError::Undefined(name.into(), *span));
             };
             walk_expr(expr, scope)
         }
-        Atom::Int(i) => Ok(Value::Int(*i, span)),
-        Atom::Float(f) => Ok(Value::Float(f.clone(), span)),
-        Atom::Bool(b) => Ok(Value::Bool(*b, span)),
-        Atom::String(string) => Ok(Value::String(string.clone(), span)),
-        Atom::Char(c) => Ok(Value::Char(*c, span)),
+        Atom::Int(i, span) => Ok(Value::Int(*i, *span)),
+        Atom::Float(f, span) => Ok(Value::Float(f.clone(), *span)),
+        Atom::Bool(b, span) => Ok(Value::Bool(*b, *span)),
+        Atom::String(string, span) => Ok(Value::String(string.clone(), *span)),
+        Atom::Char(c, span) => Ok(Value::Char(*c, *span)),
     }
 }
 
 fn walk_expr(expr: &Expr, scope: &Scope) -> Result<Value> {
     match expr {
-        Expr::Atom(atom, span) => walk_atom(atom, *span, scope),
-        Expr::Unary(op, rhs, span) => expr_unary(op, rhs, *span, scope),
-        Expr::Binary(op, lhs, rhs, span) => expr_binary(op, lhs, rhs, *span, scope),
+        Expr::Atom(atom) => walk_atom(atom, scope),
+        Expr::Unary(unary) => expr_unary(unary, scope),
+        Expr::Binary(binary) => expr_binary(binary, scope),
         Expr::IfElse(condition, then, r#else, ..) => {
             expr_conditional(condition, then, r#else, scope)
         }
@@ -374,7 +382,7 @@ pub fn walk(ast: &[Expr]) -> std::result::Result<Option<Value>, Vec<RuntimeError
     }
     let main_function = &ast[idx];
     let Expr::Func(_, _, closure, ..) = main_function else {
-        panic!("really bad things are happening");
+        panic!("maybe you added a new prameter to Expr::Func?");
     };
     match walk_expr(closure, &scope) {
         Ok(v) => Ok(Some(v)),

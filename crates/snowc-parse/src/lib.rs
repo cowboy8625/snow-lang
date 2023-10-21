@@ -2,7 +2,7 @@ pub mod error;
 pub mod expr;
 pub mod op;
 pub mod parser;
-pub use expr::{Atom, Expr};
+pub use expr::{Atom, Expr, Unary};
 pub use op::Op;
 
 #[cfg(test)]
