@@ -1,3 +1,5 @@
+use crate::TypeInfo;
+
 use super::expr::{App, Atom, Binary, Expr, Unary};
 use super::op::Op as Oper;
 use super::op::Op::*;
@@ -27,7 +29,7 @@ fn function(tokens: &mut Vec<Token>) -> Option<Expr> {
     };
     tokens.remove(0);
     let args = get_function_args(tokens);
-    let typed = get_function_type(tokens);
+    let typed = get_function_type_info(tokens);
     consume_ctrl(tokens, "=");
     let body = get_block(tokens);
     let end = body.span();
@@ -37,7 +39,7 @@ fn function(tokens: &mut Vec<Token>) -> Option<Expr> {
 }
 
 fn get_block(tokens: &mut Vec<Token>) -> Expr {
-    if_expression(tokens)
+    expression(tokens)
 }
 
 fn create_closures(args: Vec<Expr>, body: Expr) -> Expr {
@@ -60,7 +62,7 @@ fn get_function_args(tokens: &mut Vec<Token>) -> Vec<Expr> {
     args
 }
 
-fn get_function_type(tokens: &mut Vec<Token>) -> Vec<Ident> {
+fn get_function_type_info(tokens: &mut Vec<Token>) -> Vec<TypeInfo> {
     let mut types = Vec::new();
     if consume_ctrl_if(tokens, ":").is_none() {
         return types;
@@ -70,7 +72,19 @@ fn get_function_type(tokens: &mut Vec<Token>) -> Vec<Ident> {
         let Some(Token::Ident(ident)) = tokens.get(0).cloned() else {
             break;
         };
-        types.push(ident);
+
+        if matches!(tokens.get(1), Some(Token::Op(Op{lexme, ..})) if lexme == "<" && ident.lexme == "Array" )
+        {
+            tokens.remove(0);
+            tokens.remove(0);
+            let Token::Ident(ident) = tokens.remove(0) else {
+                panic!("expected array type");
+            };
+            types.push(TypeInfo::Array(Box::new(TypeInfo::from(ident))));
+            consume_op(tokens, ">");
+            continue;
+        }
+        types.push(TypeInfo::from(ident));
         tokens.remove(0);
         if consume_ctrl_if(tokens, "->").is_none() {
             break;
@@ -81,7 +95,7 @@ fn get_function_type(tokens: &mut Vec<Token>) -> Vec<Ident> {
 
 fn if_expression(tokens: &mut Vec<Token>) -> Expr {
     let Some(Token::KeyWord(KeyWord{span: start, ..})) = consume_keyword_if(tokens, "if") else {
-        return expression(tokens);
+        return equality(tokens);
     };
     let condition = expression(tokens);
     consume_keyword(tokens, "then");
@@ -98,7 +112,10 @@ fn if_expression(tokens: &mut Vec<Token>) -> Expr {
 }
 
 fn expression(tokens: &mut Vec<Token>) -> Expr {
-    equality(tokens)
+    match tokens.get(0) {
+        Some(Token::KeyWord(kw)) if kw.lexme == "if" => if_expression(tokens),
+        _ => equality(tokens),
+    }
 }
 
 fn equality(tokens: &mut Vec<Token>) -> Expr {
@@ -271,18 +288,36 @@ fn primary(tokens: &mut Vec<Token>) -> Expr {
             c.span,
         )),
         Token::Ctrl(c) if c.lexme == "(" => {
-            let expr = if_expression(tokens);
+            let expr = expression(tokens);
             let Some(Token::Ctrl(Ctrl{pos, ..})) = consume_ctrl_if(tokens, ")") else {
                 panic!("expected ')' but got {:?}", tokens.get(0));
             };
             expr.map_position(|_| pos)
         }
+        Token::Ctrl(c) if c.lexme == "[" => array(tokens, c.span),
         _ => unreachable!(
             "unexpected token current: {token:?}\nNEXT1: {:?}\nNEXT2: {:?}",
             tokens.get(0),
             tokens.get(1)
         ),
     }
+}
+
+fn array(tokens: &mut Vec<Token>, start: Span) -> Expr {
+    let mut exprs = Vec::new();
+    while !tokens.is_empty() {
+        if matches!(tokens.get(0), Some(Token::Ctrl(Ctrl{lexme, ..})) if lexme == "]") {
+            break;
+        }
+        let expr = expression(tokens);
+        exprs.push(expr);
+        consume_ctrl_if(tokens, ",");
+    }
+    let Some(Token::Ctrl(Ctrl{span: end, ..})) = consume_ctrl_if(tokens, "]") else {
+        panic!("expected ']' but got {:?}", tokens.get(0));
+    };
+    let span = Span::from((start, end));
+    Expr::Array(exprs, span)
 }
 
 fn is_atom(token: Option<&Token>) -> bool {
@@ -301,7 +336,7 @@ fn is_atom(token: Option<&Token>) -> bool {
     };
 
     match lexme {
-        "true" | "false" | "(" => true,
+        "true" | "false" | "(" | "[" => true,
         _ => false,
     }
 }
@@ -332,6 +367,21 @@ fn consume_ctrl_if(tokens: &mut Vec<Token>, expected: &str) -> Option<Token> {
     return Some(tokens.remove(0));
 }
 
+fn consume_op(tokens: &mut Vec<Token>, expected: &str) {
+    let token = tokens.remove(0);
+    if matches!(&token, Token::Op(Op{lexme, ..}) if lexme != expected) {
+        panic!("expected {expected:?} but got {:?}", token);
+    }
+}
+
+fn consume_op_if(tokens: &mut Vec<Token>, expected: &str) -> Option<Token> {
+    let token = tokens.get(0);
+    if !matches!(&token, Some(Token::Op(Op{lexme, ..})) if lexme == expected) {
+        return None;
+    }
+    return Some(tokens.remove(0));
+}
+
 fn consume_keyword(tokens: &mut Vec<Token>, expected: &str) {
     let token = tokens.remove(0);
     if matches!(&token, Token::KeyWord(KeyWord{lexme, ..}) if lexme != expected) {
@@ -351,15 +401,15 @@ fn is_deliminator(pos1: TokenPosition, pos2: TokenPosition) -> bool {
     matches!((pos1, pos2), (TokenPosition::End, TokenPosition::Start))
 }
 
-// #[test]
-// fn parse_test() {
-//     use pretty_assertions::assert_eq;
-//     let src = include_str!("./../../../samples/std.snow");
-//     let ast = parse(src);
-//     let left = ast
-//         .unwrap_or_default()
-//         .iter()
-//         .map(ToString::to_string)
-//         .collect::<Vec<_>>();
-//     assert_eq!(left, vec!["<add: (\\x -> (\\y -> (+ x y)))>"]);
-// }
+#[test]
+fn parse_test() {
+    use pretty_assertions::assert_eq;
+    let src = include_str!("./../../../samples/std.snow");
+    let ast = parse(src);
+    let left = ast
+        .unwrap_or_default()
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    assert_eq!(left, vec!["<add: (\\x -> (\\y -> (+ x y)))>"]);
+}

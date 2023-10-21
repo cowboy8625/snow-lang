@@ -97,6 +97,44 @@ pub struct App {
     pub span: Span,
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum TypeInfo {
+    Int,
+    Float,
+    Bool,
+    String,
+    Char,
+    Array(Box<Self>),
+    Custom(String),
+}
+
+impl From<Ident> for TypeInfo {
+    fn from(ident: Ident) -> Self {
+        match ident.lexme.as_str() {
+            "Int" => Self::Int,
+            "Float" => Self::Float,
+            "Bool" => Self::Bool,
+            "String" => Self::String,
+            "Char" => Self::Char,
+            name => Self::Custom(name.to_string()),
+        }
+    }
+}
+
+impl fmt::Display for TypeInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Int => write!(f, "Int"),
+            Self::Float => write!(f, "Float"),
+            Self::Bool => write!(f, "Bool"),
+            Self::String => write!(f, "String"),
+            Self::Char => write!(f, "Char"),
+            Self::Array(type_info) => write!(f, "Array<{type_info}>"),
+            Self::Custom(name) => write!(f, "{name}"),
+        }
+    }
+}
+
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Expr {
     // App(Box<Self>, Vec<Self>, Span),
@@ -107,7 +145,7 @@ pub enum Expr {
     Closure(Box<Self>, Box<Self>, Span),
     Enum(String, Vec<(String, Vec<String>)>, Span),
     Error(Span),
-    Func(String, Vec<Ident>, Box<Self>, Span),
+    Func(String, Vec<TypeInfo>, Box<Self>, Span),
     IfElse(Box<Self>, Box<Self>, Box<Self>, Span),
     Unary(Unary),
 }

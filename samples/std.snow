@@ -44,6 +44,7 @@
 --   : Char -> Bool
 --   = c >= '0' and c <= '9'
 
+
 max x y
   : Int -> Int -> Int
   = if x > y then x else y
@@ -56,5 +57,9 @@ clamp low high input
   : Int -> Int -> Int -> Int
   = max low (min input high)
 
-main : IO = print (clamp 10 15 1500)
+-- Arrays
+myArray : Array<Int> = [1, 2, 3, 4, 5]
+
+main : IO = print (myArray) "\n"
+-- main : IO = print (clamp 1 10 5)
 
