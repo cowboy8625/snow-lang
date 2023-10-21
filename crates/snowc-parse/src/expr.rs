@@ -1,5 +1,4 @@
-use super::Span;
-use super::{Ident, Op};
+use super::{Ident, Op, Span, TokenPosition};
 use std::fmt;
 
 macro_rules! is_expr {
@@ -15,23 +14,34 @@ macro_rules! is_expr {
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Atom {
-    Int(i32, Span),
-    Float(String, Span),
-    Id(String, Span),
-    Bool(bool, Span),
-    String(String, Span),
-    Char(char, Span),
+    Int(i32, TokenPosition, Span),
+    Float(String, TokenPosition, Span),
+    Id(String, TokenPosition, Span),
+    Bool(bool, TokenPosition, Span),
+    String(String, TokenPosition, Span),
+    Char(char, TokenPosition, Span),
 }
 
 impl Atom {
     pub fn span(&self) -> Span {
         match self {
-            Self::Int(_, span) => *span,
-            Self::Float(_, span) => *span,
-            Self::Id(_, span) => *span,
-            Self::Bool(_, span) => *span,
-            Self::String(_, span) => *span,
-            Self::Char(_, span) => *span,
+            Self::Int(_, _, span) => *span,
+            Self::Float(_, _, span) => *span,
+            Self::Id(_, _, span) => *span,
+            Self::Bool(_, _, span) => *span,
+            Self::String(_, _, span) => *span,
+            Self::Char(_, _, span) => *span,
+        }
+    }
+
+    pub fn position(&self) -> TokenPosition {
+        match self {
+            Self::Int(_, pos, ..) => *pos,
+            Self::Float(_, pos, ..) => *pos,
+            Self::Id(_, pos, ..) => *pos,
+            Self::Bool(_, pos, ..) => *pos,
+            Self::String(_, pos, ..) => *pos,
+            Self::Char(_, pos, ..) => *pos,
         }
     }
 }
@@ -66,7 +76,7 @@ impl fmt::Display for Atom {
 pub struct Unary {
     pub op: Op,
     pub expr: Box<Expr>,
-    // pub pos: TokenPosition,
+    pub pos: TokenPosition,
     pub span: Span,
 }
 
@@ -75,38 +85,87 @@ pub struct Binary {
     pub op: Op,
     pub left: Box<Expr>,
     pub right: Box<Expr>,
-    // pub pos: TokenPosition,
+    pub pos: TokenPosition,
+    pub span: Span,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub struct App {
+    pub name: Box<Expr>,
+    pub args: Vec<Expr>,
+    pub pos: TokenPosition,
     pub span: Span,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Expr {
-    Atom(Atom),
-    Unary(Unary),
-    // Unary(Op, Box<Self>, Span),
-    Binary(Binary),
-    //Binary(Op, Box<Self>, Box<Self>, Span),
-    IfElse(Box<Self>, Box<Self>, Box<Self>, Span),
-    Closure(Box<Self>, Box<Self>, Span),
-    Func(String, Vec<Ident>, Box<Self>, Span),
-    App(Box<Self>, Vec<Self>, Span),
+    // App(Box<Self>, Vec<Self>, Span),
+    App(App),
     Array(Vec<Self>, Span),
+    Atom(Atom),
+    Binary(Binary),
+    Closure(Box<Self>, Box<Self>, Span),
     Enum(String, Vec<(String, Vec<String>)>, Span),
     Error(Span),
+    Func(String, Vec<Ident>, Box<Self>, Span),
+    IfElse(Box<Self>, Box<Self>, Box<Self>, Span),
+    Unary(Unary),
 }
 
 impl Expr {
-    pub fn and_then<F: FnOnce(Self) -> Self>(self, op: F) -> Self {
+    pub fn map_position(self, f: impl Fn(TokenPosition) -> TokenPosition) -> Self {
         match self {
-            expr @ Self::Error(..) => expr,
-            expr => op(expr),
-        }
-    }
-
-    pub fn or_else<F: FnOnce(Self) -> Self>(self, op: F) -> Self {
-        match self {
-            expr @ Self::Error(..) => op(expr),
-            expr => expr,
+            Self::Atom(atom) => Self::Atom(match atom {
+                Atom::Int(i, pos, span) => Atom::Int(i, f(pos), span),
+                Atom::Float(i, pos, span) => Atom::Float(i, f(pos), span),
+                Atom::Id(i, pos, span) => Atom::Id(i, f(pos), span),
+                Atom::Bool(i, pos, span) => Atom::Bool(i, f(pos), span),
+                Atom::String(i, pos, span) => Atom::String(i, f(pos), span),
+                Atom::Char(i, pos, span) => Atom::Char(i, f(pos), span),
+            }),
+            Self::Unary(Unary {
+                op,
+                expr,
+                pos,
+                span,
+            }) => Self::Unary(Unary {
+                op,
+                expr,
+                pos: f(pos),
+                span,
+            }),
+            Self::Binary(Binary {
+                op,
+                left,
+                right,
+                pos,
+                span,
+            }) => Self::Binary(Binary {
+                op,
+                left,
+                right,
+                pos: f(pos),
+                span,
+            }),
+            Self::IfElse(cond, then, r#else, span) => {
+                Self::IfElse(cond, then, r#else, span)
+            }
+            Self::Closure(head, tail, span) => Self::Closure(head, tail, span),
+            Self::Func(name, args, body, span) => Self::Func(name, args, body, span),
+            Self::App(App {
+                name,
+                args,
+                pos,
+                span,
+            }) => Self::App(App {
+                name,
+                args,
+                pos: f(pos),
+                span,
+            }),
+            Self::Array(array, span) => Self::Array(array, span),
+            Self::Enum(name, variants, span) => Self::Enum(name, variants, span),
+            Self::Error(span) => Self::Error(span),
         }
     }
 
@@ -118,7 +177,7 @@ impl Expr {
             Self::IfElse(.., span) => *span,
             Self::Closure(.., span) => *span,
             Self::Func(.., span) => *span,
-            Self::App(.., span) => *span,
+            Self::App(app) => app.span,
             Self::Array(.., span) => *span,
             Self::Enum(.., span) => *span,
             Self::Error(span) => *span,
@@ -141,7 +200,7 @@ impl Expr {
             Self::IfElse(c, t, e, ..) => c.is_error() || t.is_error() || e.is_error(),
             Self::Closure(h, t, ..) => h.is_error() || t.is_error(),
             Self::Func(_, _, e, ..) => e.is_error(),
-            Self::App(e, ..) => e.is_error(),
+            Self::App(app) => app.name.is_error(),
             Self::Array(array, ..) => array.iter().any(|e| e.is_error()),
             Self::Error(..) => true,
             _ => false,
@@ -149,7 +208,7 @@ impl Expr {
     }
 
     pub fn is_id(&self) -> bool {
-        let Expr::Atom(Atom::Id(_, _)) = self else {
+        let Expr::Atom(Atom::Id(..)) = self else {
             return false;
         };
         true
@@ -166,6 +225,16 @@ impl Expr {
         match self {
             Expr::Closure(_, ref tail, ..) => Some(tail),
             _ => None,
+        }
+    }
+
+    pub fn position(&self) -> TokenPosition {
+        match self {
+            Self::Atom(atom) => atom.position(),
+            Self::Unary(unary) => unary.pos,
+            Self::Binary(binary) => binary.pos,
+            Self::App(app) => app.pos,
+            _ => unimplemented!("for {self:?}"),
         }
     }
 }
@@ -191,11 +260,11 @@ impl fmt::Display for Expr {
                 });
                 write!(f, "<{name}: {t} = {clouser}>")
             }
-            Self::App(name, args, ..) => {
-                write!(f, "<{name}: (")?;
-                for (i, arg) in args.iter().enumerate() {
+            Self::App(app) => {
+                write!(f, "<{}: (", app.name)?;
+                for (i, arg) in app.args.iter().enumerate() {
                     write!(f, "{arg}")?;
-                    if i < args.len() - 1 {
+                    if i < app.args.len() - 1 {
                         write!(f, ", ")?;
                     }
                 }
@@ -265,7 +334,7 @@ impl fmt::Debug for Expr {
                 });
                 write!(f, "<{name:?}: {t} = {clouser:?}>")
             }
-            Self::App(name, args, ..) => {
+            Self::App(App { name, args, .. }) => {
                 write!(f, "<{name:?}: (")?;
                 for (i, arg) in args.iter().enumerate() {
                     write!(f, "{arg:?}")?;

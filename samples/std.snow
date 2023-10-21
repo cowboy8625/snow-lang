@@ -1,7 +1,27 @@
+-- This file is use to test and see if the grammar is working
+-- and to experemt with new language syntaxes
+
+-- Names of snow tools
+-- snow men     -> maybe package manager
+-- snow storm   -> maybe package manager
+-- snow flake   -> debugger
+
+-- enum Result ok err = Ok ok | Err err
+--
+-- Result.mapOk Ok(x) f = Ok (f x)
+-- Result.mapOk Err(x) f = Err x
+--
+--
 -- enum Option a = Some a | None
--- Option.map f = match self on
---   | Some x -> Some (f x)
---   | None -> None
+--
+-- Option.map Some 0 f = Some (0)
+-- Option.map Some x f = Some (f x)
+-- Option.map None f = None
+--
+-- print <| Option.map (foo 10) λx -> x + 1
+-- Some 11
+
+-- foo x = Some x
 
 -- enum Bool = True | False
 
@@ -20,6 +40,10 @@
 -- `<` :> a -> a -> Bool
 -- `<` x y = core::less x y Bool::True Bool::False
 
+-- is_digit c
+--   : Char -> Bool
+--   = c >= '0' and c <= '9'
+
 max x y
   : Int -> Int -> Int
   = if x > y then x else y
@@ -28,10 +52,9 @@ min x y
  : Int -> Int -> Int
  = if x < y then x else y
 
-clamp input low high
+clamp low high input
   : Int -> Int -> Int -> Int
   = max low (min input high)
 
-is_digit c
-  : Char -> Bool
-  = c >= '0' && c <= '9'
+main : IO = print (clamp 10 15 1500)
+

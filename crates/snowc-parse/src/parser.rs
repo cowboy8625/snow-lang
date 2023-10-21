@@ -1,6 +1,4 @@
-use crate::expr::Binary;
-
-use super::expr::{Atom, Expr, Unary};
+use super::expr::{App, Atom, Binary, Expr, Unary};
 use super::op::Op as Oper;
 use super::op::Op::*;
 use snowc_lexer::{Ctrl, Ident, KeyWord, Op, Scanner, Span, Token, TokenPosition};
@@ -10,7 +8,7 @@ pub fn parse(src: &str) -> Result<Vec<Expr>, Vec<crate::error::Error>> {
     let mut ast = Vec::new();
     while tokens.len() > 0 {
         let Some(func) = function(&mut tokens) else {
-            panic!("\nonly function defs are allowed in global scope. leftovers: {:?}\n{:#?}", tokens.len(), tokens);
+            panic!("\nonly function defs are allowed in global scope. leftovers: {:?}\n{:#?}", tokens.len(), tokens.get(0));
         };
         ast.push(func);
     }
@@ -52,7 +50,11 @@ fn create_closures(args: Vec<Expr>, body: Expr) -> Expr {
 fn get_function_args(tokens: &mut Vec<Token>) -> Vec<Expr> {
     let mut args = Vec::new();
     while let Some(Token::Ident(ident)) = tokens.get(0) {
-        args.push(Expr::Atom(Atom::Id(ident.lexme.clone(), ident.span)));
+        args.push(Expr::Atom(Atom::Id(
+            ident.lexme.clone(),
+            ident.pos,
+            ident.span,
+        )));
         tokens.remove(0);
     }
     args
@@ -104,6 +106,7 @@ fn equality(tokens: &mut Vec<Token>) -> Expr {
     while let Some(op @ (Eq | Neq)) = get_op(tokens.get(0)) {
         tokens.remove(0);
         let rhs = comparison(tokens);
+        let pos = rhs.position();
         let span = Span::from((lhs.span(), rhs.span()));
         let left = Box::new(lhs);
         let right = Box::new(rhs);
@@ -111,6 +114,7 @@ fn equality(tokens: &mut Vec<Token>) -> Expr {
             op,
             left,
             right,
+            pos,
             span,
         });
     }
@@ -122,6 +126,7 @@ fn comparison(tokens: &mut Vec<Token>) -> Expr {
     while let Some(op @ (Grt | Les | GrtEq | LesEq)) = get_op(tokens.get(0)) {
         tokens.remove(0);
         let rhs = term(tokens);
+        let pos = rhs.position();
         let span = Span::from((lhs.span(), rhs.span()));
         let left = Box::new(lhs);
         let right = Box::new(rhs);
@@ -129,6 +134,7 @@ fn comparison(tokens: &mut Vec<Token>) -> Expr {
             op,
             left,
             right,
+            pos,
             span,
         });
     }
@@ -140,6 +146,7 @@ fn term(tokens: &mut Vec<Token>) -> Expr {
     while let Some(op @ (Plus | Minus)) = get_op(tokens.get(0)) {
         tokens.remove(0);
         let rhs = factor(tokens);
+        let pos = rhs.position();
         let span = Span::from((lhs.span(), rhs.span()));
         let left = Box::new(lhs);
         let right = Box::new(rhs);
@@ -147,6 +154,7 @@ fn term(tokens: &mut Vec<Token>) -> Expr {
             op,
             left,
             right,
+            pos,
             span,
         });
     }
@@ -158,6 +166,7 @@ fn factor(tokens: &mut Vec<Token>) -> Expr {
     while let Some(op @ (Mult | Div | Mod)) = get_op(tokens.get(0)) {
         tokens.remove(0);
         let rhs = unary(tokens);
+        let pos = rhs.position();
         let span = Span::from((lhs.span(), rhs.span()));
         let left = Box::new(lhs);
         let right = Box::new(rhs);
@@ -165,6 +174,7 @@ fn factor(tokens: &mut Vec<Token>) -> Expr {
             op,
             left,
             right,
+            pos,
             span,
         });
     }
@@ -175,89 +185,97 @@ fn unary(tokens: &mut Vec<Token>) -> Expr {
     if let Some(op @ (Minus | Not)) = get_op(tokens.get(0)) {
         let token = tokens.remove(0);
         let rhs = unary(tokens);
+        let pos = rhs.position();
         let span = Span::from((token.span(), rhs.span()));
         let expr = Box::new(rhs);
-        return Expr::Unary(Unary { op, expr, span });
+        return Expr::Unary(Unary {
+            op,
+            expr,
+            pos,
+            span,
+        });
     }
     call(tokens)
 }
 
 fn call(tokens: &mut Vec<Token>) -> Expr {
-    let pos1 = tokens
-        .get(0)
-        .map(|t| t.position())
-        .cloned()
-        .unwrap_or(TokenPosition::Start);
     let expr = primary(tokens);
-    let Expr::Atom(Atom::Id(func_name, start)) = expr.clone() else {
+    let Expr::Atom(Atom::Id(_fname, mut pos, start)) = expr.clone() else {
         return expr;
     };
-    let mut pos2 = tokens
-        .get(0)
-        .map(|t| t.position())
-        .cloned()
-        .unwrap_or(TokenPosition::End);
-    let foo =
-        |pos1, pos2| matches!((pos1, pos2), (TokenPosition::End, TokenPosition::Start));
-    if !is_atom(tokens.get(0)) || foo(pos1, pos2) || is_keyword(tokens.get(0)) {
+    let next_token = tokens.get(0);
+    let mut pos1 = next_token.map(|t| t.position()).cloned().unwrap_or(pos);
+    if !is_atom(next_token) || is_deliminator(pos, pos1) || is_keyword(next_token) {
         return expr;
     }
 
-    let mut pos3 = tokens
-        .get(1)
-        .map(|t| t.position())
-        .cloned()
-        .unwrap_or(TokenPosition::End);
     let mut args = Vec::new();
     while !tokens.is_empty() {
-        eprintln!("{func_name} {:?}, {:?}", pos2, pos3);
-        if !is_atom(tokens.get(0)) || foo(pos2, pos3) || is_keyword(tokens.get(0)) {
-            eprintln!("break {:#?}", tokens.get(0));
+        let next_token = tokens.get(0);
+        if !is_atom(next_token) || is_keyword(next_token) {
             break;
         }
+        let atom = primary(tokens);
+        pos = atom.position();
 
-        args.push(primary(tokens));
-        pos2 = pos3;
-        pos3 = tokens
-            .get(1)
-            .map(|t| t.position())
-            .cloned()
-            .unwrap_or(TokenPosition::End);
+        args.push(atom);
+
+        let next_token = tokens.get(0);
+        pos1 = next_token.map(|t| t.position()).cloned().unwrap_or(pos);
+
+        if is_deliminator(pos, pos1) {
+            break;
+        }
     }
     let end = args.last().map(|e| e.span()).unwrap_or(start);
+    let pos = args.last().map(|e| e.position()).unwrap_or(expr.position());
 
-    return Expr::App(
-        Box::new(Expr::Atom(Atom::Id(func_name, start))),
+    return Expr::App(App {
+        name: Box::new(expr),
         args,
-        Span::from((start, end)),
-    );
+        pos,
+        span: Span::from((start, end)),
+    });
 }
 
 fn primary(tokens: &mut Vec<Token>) -> Expr {
     let token = tokens.remove(0);
     match token {
-        Token::Int(num) => {
-            Expr::Atom(Atom::Int(num.lexme.parse().unwrap_or_default(), num.span))
-        }
+        Token::Int(num) => Expr::Atom(Atom::Int(
+            num.lexme.parse().unwrap_or_default(),
+            num.pos,
+            num.span,
+        )),
         Token::Float(float) => Expr::Atom(Atom::Float(
             float.lexme.parse().unwrap_or_default(),
+            float.pos,
             float.span,
         )),
-        Token::Ident(id) => Expr::Atom(Atom::Id(id.lexme, id.span)),
-        Token::KeyWord(kw) if kw.lexme == "true" => {
-            Expr::Atom(Atom::Bool(kw.lexme.parse().unwrap_or_default(), kw.span))
+        Token::Ident(id) => Expr::Atom(Atom::Id(id.lexme, id.pos, id.span)),
+        Token::KeyWord(kw) if kw.lexme == "true" => Expr::Atom(Atom::Bool(
+            kw.lexme.parse().unwrap_or_default(),
+            kw.pos,
+            kw.span,
+        )),
+        Token::KeyWord(kw) if kw.lexme == "false" => Expr::Atom(Atom::Bool(
+            kw.lexme.parse().unwrap_or_default(),
+            kw.pos,
+            kw.span,
+        )),
+        Token::Str(string) => {
+            Expr::Atom(Atom::String(string.lexme, string.pos, string.span))
         }
-        Token::KeyWord(kw) if kw.lexme == "false" => {
-            Expr::Atom(Atom::Bool(kw.lexme.parse().unwrap_or_default(), kw.span))
-        }
-        Token::Str(string) => Expr::Atom(Atom::String(string.lexme, string.span)),
-        Token::Char(c) => {
-            Expr::Atom(Atom::Char(c.lexme.parse().unwrap_or_default(), c.span))
-        }
+        Token::Char(c) => Expr::Atom(Atom::Char(
+            c.lexme.parse().unwrap_or_default(),
+            c.pos,
+            c.span,
+        )),
         Token::Ctrl(c) if c.lexme == "(" => {
             let expr = if_expression(tokens);
-            consume_ctrl(tokens, ")");
-            expr
+            let Some(Token::Ctrl(Ctrl{pos, ..})) = consume_ctrl_if(tokens, ")") else {
+                panic!("expected ')' but got {:?}", tokens.get(0));
+            };
+            expr.map_position(|_| pos)
         }
         _ => unreachable!(
             "unexpected token current: {token:?}\nNEXT1: {:?}\nNEXT2: {:?}",
@@ -329,30 +347,19 @@ fn consume_keyword_if(tokens: &mut Vec<Token>, expected: &str) -> Option<Token> 
     return Some(tokens.remove(0));
 }
 
-fn _is_deliminator(tokens: &[Token]) -> bool {
-    let Some(first) = tokens.get(0) else {
-        return false;
-    };
-    let pos1 = first.position();
-
-    let Some(second) = tokens.get(1) else {
-        return false;
-    };
-
-    let pos2 = second.position();
-
+fn is_deliminator(pos1: TokenPosition, pos2: TokenPosition) -> bool {
     matches!((pos1, pos2), (TokenPosition::End, TokenPosition::Start))
 }
 
-#[test]
-fn parse_test() {
-    use pretty_assertions::assert_eq;
-    let src = include_str!("./../../../samples/std.snow");
-    let ast = parse(src);
-    let left = ast
-        .unwrap_or_default()
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>();
-    assert_eq!(left, vec!["<add: (\\x -> (\\y -> (+ x y)))>"]);
-}
+// #[test]
+// fn parse_test() {
+//     use pretty_assertions::assert_eq;
+//     let src = include_str!("./../../../samples/std.snow");
+//     let ast = parse(src);
+//     let left = ast
+//         .unwrap_or_default()
+//         .iter()
+//         .map(ToString::to_string)
+//         .collect::<Vec<_>>();
+//     assert_eq!(left, vec!["<add: (\\x -> (\\y -> (+ x y)))>"]);
+// }

@@ -47,7 +47,9 @@ fn get_inner_expr<'a>(expr: &'a Expr) -> ExprVisitor<'a> {
     match expr {
         Expr::Atom(..) => ExprVisitor::Root,
         Expr::Unary(unary) => ExprVisitor::Unary(unary.expr.as_ref()),
-        Expr::Binary(_, lhs, rhs, ..) => ExprVisitor::Binary(lhs.as_ref(), rhs.as_ref()),
+        Expr::Binary(binary) => {
+            ExprVisitor::Binary(binary.left.as_ref(), binary.right.as_ref())
+        }
         Expr::IfElse(condition, then, r#else, ..) => {
             ExprVisitor::IfElse(condition.as_ref(), then.as_ref(), r#else.as_ref())
         }
@@ -55,7 +57,7 @@ fn get_inner_expr<'a>(expr: &'a Expr) -> ExprVisitor<'a> {
             ExprVisitor::Closure(head.as_ref(), tail.as_ref())
         }
         Expr::Func(_, _, node, ..) => ExprVisitor::Func(node.as_ref()),
-        Expr::App(name, args, ..) => ExprVisitor::App(name.as_ref(), args),
+        Expr::App(app) => ExprVisitor::App(app.name.as_ref(), &app.args),
         Expr::Array(nodes, ..) => ExprVisitor::Array(nodes),
         Expr::Enum(..) => ExprVisitor::Root,
         Expr::Error(..) => ExprVisitor::Root,
