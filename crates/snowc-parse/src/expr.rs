@@ -272,6 +272,7 @@ impl Expr {
             Self::Unary(unary) => unary.pos,
             Self::Binary(binary) => binary.pos,
             Self::App(app) => app.pos,
+            Self::Closure(_, tail, _) => tail.position(),
             _ => unimplemented!("for {self:?}"),
         }
     }

@@ -93,6 +93,16 @@ fn get_function_type_info(tokens: &mut Vec<Token>) -> Vec<TypeInfo> {
     types
 }
 
+fn expression(tokens: &mut Vec<Token>) -> Expr {
+    match tokens.get(0) {
+        Some(Token::KeyWord(kw)) if kw.lexme == "if" => if_expression(tokens),
+        Some(Token::Ctrl(c)) if vec!["λ", "\\"].contains(&c.lexme.as_str()) => {
+            lambda_expression(tokens)
+        }
+        _ => equality(tokens),
+    }
+}
+
 fn if_expression(tokens: &mut Vec<Token>) -> Expr {
     let Some(Token::KeyWord(KeyWord{span: start, ..})) = consume_keyword_if(tokens, "if") else {
         return equality(tokens);
@@ -111,11 +121,19 @@ fn if_expression(tokens: &mut Vec<Token>) -> Expr {
     )
 }
 
-fn expression(tokens: &mut Vec<Token>) -> Expr {
-    match tokens.get(0) {
-        Some(Token::KeyWord(kw)) if kw.lexme == "if" => if_expression(tokens),
-        _ => equality(tokens),
+fn lambda_expression(tokens: &mut Vec<Token>) -> Expr {
+    let Token::Ctrl(Ctrl{span: start, ..}) = tokens.remove(0) else {
+        panic!("expected `\\` or `λ` in lambda expression");
+    };
+    // TODO: Check that there are only one argument to lambda otherwise report an error
+    let args = get_function_args(tokens);
+    if args.len() != 1 {
+        panic!("expected one argument to lambda expression");
     }
+    consume_ctrl(tokens, "->");
+    let body = expression(tokens);
+    let span = Span::from((start, body.span()));
+    Expr::Closure(Box::new(args[0].clone()), Box::new(body), span)
 }
 
 fn equality(tokens: &mut Vec<Token>) -> Expr {
@@ -217,8 +235,11 @@ fn unary(tokens: &mut Vec<Token>) -> Expr {
 
 fn call(tokens: &mut Vec<Token>) -> Expr {
     let expr = primary(tokens);
-    let Expr::Atom(Atom::Id(_fname, mut pos, start)) = expr.clone() else {
-        return expr;
+
+    let (mut pos, start) = match &expr {
+        Expr::Atom(Atom::Id(_, pos, start)) => (*pos, *start),
+        Expr::Closure(_, tail, span) => (tail.position(), *span),
+        _ => return expr,
     };
     let next_token = tokens.get(0);
     let mut pos1 = next_token.map(|t| t.position()).cloned().unwrap_or(pos);
@@ -372,14 +393,6 @@ fn consume_op(tokens: &mut Vec<Token>, expected: &str) {
     if matches!(&token, Token::Op(Op{lexme, ..}) if lexme != expected) {
         panic!("expected {expected:?} but got {:?}", token);
     }
-}
-
-fn consume_op_if(tokens: &mut Vec<Token>, expected: &str) -> Option<Token> {
-    let token = tokens.get(0);
-    if !matches!(&token, Some(Token::Op(Op{lexme, ..})) if lexme == expected) {
-        return None;
-    }
-    return Some(tokens.remove(0));
 }
 
 fn consume_keyword(tokens: &mut Vec<Token>, expected: &str) {

@@ -57,9 +57,15 @@ clamp low high input
   : Int -> Int -> Int -> Int
   = max low (min input high)
 
+-- main : IO = print (clamp 1 10 5)
+
 -- Arrays
 myArray : Array<Int> = [1, 2, 3, 4, 5]
 
-main : IO = print (myArray) "\n"
--- main : IO = print (clamp 1 10 5)
+-- main : IO = print (myArray) "\n"
+
+-- Lambda
+
+main : IO = print ((λx -> 100 + x) 11)
+
 
