@@ -19,32 +19,50 @@ pub enum Error {
     ItemNotAllowedInGlobalSpace(Span),
     #[error("invalid char '{0}' {1:?}")]
     InvalidChar(char, Span),
-    #[error("who knows what you did, gezzz {0:?}")]
-    Unknown(Span),
     #[error("unexpected end of file {0:?}")]
     UnexpectedEOF(Span),
     #[error("unexpected token {0:?}")]
     UnexpectedToken(Span),
+    #[error("closure arguments can only be one {0:?}")]
+    ClosureArgumentsCanOnlyBeOne(Span),
+    #[error("missing ']' to array at {0:?}")]
+    UnclosedArray(Span),
+    #[error("expected type {0:?}")]
+    ExpectedType(Span),
+    #[error("not a function {0:?}")]
+    NotAFunction(Span),
+    #[error("unexpected end of input")]
+    UnexpectedEndOfInput(Span),
 }
 
 impl Error {
     pub fn span(&self) -> Span {
         match self {
-            Self::MissingIdentifier(s) => *s,
-            Self::UnknownOperator(s) => *s,
-            Self::MissingDeliminator(s) => *s,
-            Self::ExpectedConditionForStatement(s) => *s,
-            Self::ItemNotAllowedInGlobalSpace(s) => *s,
-            Self::InvalidChar(_, s) => *s,
-            Self::Unknown(s) => *s,
-            Self::UnexpectedEOF(s) => *s,
-            Self::UnexpectedToken(s) => *s,
+            Self::MissingIdentifier(s)
+            | Self::ClosureArgumentsCanOnlyBeOne(s)
+            | Self::ExpectedConditionForStatement(s)
+            | Self::ExpectedType(s)
+            | Self::InvalidChar(_, s)
+            | Self::ItemNotAllowedInGlobalSpace(s)
+            | Self::MissingDeliminator(s)
+            | Self::NotAFunction(s)
+            | Self::UnclosedArray(s)
+            | Self::UnexpectedEOF(s)
+            | Self::UnexpectedToken(s)
+            | Self::UnexpectedEndOfInput(s)
+            | Self::UnknownOperator(s) => *s,
         }
     }
 
     pub fn report<'a>(&'a self, filename: &'a str, src: &'a str) -> String {
-        let span = self.span();
-        debug_assert!(span.idx_start < span.idx_end, "reported span is invalid for {:?}", &self);
+        let span = match self {
+            Self::UnexpectedEndOfInput(_) => {
+                let idx_end = src.len();
+                let idx_start = idx_end.saturating_sub(1);
+                Span::new(idx_start, idx_end, 0, 0, 0, 0)
+            }
+            _ => self.span(),
+        };
         let range = (span.idx_start, span.idx_end);
         let label = &self.to_string();
         let snippet = Snippet {
@@ -59,18 +77,11 @@ impl Error {
                 line_start: span.row_start,
                 origin: Some(filename),
                 fold: true,
-                annotations: vec![
-                    SourceAnnotation {
-                        label,
-                        annotation_type: AnnotationType::Error,
-                        range,
-                    },
-                    // SourceAnnotation {
-                    //     label: "while parsing this struct",
-                    //     annotation_type: AnnotationType::Info,
-                    //     range: (34, 50),
-                    // },
-                ],
+                annotations: vec![SourceAnnotation {
+                    label,
+                    annotation_type: AnnotationType::Error,
+                    range,
+                }],
             }],
             opt: FormatOptions {
                 color: true,

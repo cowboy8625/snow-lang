@@ -6,7 +6,7 @@ pub fn snapshot_parsing(input: &str) -> String {
         Err(errors) => {
             return errors
                 .iter()
-                .map(|x| x.report("snowc", input))
+                .map(|x| x.to_string()) // .report("snowc", input))
                 .collect::<Vec<_>>()
                 .join("\n");
         }

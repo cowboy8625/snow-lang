@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 snowc-lexer = { path = "../snowc-lexer" }
 thiserror = "1.0.40"
-anyhow = "1.0.71"
 annotate-snippets = { version = "0.9.1", features = ["color"] }
 insta = { version = "1.34.0", features = ["yaml"] }
 

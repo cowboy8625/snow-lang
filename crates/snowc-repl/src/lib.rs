@@ -42,19 +42,19 @@ pub fn repl() -> Result<()> {
             Command::Quit => repl.quit(),
         }
 
-        // if !matches!(command, Command::Return) {
-        //     let mut s = scope.clone();
-        //     match compile(&format!("{}  ", repl.input), &mut s) {
-        //         Ok(Some(v)) => {
-        //             let y = terminal.y() + 1;
-        //             terminal.scroll_up_if_needed(y)?;
-        //             terminal.print_at(0, y, &v.to_string().grey().to_string())?;
-        //         }
-        //         _ => {
-        //             terminal.clear_from_cursor_down()?;
-        //         }
-        //     }
-        // }
+        if !matches!(command, Command::Return) {
+            let mut s = scope.clone();
+            match compile(&format!("{}  ", repl.input), &mut s) {
+                Ok(Some(v)) => {
+                    let y = terminal.y() + 1;
+                    terminal.scroll_up_if_needed(y)?;
+                    terminal.print_at(0, y, &v.to_string().grey().to_string())?;
+                }
+                _ => {
+                    terminal.clear_from_cursor_down()?;
+                }
+            }
+        }
 
         terminal.print(&format!("{PROMPT}{}", &repl.input))?;
         terminal.flush()?;
@@ -67,14 +67,11 @@ fn compile(
     input: &str,
     scope: &mut Scope,
 ) -> std::result::Result<Option<Value>, Vec<String>> {
-    let lexer = |i| snowc_lexer::Scanner::new(i);
-    let ast = match snowc_parse::parse(lexer(input)) {
+    let ast = match snowc_parse::parse(input) {
         Ok(ast) => ast,
-        Err(_) => match snowc_parse::parse_expr(lexer(input)) {
+        Err(_) => match snowc_parse::expression(input) {
             Ok(ast) => vec![ast],
-            Err(err) => {
-                return Err(err.into_iter().map(|x| x.report("snowc", input)).collect())
-            }
+            Err(err) => return Err(vec![err.report("snowc repl", input)]),
         },
     };
     if ast.iter().any(|x| x.is_error()) {

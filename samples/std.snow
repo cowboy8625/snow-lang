@@ -66,6 +66,6 @@ myArray : Array<Int> = [1, 2, 3, 4, 5]
 
 -- Lambda
 
-main : IO = print ((λx -> 100 + x) 11)
+main : IO = print ((λx -> 100 + x) 11) "\n"
 
 
