@@ -2,14 +2,11 @@
 source: crates/snowc-lexer/tests/test.rs
 expression: snapshot_lexing(contents)
 ---
-main :: IO
-^^^^ main
-     ^^ ::
-        ^^ IO
-main = print "Hello World\n"
-^^^^ main
-     ^ =
-       ^^^^^ print
-             ^^^^^^^^^^^^^^^ "Hello World
-"
+main : IO = print "Winter is Coming!"
+^^^^ Ident(Ident { lexme: "main", pos: Start, span: (0,0)->(4,0) })
+     ^ Ctrl(Ctrl { lexme: ":", pos: Middle, span: (5,0)->(6,0) })
+       ^^ Ident(Ident { lexme: "IO", pos: Middle, span: (7,0)->(9,0) })
+          ^ Ctrl(Ctrl { lexme: "=", pos: Middle, span: (10,0)->(11,0) })
+            ^^^^^ Ident(Ident { lexme: "print", pos: Middle, span: (12,0)->(17,0) })
+                  ^^^^^^^^^^^^^^^^^^^ Str(Str { lexme: "Winter is Coming!", pos: End, span: (18,0)->(37,0) })
 

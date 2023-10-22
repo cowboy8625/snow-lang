@@ -38,31 +38,43 @@ Sample code can be found in the `samples` folder. Here are a few illustrative ex
 
 ## Syntax
 
-**Enums:**
-
-```haskell
-enum Option a = Some a | None
-Option.map f = match self on
-  | Some x -> Some (f x)
-  | None -> None
-
-enum Bool = True | False
-```
-
 **Functions:**
 
 ```haskell
-max :> Int -> Int -> Int
-max x y = if x > y then x else y
+max x y
+    : Int -> Int -> Int
+    = if x > y then x else y
 
-min :> Int -> Int -> Int
-min x y = if x < y then x else y
+min x y
+    : Int -> Int -> Int
+    = if x < y then x else y
 
-clamp :> Int -> Int -> Int -> Int
-clamp input low high = max low (min input high)
+clamp input low high
+    : Int -> Int -> Int -> Int
+    = max low (min input high)
 
-is_digit :> Char -> Bool
-is_digit c = c >= '0' && c <= '9'
+is_digit c
+    : Char -> Bool
+    = c >= '0' and c <= '9'
+```
+
+##### **Experimental:**
+
+**Enums:**
+
+```haskell
+enum Option a
+    = Some a
+    | None
+
+Option.map f
+    = match self on
+    | Some x -> Some (f x)
+    | None -> None
+
+enum Bool
+    = True
+    | False
 ```
 
 **Custom Operators:**
@@ -71,26 +83,30 @@ Snow allows the definition of custom operators to match the specific needs of yo
 
 ```haskell
 -- Prefix Operator
-`!` :> a -> Bool
-`!` x = core::not x True False
+`!` x
+    : a -> Bool
+    = core::not x True False
 
 -- Infix Operator
-`==` :> a -> a -> Bool
-`==` x y = core::equal x y Bool::True Bool::False
+`==` x y
+    : a -> a -> Bool
+    = core::equal x y Bool::True Bool::False
 
-`<=` :> a -> a -> Bool
-`<=` x y = core::less_equal x y Bool::True Bool::False
+`<=` x y
+    : a -> a -> Bool
+    = core::less_equal x y Bool::True Bool::False
 
-`>=` :> a -> a -> Bool
-`>=` x y = core::greater_equal x y Bool::True Bool::False
+`>=` x y
+    : a -> a -> Bool
+    = core::greater_equal x y Bool::True Bool::False
 
-`>` :> a -> a -> Bool
-`>` x y = core::greater x y Bool::True Bool::False
+`>` x y
+    : a -> a -> Bool
+    = core::greater x y Bool::True Bool::False
 
-`<` :> a -> a -> Bool
-`<` x y = core::less x y Bool::True Bool::False
+`<` x y
+    : a -> a -> Bool
+    = core::less x y Bool::True Bool::False
 ```
-
-The `:>` is used to define a type signature for functions, providing a clear specification for argument and return types.
 
 Feel free to explore and experiment with Snow, and stay tuned for its evolving features and capabilities.

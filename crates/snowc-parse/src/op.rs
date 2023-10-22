@@ -1,4 +1,3 @@
-use super::Token;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -22,17 +21,6 @@ pub enum Op {
     Mod,
 }
 
-impl TryFrom<&Token> for Op {
-    type Error = &'static str;
-    fn try_from(token: &Token) -> Result<Self, Self::Error> {
-        match token {
-            Token::Op(ref op, ..) => Self::try_from(op),
-            Token::KeyWord(ref keyword, ..) => Self::try_from(keyword),
-            _ => Err("not a operator"),
-        }
-    }
-}
-
 impl TryFrom<&str> for Op {
     type Error = &'static str;
     fn try_from(op: &str) -> Result<Self, Self::Error> {
@@ -51,9 +39,9 @@ impl TryFrom<&str> for Op {
             // "=" => Ok(Self::Equals),
             "|>" => Ok(Self::LRPipe),
             "<|" => Ok(Self::RLPipe),
-            "and" => Ok(Self::And),
-            "or" => Ok(Self::Or),
-            "mod" => Ok(Self::Mod),
+            "and" | "&&" => Ok(Self::And),
+            "or" | "||" => Ok(Self::Or),
+            "mod" | "%" => Ok(Self::Mod),
             _ => Err("not an operator"),
         }
     }

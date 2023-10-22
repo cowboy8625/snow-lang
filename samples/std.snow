@@ -1,33 +1,71 @@
-enum Option a = Some a | None
-Option.map f = match self on
-  | Some x -> Some (f x)
-  | None -> None
+-- This file is use to test and see if the grammar is working
+-- and to experemt with new language syntaxes
 
-enum Bool = True | False
+-- Names of snow tools
+-- snow men     -> maybe package manager
+-- snow storm   -> maybe package manager
+-- snow flake   -> debugger
 
-max :> Int -> Int -> Int
-max x y = if x > y then x else y
+-- enum Result ok err = Ok ok | Err err
+--
+-- Result.mapOk Ok(x) f = Ok (f x)
+-- Result.mapOk Err(x) f = Err x
+--
+--
+-- enum Option a = Some a | None
+--
+-- Option.map Some 0 f = Some (0)
+-- Option.map Some x f = Some (f x)
+-- Option.map None f = None
+--
+-- print <| Option.map (foo 10) λx -> x + 1
+-- Some 11
 
-min :> Int -> Int -> Int
-min x y = if x < y then x else y
+-- foo x = Some x
 
-clamp :> Int -> Int -> Int -> Int
-clamp input low high = max low (min input high)
+-- enum Bool = True | False
 
-is_digit :> Char -> Bool
-is_digit c = c >= '0' && c <= '9'
+-- `==` :> a -> a -> Bool
+-- `==` x y = core::equal x y Bool::True Bool::False
 
-`==` :> a -> a -> Bool
-`==` x y = core::equal x y Bool::True Bool::False
+-- `<=` :> a -> a -> Bool
+-- `<=` x y = core::less_equal x y Bool::True Bool::False
 
-`<=` :> a -> a -> Bool
-`<=` x y = core::less_equal x y Bool::True Bool::False
+-- `>=` :> a -> a -> Bool
+-- `>=` x y = core::greater_equal x y Bool::True Bool::False
 
-`>=` :> a -> a -> Bool
-`>=` x y = core::greater_equal x y Bool::True Bool::False
+-- `>` :> a -> a -> Bool
+-- `>` x y = core::greater x y Bool::True Bool::False
 
-`>` :> a -> a -> Bool
-`>` x y = core::greater x y Bool::True Bool::False
+-- `<` :> a -> a -> Bool
+-- `<` x y = core::less x y Bool::True Bool::False
 
-`<` :> a -> a -> Bool
-`<` x y = core::less x y Bool::True Bool::False
+-- is_digit c
+--   : Char -> Bool
+--   = c >= '0' and c <= '9'
+
+
+max x y
+  : Int -> Int -> Int
+  = if x > y then x else y
+
+min x y
+ : Int -> Int -> Int
+ = if x < y then x else y
+
+clamp low high input
+  : Int -> Int -> Int -> Int
+  = max low (min input high)
+
+-- main : IO = print (clamp 1 10 5)
+
+-- Arrays
+myArray : Array<Int> = [1, 2, 3, 4, 5]
+
+-- main : IO = print (myArray) "\n"
+
+-- Lambda
+
+main : IO = print ((λx -> 100 + x) 11)
+
+

@@ -1,6 +1,0 @@
-[package]
-name = "snowc-native-code-gen"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]

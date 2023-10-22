@@ -178,7 +178,7 @@ fn type_check_app(
     _span: &Span,
 ) -> Type {
     let t = type_of(func_name, env, name);
-    let Expr::Atom(Atom::Id(name), _) = name else {
+    let Expr::Atom(Atom::Id(name, _)) = name else {
         return t;
     };
     let Some(Item::Func(tfunc)) = env.get(name) else {
@@ -210,8 +210,8 @@ fn type_of(func_name: &str, env: &Types, e: &Expr) -> Type {
         Expr::Atom(Atom::Bool(..), ..) => Type::Bool,
         Expr::Atom(Atom::String(..), ..) => Type::String,
         Expr::Atom(Atom::Char(..), ..) => Type::Char,
-        Expr::Atom(Atom::Id(id), ..) => lookup(func_name, env, id),
-        Expr::Unary(_, rhs, ..) => type_of(func_name, env, rhs),
+        Expr::Atom(Atom::Id(id, ..)) => lookup(func_name, env, id),
+        Expr::Unary(unary) => type_of(func_name, env, &unary.expr),
         Expr::Binary(op, lhs, rhs, ..) => type_check_binary(func_name, env, op, lhs, rhs),
         Expr::IfElse(c, b1, b2, ..) => type_check_if_else(func_name, env, c, b1, b2),
         // enum_var @ Expr::EnumVar(..) => {
@@ -245,7 +245,7 @@ fn pair_up_params<'a>(
         // expr.span(), 
         panic!("unimplemented yet for '{expr}'");
     };
-    let Expr::Atom(Atom::Id(name), _) = &**head else {
+    let Expr::Atom(Atom::Id(name, _)) = &**head else {
         // head.span(), 
         panic!("unimplemented yet for '{expr}'");
     };
@@ -288,7 +288,7 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
     let errors = Vec::new();
     for def in ast.iter() {
         match def {
-            Expr::Func(name, body, _) => {
+            Expr::Func(name, _type_info, body, _) => {
                 let Some(Item::Func(type_func)) = env.get_mut(name) else {
                     // span.clone(),
                     panic!(
@@ -308,20 +308,20 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
                     );
                 }
             }
-            Expr::TypeDec(name, body, _) => {
-                let mut body = body.clone();
-                let Some(t) = body.pop() else {
-                    // span.clone(),
-                    panic!("missing return type from type declaration '{name}'");
-                };
-                let mut args = vec![];
-                for string_type in body.iter() {
-                    args.push((None, Type::try_from((string_type, &env)).unwrap()));
-                }
-                let return_type = Type::try_from((&t, &env)).unwrap();
-                let typed_func = TypedFunc::new_with_args(return_type, args);
-                env.insert(name.into(), Item::Func(typed_func));
-            }
+            // Expr::TypeDec(name, body, _) => {
+            //     let mut body = body.clone();
+            //     let Some(t) = body.pop() else {
+            //         // span.clone(),
+            //         panic!("missing return type from type declaration '{name}'");
+            //     };
+            //     let mut args = vec![];
+            //     for string_type in body.iter() {
+            //         args.push((None, Type::try_from((string_type, &env)).unwrap()));
+            //     }
+            //     let return_type = Type::try_from((&t, &env)).unwrap();
+            //     let typed_func = TypedFunc::new_with_args(return_type, args);
+            //     env.insert(name.into(), Item::Func(typed_func));
+            // }
             Expr::Enum(name, var, _) => {
                 let mut variants = vec![];
                 for (name, memb) in var.iter() {
@@ -349,100 +349,3 @@ pub fn type_check(ast: &[Expr]) -> Result<(), Vec<String>> {
     }
     Ok(())
 }
-//
-// fn get_names(expr: &Expr, names: &mut Vec<String>) {
-//     match expr {
-//         Expr::Atom(Atom::Id(name), ..) => {
-//             names.push(name.clone());
-//         },
-//         Expr::EnumVar(head, tail, ..) => {
-//             get_names(head, names);
-//             get_names(tail, names);
-//         }
-//         _ => unreachable!(),
-//     }
-// }
-//
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use snowc_parse::ParserBuilder;
-//     #[test]
-//     fn string() {
-//         let src = r#"foo :: String;fn foo = "Hello";"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok())
-//     }
-//
-//     #[test]
-//     fn atom() {
-//         let src = r#"foo :: Int;fn foo = 12321321;"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok());
-//
-//         let src = r#"foo :: Float;fn foo = 12321.321;"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok());
-//
-//         let src = r#"foo :: Char;fn foo = 'c';"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok());
-//
-//         let src = r#"foo :: Bool;fn foo = true;"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok());
-//
-//         let src = r#"foo :: Bool;fn foo = false;"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok())
-//     }
-//
-//     #[test]
-//     fn unary() {
-//         let src = r#"bar :: Int;fn bar = -123;"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok())
-//     }
-//
-//     #[test]
-//     fn binary() {
-//         let src = r#"add :: Int -> Int -> Int;fn add x y = x + y;"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok())
-//     }
-//
-//     #[test]
-//     fn conditional() {
-//         let src = r#"max :: Int -> Int -> Int;
-// fn max x y = if x > y then x else y;"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok())
-//     }
-//
-//     #[test]
-//     fn func_dec_matches_func_two_args_return_int() {
-//         let src = r#"add :: Int -> Int -> Int;fn add x y = x + y;"#;
-//         let ast = ParserBuilder::default().build(src).parse().unwrap();
-//         let t = type_check(&ast);
-//         dbg!(&t);
-//         assert!(t.is_ok())
-//     }
-// }

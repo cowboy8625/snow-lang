@@ -3,7 +3,10 @@ mod error;
 mod tests;
 mod value;
 pub use error::RuntimeError;
-use snowc_parse::{Atom, Expr, Op, Span};
+use snowc_parse::{
+    expr::{App, Binary},
+    Atom, Expr, Op, Span, TokenPosition, Unary,
+};
 use std::collections::HashMap;
 pub use value::Value;
 
@@ -11,12 +14,20 @@ type Env = HashMap<String, Expr>;
 type Result<T> = std::result::Result<T, RuntimeError>;
 
 fn builtin(op: Op) -> Expr {
+    let pos = TokenPosition::Middle;
     let span = Span::default();
-    let lhs = Expr::Atom(Atom::Id("x".into()), span);
-    let rhs = Expr::Atom(Atom::Id("y".into()), span);
-    let body = Expr::Binary(op, Box::new(lhs.clone()), Box::new(rhs.clone()), span);
-    let x = Expr::Closure(Box::new(lhs), Box::new(body), span);
-    Expr::Closure(Box::new(rhs), Box::new(x), span)
+    let left = Box::new(Expr::Atom(Atom::Id("x".into(), pos, span)));
+    let right = Box::new(Expr::Atom(Atom::Id("y".into(), pos, span)));
+    let binary = Binary {
+        op,
+        left: left.clone(),
+        right: right.clone(),
+        pos: TokenPosition::End,
+        span,
+    };
+    let body = Expr::Binary(binary);
+    let x = Expr::Closure(left, Box::new(body), span);
+    Expr::Closure(right, Box::new(x), span)
 }
 
 #[derive(Debug, Clone)]
@@ -51,8 +62,9 @@ impl Default for Scope {
     }
 }
 
-fn expr_unary(op: &Op, rhs: &Expr, _span: Span, scope: &Scope) -> Result<Value> {
-    let atom = walk_expr(rhs, scope)?;
+fn expr_unary(unary: &Unary, scope: &Scope) -> Result<Value> {
+    let Unary { op, expr, .. } = unary;
+    let atom = walk_expr(expr, scope)?;
     match (op, atom) {
         (Op::Minus, Value::Int(int, span)) => Ok(Value::Int(-int, span)),
         (Op::Not, Value::Bool(b, span)) => Ok(Value::Bool(!b, span)),
@@ -60,63 +72,64 @@ fn expr_unary(op: &Op, rhs: &Expr, _span: Span, scope: &Scope) -> Result<Value> 
     }
 }
 
-fn expr_binary(
-    op: &Op,
-    lhs: &Expr,
-    rhs: &Expr,
-    span: Span,
-    scope: &Scope,
-) -> Result<Value> {
-    let lhs_atom = walk_expr(lhs, scope)?;
-    let rhs_atom = walk_expr(rhs, scope)?;
+fn expr_binary(binary: &Binary, scope: &Scope) -> Result<Value> {
+    let Binary {
+        op,
+        left,
+        right,
+        span,
+        ..
+    } = binary;
+    let lhs_atom = walk_expr(left, scope)?;
+    let rhs_atom = walk_expr(right, scope)?;
     match (op, lhs_atom, rhs_atom) {
         (Op::Plus, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs + rhs, span))
+            Ok(Value::Int(lhs + rhs, *span))
         }
         (Op::Plus, Value::String(lhs, ..), Value::String(rhs, ..)) => {
-            Ok(Value::String(format!("{lhs}{rhs}"), span))
+            Ok(Value::String(format!("{lhs}{rhs}"), *span))
         }
         (Op::Minus, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs - rhs, span))
+            Ok(Value::Int(lhs - rhs, *span))
         }
         (Op::Mult, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs * rhs, span))
+            Ok(Value::Int(lhs * rhs, *span))
         }
         (Op::Div, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs / rhs, span))
+            Ok(Value::Int(lhs / rhs, *span))
         }
         (Op::Mod, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Int(lhs % rhs, span))
+            Ok(Value::Int(lhs % rhs, *span))
         }
         (Op::Grt, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs > rhs, span))
+            Ok(Value::Bool(lhs > rhs, *span))
         }
         (Op::GrtEq, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs >= rhs, span))
+            Ok(Value::Bool(lhs >= rhs, *span))
         }
         (Op::Les, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs < rhs, span))
+            Ok(Value::Bool(lhs < rhs, *span))
         }
         (Op::LesEq, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs <= rhs, span))
+            Ok(Value::Bool(lhs <= rhs, *span))
         }
         (Op::Eq, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs == rhs, span))
+            Ok(Value::Bool(lhs == rhs, *span))
         }
         (Op::Neq, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
-            Ok(Value::Bool(lhs != rhs, span))
+            Ok(Value::Bool(lhs != rhs, *span))
         }
         (Op::Eq, Value::String(lhs, ..), Value::String(rhs, ..)) => {
-            Ok(Value::Bool(lhs == rhs, span))
+            Ok(Value::Bool(lhs == rhs, *span))
         }
         (Op::Neq, Value::String(lhs, ..), Value::String(rhs, ..)) => {
-            Ok(Value::Bool(lhs != rhs, span))
+            Ok(Value::Bool(lhs != rhs, *span))
         }
         (Op::And, Value::Bool(lhs, ..), Value::Bool(rhs, ..)) => {
-            Ok(Value::Bool(lhs && rhs, span))
+            Ok(Value::Bool(lhs && rhs, *span))
         }
         (Op::Or, Value::Bool(lhs, ..), Value::Bool(rhs, ..)) => {
-            Ok(Value::Bool(lhs || rhs, span))
+            Ok(Value::Bool(lhs || rhs, *span))
         }
         (op, r, l) => unimplemented!("{l:?} {op:?} {r:?}"),
     }
@@ -144,7 +157,7 @@ fn expr_closure_with_args(
     let Some(arg) = args.first() else {
         unimplemented!("not sure what to do here");
     };
-    let Expr::Atom(Atom::Id(name), span) = head else {
+    let Expr::Atom(Atom::Id(name, _, span)) = head else {
         unimplemented!("shouldnt get here i think?");
     };
     let mut scope = scope.clone();
@@ -156,9 +169,9 @@ fn expr_closure_with_args(
 }
 
 fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Value> {
-    let Expr::Atom(Atom::Id(name), span) = name else {
+    let Expr::Atom(Atom::Id(name, _, span)) = name else {
         let (Some(head), Some(tail)) = (name.get_head(), name.get_tail()) else {
-            let Expr::App(name, args, span) = name else {
+            let Expr::App(App { name, args, span, .. }) = name else {
                 return Err(RuntimeError::InvalidArguments(span));
             };
             return expr_app(name, args, *span, scope);
@@ -178,16 +191,18 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                     .enumerate()
                     .fold("".into(), |acc, (idx, item)| {
                         let item = match item {
-                            Value::Array(array, ..) => {
-                                array.iter().enumerate().map(|(idx, i)| {
+                            Value::Array(array, ..) => array
+                                .iter()
+                                .enumerate()
+                                .map(|(idx, i)| {
                                     if idx == 0 {
-                                        return format!("[{i}, ")
+                                        return format!("[{i}, ");
                                     } else if idx == array.len().saturating_sub(1) {
-                                        return format!("{i}]")
+                                        return format!("{i}]");
                                     }
                                     format!("{i}, ")
-                                }).collect::<String>()
-                            }
+                                })
+                                .collect::<String>(),
                             _ => item.to_string(),
                         };
                         if idx == 0 {
@@ -231,10 +246,10 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                     string.push_str(&value);
                     Ok(Value::String(string, span))
                 }
-                (Value::Array(mut array, span), value) =>{
+                (Value::Array(mut array, span), value) => {
                     array.push(value);
                     Ok(Value::Array(array, span))
-                },
+                }
                 _ => Err(RuntimeError::InvalidArguments(*span)),
             }
         }
@@ -244,53 +259,49 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                 Value::String(string, span) => {
                     Ok(Value::String(string[1..].to_string(), span))
                 }
-                Value::Array(array, span) => {
-                    Ok(Value::Array(array[1..].to_vec(), span))
-                },
+                Value::Array(array, span) => Ok(Value::Array(array[1..].to_vec(), span)),
                 _ => Err(RuntimeError::InvalidArguments(*span)),
             }
-        },
+        }
         "head" => {
             let iter = walk_expr(&args[0], scope)?;
             match iter {
                 Value::String(string, span) => {
                     Ok(Value::String(string[0..1].to_string(), span))
                 }
-                Value::Array(array, ..) => {
-                    Ok(array[0].clone())
-                },
+                Value::Array(array, ..) => Ok(array[0].clone()),
                 _ => Err(RuntimeError::InvalidArguments(*span)),
             }
-        },
+        }
         _ => {
             let Some(mut func) = scope.get(name) else {
                 return Err(RuntimeError::Undefined(name.into(), *span));
             };
             let mut scope = scope.clone();
             for arg in args.iter() {
-                let Some(Expr::Atom(Atom::Id(name), ..)) = func.get_head() else {
+                let Some(Expr::Atom(Atom::Id(name, pos, ..))) = func.get_head() else {
                     continue;
                 };
                 let value = walk_expr(&arg.clone(), &scope)?;
-                fn into_expr(v: &Value) -> Expr {
+                fn into_expr(v: &Value, pos: TokenPosition) -> Expr {
                     match v {
-                        Value::Int(i, span) => Expr::Atom(Atom::Int(*i), *span),
+                        Value::Int(i, span) => Expr::Atom(Atom::Int(*i, pos, *span)),
                         Value::Float(i, span) => {
-                            Expr::Atom(Atom::Float(i.clone()), *span)
+                            Expr::Atom(Atom::Float(i.clone(), pos, *span))
                         }
-                        Value::Bool(i, span) => Expr::Atom(Atom::Bool(*i), *span),
+                        Value::Bool(i, span) => Expr::Atom(Atom::Bool(*i, pos, *span)),
                         Value::String(i, span) => {
-                            Expr::Atom(Atom::String(i.clone()), *span)
+                            Expr::Atom(Atom::String(i.clone(), pos, *span))
                         }
-                        Value::Char(i, span) => Expr::Atom(Atom::Char(*i), *span),
+                        Value::Char(i, span) => Expr::Atom(Atom::Char(*i, pos, *span)),
                         Value::Array(array, span) => {
-                            let array = array.iter().map(into_expr).collect();
-                            Expr::Array(array, *span)
+                            let array = array.iter().map(|v| into_expr(v, pos)).collect();
+                            Expr::Array(array, pos, *span)
                         }
                         _ => unreachable!("{v}"),
                     }
                 }
-                scope.insert_local(name.clone(), into_expr(&value));
+                scope.insert_local(name.clone(), into_expr(&value, *pos));
                 let Some(t) = func.get_tail() else {
                     unreachable!()
                 };
@@ -306,32 +317,34 @@ fn expr_closure(head: &Expr, tail: &Expr, scope: &Scope) -> Result<Value> {
     walk_expr(tail, scope)
 }
 
-fn walk_atom(atom: &Atom, span: Span, scope: &Scope) -> Result<Value> {
+fn walk_atom(atom: &Atom, scope: &Scope) -> Result<Value> {
     match atom {
-        Atom::Id(name) => {
+        Atom::Id(name, _, span) => {
             let Some(expr) = scope.get(name) else {
-                return Err(RuntimeError::Undefined(name.into(), span));
+                return Err(RuntimeError::Undefined(name.into(), *span));
             };
             walk_expr(expr, scope)
         }
-        Atom::Int(i) => Ok(Value::Int(*i, span)),
-        Atom::Float(f) => Ok(Value::Float(f.clone(), span)),
-        Atom::Bool(b) => Ok(Value::Bool(*b, span)),
-        Atom::String(string) => Ok(Value::String(string.clone(), span)),
-        Atom::Char(c) => Ok(Value::Char(*c, span)),
+        Atom::Int(i, _, span) => Ok(Value::Int(*i, *span)),
+        Atom::Float(f, _, span) => Ok(Value::Float(f.clone(), *span)),
+        Atom::Bool(b, _, span) => Ok(Value::Bool(*b, *span)),
+        Atom::String(string, _, span) => Ok(Value::String(string.clone(), *span)),
+        Atom::Char(c, _, span) => Ok(Value::Char(*c, *span)),
     }
 }
 
 fn walk_expr(expr: &Expr, scope: &Scope) -> Result<Value> {
     match expr {
-        Expr::Atom(atom, span) => walk_atom(atom, *span, scope),
-        Expr::Unary(op, rhs, span) => expr_unary(op, rhs, *span, scope),
-        Expr::Binary(op, lhs, rhs, span) => expr_binary(op, lhs, rhs, *span, scope),
+        Expr::Atom(atom) => walk_atom(atom, scope),
+        Expr::Unary(unary) => expr_unary(unary, scope),
+        Expr::Binary(binary) => expr_binary(binary, scope),
         Expr::IfElse(condition, then, r#else, ..) => {
             expr_conditional(condition, then, r#else, scope)
         }
         Expr::Closure(head, tail, ..) => expr_closure(head, tail, scope),
-        Expr::App(name, args, span) => expr_app(name, args, *span, scope),
+        Expr::App(App {
+            name, args, span, ..
+        }) => expr_app(name, args, *span, scope),
         Expr::Array(array, ..) => {
             let mut result = vec![];
             let start_span = array.first().map(|e| e.span()).unwrap_or_default();
@@ -345,8 +358,6 @@ fn walk_expr(expr: &Expr, scope: &Scope) -> Result<Value> {
         }
         Expr::Enum(..) => unimplemented!("enum"),
 
-        // this should only be for type checker.
-        Expr::TypeDec(..) => unreachable!("type dec"),
         // should never get to theres
         Expr::Func(..) => unreachable!("func"),
         Expr::Error(..) => unreachable!("error"),
@@ -361,11 +372,10 @@ pub fn walk(ast: &[Expr]) -> std::result::Result<Option<Value>, Vec<RuntimeError
             Expr::Func(name, ..) if name == "main" => {
                 main_idx = Some(idx);
             }
-            Expr::Func(name, closure, ..) => {
+            Expr::Func(name, _, closure, ..) => {
                 scope.insert_global(name.to_string(), *closure.clone());
             }
-            Expr::TypeDec(..) => {}
-            _ => unreachable!(),
+            _ => unreachable!("{:?}", expr),
         }
     }
 
@@ -378,8 +388,8 @@ pub fn walk(ast: &[Expr]) -> std::result::Result<Option<Value>, Vec<RuntimeError
         return Err(errors);
     }
     let main_function = &ast[idx];
-    let Expr::Func(_, closure, ..) = main_function else {
-        panic!("really bad things are happening");
+    let Expr::Func(_, _, closure, ..) = main_function else {
+        panic!("maybe you added a new prameter to Expr::Func?");
     };
     match walk_expr(closure, &scope) {
         Ok(v) => Ok(Some(v)),
@@ -395,11 +405,10 @@ pub fn eval_expr_with_scope(
     scope: &mut Scope,
 ) -> std::result::Result<Option<Value>, RuntimeError> {
     match expr {
-        Expr::Func(name, closure, ..) => {
+        Expr::Func(name, _, closure, ..) => {
             scope.insert_global(name.to_string(), *closure.clone());
             Ok(None)
         }
-        Expr::TypeDec(..) => Ok(None),
         _ => walk_expr(expr, scope).map(Some),
     }
 }
