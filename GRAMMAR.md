@@ -1,11 +1,17 @@
 ```ebnf
 program             ::= function_definition*
-function_definition ::= ident ident* ( ":" type )? "=" expression
-expression          ::= if_expression | binary_operation | unary_operation
+function_definition ::= ident ident* type_info? "=" expression
+type_info           ::= ":" type ( "->" type )*
+expression          ::= if_expression | logic_or | lambda_expression
 if_expression       ::= "if" expression "then" expression "else" expression
-binary_operation    ::= expression operator expression
-unary_operation     ::= ("!" | "-") unary_operation | app
-app                 ::= ident atom* | primary
+logic_or            ::= logic_and ( "or" logic_and )*
+logic_and           ::= equality ( "and" equality )*
+equality            ::= comparison ( ( "==" | "!=" ) comparison )*
+comparison          ::= term ( ( ">" | ">=" | "<" | "<=" ) term )*
+term                ::= factor ( ( "-" | "+" ) factor )*
+factor              ::= unary ( ( "/" | "*" ) unary )*
+unary               ::= ("!" | "-") unary | app
+app                 ::= ident atom* | atom
 atom                ::= int | bool | string | ident | array_literal
 array_literal       ::= "[" (expression ("," expression)*)? "]"
 lambda_expression   ::= ("λ" | "\") ident ( ":" type )? "->" expression
@@ -16,7 +22,9 @@ ident               ::= letter (letter | digit)*
 type_specifier      ::= "Int" | "Bool" | "String" | "IO" | array_type | ident
 array_type          ::= "Array" "<" type ">"
 type                ::= type_specifier ("->" type)?
-operator            ::= "+" | "-" | "*" | "/" | "="
 letter              ::= "a".."z" | "A".."Z"
 digit               ::= "0".."9"
+comment             ::= line_comment | block_comment
+line_comment        ::= "--" [^"\n"]* "\n"
+block_comment       ::= "{-" [^"-}"]* "-}"
 ```
