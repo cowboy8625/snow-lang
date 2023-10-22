@@ -99,7 +99,7 @@ fn expression(tokens: &mut Vec<Token>) -> Expr {
         Some(Token::Ctrl(c)) if vec!["λ", "\\"].contains(&c.lexme.as_str()) => {
             lambda_expression(tokens)
         }
-        _ => equality(tokens),
+        _ => logic_or(tokens),
     }
 }
 
@@ -134,6 +134,46 @@ fn lambda_expression(tokens: &mut Vec<Token>) -> Expr {
     let body = expression(tokens);
     let span = Span::from((start, body.span()));
     Expr::Closure(Box::new(args[0].clone()), Box::new(body), span)
+}
+
+fn logic_or(tokens: &mut Vec<Token>) -> Expr {
+    let mut lhs = logic_and(tokens);
+    while let Some(op @ Or) = get_op(tokens.get(0)) {
+        tokens.remove(0);
+        let rhs = logic_and(tokens);
+        let pos = rhs.position();
+        let span = Span::from((lhs.span(), rhs.span()));
+        let left = Box::new(lhs);
+        let right = Box::new(rhs);
+        lhs = Expr::Binary(Binary {
+            op,
+            left,
+            right,
+            pos,
+            span,
+        });
+    }
+    lhs
+}
+
+fn logic_and(tokens: &mut Vec<Token>) -> Expr {
+    let mut lhs = equality(tokens);
+    while let Some(op @ And) = get_op(tokens.get(0)) {
+        tokens.remove(0);
+        let rhs = equality(tokens);
+        let pos = rhs.position();
+        let span = Span::from((lhs.span(), rhs.span()));
+        let left = Box::new(lhs);
+        let right = Box::new(rhs);
+        lhs = Expr::Binary(Binary {
+            op,
+            left,
+            right,
+            pos,
+            span,
+        });
+    }
+    lhs
 }
 
 fn equality(tokens: &mut Vec<Token>) -> Expr {
@@ -334,11 +374,11 @@ fn array(tokens: &mut Vec<Token>, start: Span) -> Expr {
         exprs.push(expr);
         consume_ctrl_if(tokens, ",");
     }
-    let Some(Token::Ctrl(Ctrl{span: end, ..})) = consume_ctrl_if(tokens, "]") else {
+    let Some(Token::Ctrl(Ctrl{span: end, pos, ..})) = consume_ctrl_if(tokens, "]") else {
         panic!("expected ']' but got {:?}", tokens.get(0));
     };
     let span = Span::from((start, end));
-    Expr::Array(exprs, span)
+    Expr::Array(exprs, pos, span)
 }
 
 fn is_atom(token: Option<&Token>) -> bool {
@@ -369,6 +409,9 @@ fn is_keyword(token: Option<&Token>) -> bool {
 fn get_op(token: Option<&Token>) -> Option<Oper> {
     token.and_then(|t| {
         t.map_op::<Option<Oper>>(|Op { lexme, .. }| crate::op::Op::try_from(lexme).ok())
+            .or(t.map_keyword::<Option<Oper>>(|KeyWord { lexme, .. }| {
+                crate::op::Op::try_from(lexme).ok()
+            }))
             .flatten()
     })
 }

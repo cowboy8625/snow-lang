@@ -171,6 +171,7 @@ impl<'a> Scanner<'a> {
             ':' if self.matched(':') => self.token("::", |lexme, pos, span| {
                 Token::Ctrl(Ctrl { lexme, pos, span })
             }),
+            '&' => self.token("&", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
             '|' => self.token("|", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
             '-' => self.token("-", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),
             '+' => self.token("+", |lexme, pos, span| Token::Op(Op { lexme, pos, span })),

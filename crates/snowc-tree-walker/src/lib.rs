@@ -296,7 +296,7 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                         Value::Char(i, span) => Expr::Atom(Atom::Char(*i, pos, *span)),
                         Value::Array(array, span) => {
                             let array = array.iter().map(|v| into_expr(v, pos)).collect();
-                            Expr::Array(array, *span)
+                            Expr::Array(array, pos, *span)
                         }
                         _ => unreachable!("{v}"),
                     }

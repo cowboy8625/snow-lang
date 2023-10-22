@@ -39,9 +39,9 @@ impl TryFrom<&str> for Op {
             // "=" => Ok(Self::Equals),
             "|>" => Ok(Self::LRPipe),
             "<|" => Ok(Self::RLPipe),
-            "and" => Ok(Self::And),
-            "or" => Ok(Self::Or),
-            "mod" => Ok(Self::Mod),
+            "and" | "&&" => Ok(Self::And),
+            "or" | "||" => Ok(Self::Or),
+            "mod" | "%" => Ok(Self::Mod),
             _ => Err("not an operator"),
         }
     }

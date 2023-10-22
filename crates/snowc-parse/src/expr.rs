@@ -139,7 +139,7 @@ impl fmt::Display for TypeInfo {
 pub enum Expr {
     // App(Box<Self>, Vec<Self>, Span),
     App(App),
-    Array(Vec<Self>, Span),
+    Array(Vec<Self>, TokenPosition, Span),
     Atom(Atom),
     Binary(Binary),
     Closure(Box<Self>, Box<Self>, Span),
@@ -201,7 +201,7 @@ impl Expr {
                 pos: f(pos),
                 span,
             }),
-            Self::Array(array, span) => Self::Array(array, span),
+            Self::Array(array, pos, span) => Self::Array(array, f(pos), span),
             Self::Enum(name, variants, span) => Self::Enum(name, variants, span),
             Self::Error(span) => Self::Error(span),
         }
@@ -272,7 +272,8 @@ impl Expr {
             Self::Unary(unary) => unary.pos,
             Self::Binary(binary) => binary.pos,
             Self::App(app) => app.pos,
-            Self::Closure(_, tail, _) => tail.position(),
+            Self::Closure(_, tail, ..) => tail.position(),
+            Self::Array(_, pos, ..) => *pos,
             _ => unimplemented!("for {self:?}"),
         }
     }
