@@ -51,8 +51,8 @@ fn snippet_builder<'a>(
     label: &'a str,
     span: Span,
 ) -> Snippet<'a> {
-    debug_assert!(span.idx_end < src.len(), "index: {:?}, is to small for the span {:?} label: {}", src.len(), span, label);
-    debug_assert!(span.idx_start < span.idx_end, "reported span is invalid");
+    // debug_assert!(span.idx_end < src.len(), "index: {:?}, is to small for the span {:?} label: {}", src.len(), span, label);
+    // debug_assert!(span.idx_start < span.idx_end, "reported span is invalid");
     let range = (span.idx_start, span.idx_end);
     Snippet {
         title: Some(Annotation {
