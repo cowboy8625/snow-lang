@@ -44,7 +44,7 @@ pub fn repl() -> Result<()> {
 
         if !matches!(command, Command::Return) {
             let mut s = scope.clone();
-            match compile(&format!("{}  ", repl.input), &mut s) {
+            match compile(&format!("{}  ", repl.input), &repl, &mut s) {
                 Ok(Some(v)) => {
                     let y = terminal.y() + 1;
                     terminal.scroll_up_if_needed(y)?;
@@ -65,13 +65,19 @@ pub fn repl() -> Result<()> {
 // Not sure what to return here
 fn compile(
     input: &str,
+    repl: &Repl,
     scope: &mut Scope,
 ) -> std::result::Result<Option<Value>, Vec<String>> {
+    let (filename, src) = repl
+        .loaded_file
+        .clone()
+        .unwrap_or(("snowc repl".into(), String::new()));
+    let i = &(src + input);
     let ast = match snowc_parse::parse(input) {
         Ok(ast) => ast,
         Err(_) => match snowc_parse::expression(input) {
             Ok(ast) => vec![ast],
-            Err(err) => return Err(vec![err.report("snowc repl", input)]),
+            Err(err) => return Err(vec![err.report(&filename, i)]),
         },
     };
     if ast.iter().any(|x| x.is_error()) {
@@ -82,7 +88,7 @@ fn compile(
     for node in ast {
         match eval_expr_with_scope(&node, scope) {
             Ok(v) => results.push(v),
-            Err(err) => return Err(vec![err.report("snowc", input)]),
+            Err(err) => return Err(vec![err.report("snowc", i)]),
         }
     }
     Ok(results.pop().flatten())
@@ -98,7 +104,7 @@ fn execute_return_command(
         return Ok(());
     }
     repl.input.push_str(" ");
-    match compile(&repl.input, scope) {
+    match compile(&repl.input, &repl, scope) {
         Ok(Some(v)) => {
             terminal.print(&v.to_string().yellow().to_string())?;
             terminal.new_line()?;
@@ -125,7 +131,7 @@ fn execute_builtin_repl_command(
             // FIXME: properly handle filename if it doesn't exist
             let filename = &i[6..];
             let src = std::fs::read_to_string(filename).unwrap();
-            let result = compile(&src, scope);
+            let result = compile(&src, &repl, scope);
             if result.is_err() {
                 terminal.print(&result.unwrap_err().join("\n"))?;
                 terminal.new_line()?;
@@ -133,6 +139,7 @@ fn execute_builtin_repl_command(
             }
             terminal.print(&format!("loaded file {}", &i[6..]))?;
             terminal.new_line()?;
+            repl.loaded_file = Some((filename.to_string(), src));
             Ok(true)
         }
         ":exit" | ":quit" => {
@@ -158,6 +165,7 @@ struct Repl {
     input: String,
     running: bool,
     pos: Pos<usize>,
+    loaded_file: Option<(String, String)>,
     // history: History,
 }
 
@@ -167,6 +175,7 @@ impl Repl {
             input: String::new(),
             running: true,
             pos: Pos::default(),
+            loaded_file: None,
         }
     }
 
