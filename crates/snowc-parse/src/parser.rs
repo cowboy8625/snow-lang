@@ -107,6 +107,7 @@ fn get_function_type_info(tokens: &mut Vec<Token>) -> Result<Vec<TypeInfo>> {
             tokens.remove(0);
             types.push(TypeInfo::Array(Box::new(TypeInfo::from(ident))));
             consume_op(tokens, ">")?;
+            consume_ctrl_if(tokens, "->");
             continue;
         }
         types.push(TypeInfo::from(ident));
@@ -386,7 +387,7 @@ fn primary(tokens: &mut Vec<Token>) -> Result<Expr> {
         Token::Ctrl(c) if c.lexme == "(" => {
             let expr = expression(tokens)?;
             let Some(Token::Ctrl(Ctrl{pos, ..})) = consume_ctrl_if(tokens, ")") else {
-                panic!("expected ')' but got {:?}", tokens.get(0));
+                return Err(Error::UnclosedParen(expr.span()));
             };
             Ok(expr.map_position(|_| pos))
         }
@@ -434,7 +435,7 @@ fn is_atom(token: Option<&Token>) -> bool {
 }
 
 fn is_keyword(token: Option<&Token>) -> bool {
-    matches!(token, Some(Token::KeyWord(_)))
+    matches!(token, Some(Token::KeyWord(KeyWord { lexme, .. })) if !matches!(lexme.as_str(), "true" | "false"))
 }
 
 fn get_op(token: Option<&Token>) -> Option<Oper> {
@@ -445,6 +446,43 @@ fn get_op(token: Option<&Token>) -> Option<Oper> {
             }))
             .flatten()
     })
+}
+
+#[test]
+fn test_get_op() {
+    use pretty_assertions::assert_eq;
+    let op = |l: &str| {
+        get_op(Some(&Token::Op(Op {
+            lexme: l.to_string(),
+            span: Span::default(),
+            pos: TokenPosition::End,
+        })))
+    };
+    let keyword = |l: &str| {
+        get_op(Some(&Token::KeyWord(KeyWord {
+            lexme: l.to_string(),
+            span: Span::default(),
+            pos: TokenPosition::End,
+        })))
+    };
+    assert_eq!(op("+"), Some(Oper::Plus));
+    assert_eq!(op("-"), Some(Oper::Minus));
+    assert_eq!(op("*"), Some(Oper::Mult));
+    assert_eq!(op("/"), Some(Oper::Div));
+    assert_eq!(op("%"), Some(Oper::Mod));
+    assert_eq!(op("&&"), Some(Oper::And));
+    assert_eq!(op("||"), Some(Oper::Or));
+    assert_eq!(op("=="), Some(Oper::Eq));
+    assert_eq!(op("!="), Some(Oper::Neq));
+    assert_eq!(op("<"), Some(Oper::Les));
+    assert_eq!(op(">"), Some(Oper::Grt));
+    assert_eq!(op("<="), Some(Oper::LesEq));
+    assert_eq!(op(">="), Some(Oper::GrtEq));
+    assert_eq!(op("!"), Some(Oper::Not));
+    assert_eq!(keyword("and"), Some(Oper::And));
+    assert_eq!(keyword("not"), Some(Oper::Not));
+    assert_eq!(keyword("or"), Some(Oper::Or));
+    assert_eq!(keyword("mod"), Some(Oper::Mod));
 }
 
 fn consume_ctrl(tokens: &mut Vec<Token>, expected: &str) -> Result<Token> {
@@ -494,18 +532,21 @@ fn consume_keyword_if(tokens: &mut Vec<Token>, expected: &str) -> Option<Token> 
 
 fn is_deliminator(pos1: TokenPosition, pos2: TokenPosition) -> bool {
     use TokenPosition::*;
-    matches!((pos1, pos2), (End, Start | End))
+    match (pos1, pos2) {
+        (_, FullSpan) => true,
+        (End, Start | End) => true,
+        _ => false,
+    }
 }
 
 #[test]
 fn parse_test() {
     use pretty_assertions::assert_eq;
-    let src = include_str!("./../../../samples/std.snow");
+    let src = include_str!("./../../../samples/other.snow");
     let ast = parse(src);
-    let left = ast
-        .unwrap_or_default()
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>();
+    let left = match ast {
+        Ok(ast) => ast.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        Err(err) => panic!("{:?}", err),
+    };
     assert_eq!(left, vec!["<add: (\\x -> (\\y -> (+ x y)))>"]);
 }
