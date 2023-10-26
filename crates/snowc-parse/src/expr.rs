@@ -274,6 +274,7 @@ impl Expr {
             Self::App(app) => app.pos,
             Self::Closure(_, tail, ..) => tail.position(),
             Self::Array(_, pos, ..) => *pos,
+            Self::IfElse(_, _, r#else, ..) => r#else.position(),
             _ => unimplemented!("for {self:?}"),
         }
     }

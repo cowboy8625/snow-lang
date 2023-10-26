@@ -49,7 +49,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn get_token_position(&mut self) -> TokenPosition {
-        let next = self.peek_char().copied().unwrap_or('\n');
+        let next = self.peek_char().copied().unwrap_or('\0');
         match (self.last_char, next) {
             ('\n', '\n') => TokenPosition::FullSpan,
             ('\n', c) if c != '\n' => TokenPosition::Start,

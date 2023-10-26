@@ -33,6 +33,8 @@ pub enum Error {
     NotAFunction(Span),
     #[error("unexpected end of input")]
     UnexpectedEndOfInput(Span),
+    #[error("unclosed parenthesis {0:?}")]
+    UnclosedParen(Span),
 }
 
 impl Error {
@@ -50,6 +52,7 @@ impl Error {
             | Self::UnexpectedEOF(s)
             | Self::UnexpectedToken(s)
             | Self::UnexpectedEndOfInput(s)
+            | Self::UnclosedParen(s)
             | Self::UnknownOperator(s) => *s,
         }
     }
