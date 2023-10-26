@@ -179,6 +179,7 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
         return expr_closure_with_args(head, tail, args, scope);
     };
     match name.as_str() {
+        // Prints any item to console
         "print" => {
             let mut eval_args = vec![];
             for expr in args.iter() {
@@ -191,18 +192,15 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                     .enumerate()
                     .fold("".into(), |acc, (idx, item)| {
                         let item = match item {
-                            Value::Array(array, ..) => array
-                                .iter()
-                                .enumerate()
-                                .map(|(idx, i)| {
-                                    if idx == 0 {
-                                        return format!("[{i}, ");
-                                    } else if idx == array.len().saturating_sub(1) {
-                                        return format!("{i}]");
+                            Value::Array(array, ..) => format!(
+                                "{}]",
+                                array.iter().fold("[".into(), |acc, item| {
+                                    if acc == "[" {
+                                        return format!("{acc}{item}");
                                     }
-                                    format!("{i}, ")
+                                    format!("{acc}, {item}")
                                 })
-                                .collect::<String>(),
+                            ),
                             _ => item.to_string(),
                         };
                         if idx == 0 {
@@ -213,6 +211,7 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
             print!("{formated}");
             Ok(eval_args[0].clone())
         }
+        // use this function to index into an array
         "nth" => {
             let atom = walk_expr(&args[0], scope)?;
             let Value::Array(array, span) = atom else {
@@ -229,6 +228,7 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
             let atom = &array[idx];
             Ok(atom.clone())
         }
+        // use this function to get the length of an array
         "length" => {
             let Value::Array(array, span) = walk_expr(&args[0], scope)? else {
                 // eprintln!("{:#?}", scope.get("arr"));
@@ -238,6 +238,7 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
             let len = array.len();
             Ok(Value::Int(len as i32, span))
         }
+        // use this function to push to the end of an array
         "push" => {
             let lhs = walk_expr(&args[0], scope)?;
             let rhs = walk_expr(&args[1], scope)?;
