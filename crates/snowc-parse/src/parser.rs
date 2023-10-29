@@ -392,7 +392,11 @@ fn primary(tokens: &mut Vec<Token>) -> Result<Expr> {
             Ok(expr.map_position(|_| pos))
         }
         Token::Ctrl(c) if c.lexme == "[" => array(tokens, c.span),
-        token => Err(Error::UnexpectedToken(token.span())),
+        token => Err(Error::UnexpectedToken(
+            "(, [, ident, str, int, float, true, false, char".to_string(),
+            format!("{token:?}\r\n{:?}", tokens.get(1)),
+            token.span(),
+        )),
     }
 }
 
@@ -488,10 +492,14 @@ fn test_get_op() {
 fn consume_ctrl(tokens: &mut Vec<Token>, expected: &str) -> Result<Token> {
     let Some(Token::Ctrl(Ctrl{lexme, span, ..})) = tokens.get(0) else {
         let span = tokens.get(0).map(|t| t.span()).unwrap_or_default();
-        return Err(Error::UnexpectedToken(span));
+        return Err(Error::UnexpectedToken(expected.to_string(), tokens.get(0).map(|t| t.to_string()).unwrap_or_default(), span));
     };
     if lexme != expected {
-        return Err(Error::UnexpectedToken(*span));
+        return Err(Error::UnexpectedToken(
+            expected.to_string(),
+            tokens.get(0).map(|t| t.to_string()).unwrap_or_default(),
+            *span,
+        ));
     }
     Ok(tokens.remove(0))
 }
@@ -508,16 +516,26 @@ fn consume_op(tokens: &mut Vec<Token>, expected: &str) -> Result<Token> {
     let token = tokens.get(0);
     if matches!(&token, Some(Token::Op(Op{lexme, ..})) if lexme != expected) {
         let span = token.map(|t| t.span()).unwrap_or_default();
-        return Err(Error::UnexpectedToken(span));
+        return Err(Error::UnexpectedToken(
+            expected.to_string(),
+            tokens.get(0).map(|t| t.to_string()).unwrap_or_default(),
+            span,
+        ));
     }
     Ok(tokens.remove(0))
 }
 
 fn consume_keyword(tokens: &mut Vec<Token>, expected: &str) -> Result<Token> {
-    let token = tokens.get(0);
-    if matches!(&token, Some(Token::KeyWord(KeyWord{lexme, ..})) if lexme != expected) {
-        let span = token.map(|t| t.span()).unwrap_or_default();
-        return Err(Error::UnexpectedToken(span));
+    let Some(Token::KeyWord(KeyWord{lexme, span, ..})) = tokens.get(0) else {
+        let span = tokens.get(0).map(|t| t.span()).unwrap_or_default();
+        return Err(Error::UnexpectedToken(expected.to_string(), tokens.get(0).map(|t| t.to_string()).unwrap_or_default(), span));
+    };
+    if lexme != expected {
+        return Err(Error::UnexpectedToken(
+            expected.to_string(),
+            tokens.get(0).map(|t| t.to_string()).unwrap_or_default(),
+            *span,
+        ));
     }
     Ok(tokens.remove(0))
 }

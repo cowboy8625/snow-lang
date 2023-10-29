@@ -1,22 +1,24 @@
+use crossterm::{
+    cursor::{MoveTo, RestorePosition, SavePosition},
+    event::{poll, read, Event, KeyCode, KeyEvent, KeyModifiers},
+    style::Print,
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ScrollUp},
+    QueueableCommand,
+};
 use std::io::{Result, Write};
 use std::time::Duration;
-use crossterm::{
-    QueueableCommand,
-    style::Print,
-    event::{read, poll, Event, KeyCode, KeyEvent, KeyModifiers},
-    terminal::{enable_raw_mode, disable_raw_mode, Clear, ScrollUp},
-    cursor::{SavePosition, RestorePosition, MoveTo}
-};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Command {
     InsertChar(char),
+    CursorLeft,
+    CursorRight,
     Backspace,
+    DeleteFromCursorBackward,
     Return,
     Clear,
     Quit,
 }
-
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Size {
@@ -27,10 +29,7 @@ pub struct Size {
 impl Size {
     pub fn new() -> Result<Self> {
         let (width, height) = crossterm::terminal::size()?;
-        Ok(Self {
-            width,
-            height,
-        })
+        Ok(Self { width, height })
     }
 }
 
@@ -43,10 +42,7 @@ pub struct Pos<T> {
 impl Pos<u16> {
     pub fn new() -> Result<Self> {
         let (x, y): (u16, u16) = crossterm::cursor::position()?;
-        Ok(Self {
-            x,
-            y,
-        })
+        Ok(Self { x, y })
     }
 }
 
@@ -78,43 +74,85 @@ impl Terminal {
 
         let event = read().ok()?;
         match event {
-            Event::Key(KeyEvent { code: KeyCode::Char('l'), modifiers: KeyModifiers::CONTROL, .. }) => {
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('l'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            }) => {
                 self.clear_screen().ok()?;
                 Some(Command::Clear)
             }
-            Event::Key(KeyEvent { code: KeyCode::Char(c), .. }) => {
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('u'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            }) => {
+                self.cursor.x = 0;
+                Some(Command::DeleteFromCursorBackward)
+            }
+            Event::Key(KeyEvent {
+                code: KeyCode::Char(c),
+                ..
+            }) => {
+                self.cursor.x += 1;
                 Some(Command::InsertChar(c))
-            },
-            Event::Key(KeyEvent { code: KeyCode::Enter, .. }) => {
+            }
+            Event::Key(KeyEvent {
+                code: KeyCode::Enter,
+                ..
+            }) => {
                 self.cursor.y += 1;
                 Some(Command::Return)
-            },
-            Event::Key(KeyEvent { code: KeyCode::Backspace, .. }) => {
+            }
+            Event::Key(KeyEvent {
+                code: KeyCode::Backspace,
+                ..
+            }) => {
                 self.cursor.x = self.cursor.x.saturating_sub(1);
                 Some(Command::Backspace)
-            },
-            Event::Key(KeyEvent { code: KeyCode::Esc, .. }) => Some(Command::Quit),
-            // Event::Key(KeyEvent { code: KeyCode::Enter, .. }) => repl.state = ReplState::Eval,
+            }
+            Event::Key(KeyEvent {
+                code: KeyCode::Esc, ..
+            }) => Some(Command::Quit),
+            Event::Key(KeyEvent {
+                code: KeyCode::Left,
+                ..
+            }) => {
+                self.cursor.x = self.cursor.x.saturating_sub(1);
+                Some(Command::CursorLeft)
+            }
+            Event::Key(KeyEvent {
+                code: KeyCode::Right,
+                ..
+            }) => {
+                self.cursor.x += 1;
+                Some(Command::CursorRight)
+            }
             // Event::Key(KeyEvent { code: KeyCode::Char('n'), modifiers: KeyModifiers::CONTROL, .. }) => {
             //     eprintln!("next completion");
             //     repl.state = ReplState::NextCompletion;
             // }
             // Event::Key(KeyEvent { code: KeyCode::Tab, .. }) => repl.state = ReplState::AutoComplete,
-            // Event::Key(KeyEvent { code: KeyCode::Backspace, .. }) => backspace(repl)?,
-            // Event::Key(KeyEvent { code: KeyCode::Left, .. }) => move_cursor_left(repl)?,
-            // Event::Key(KeyEvent { code: KeyCode::Right, .. }) => move_cursor_right(repl)?,
             _ => None,
         }
     }
 
+    pub fn prompt(&mut self, prompt: &str, input: &str, pos: &Pos<usize>) -> Result<()> {
+        let x = (pos.x + prompt.len()) as u16;
+        self.print(&format!("{}{}", prompt, input))?;
+        self.writer.queue(MoveTo(x, self.cursor.y))?;
+        Ok(())
+    }
+
     pub fn print(&mut self, input: &str) -> Result<()> {
         for (idx, line) in input.lines().enumerate() {
-            self.writer.queue(MoveTo(self.cursor.x, self.cursor.y))?;
+            self.writer.queue(MoveTo(0, self.cursor.y))?;
             self.writer.queue(Print(line))?;
             if idx > 0 {
                 self.new_line()?;
             }
         }
+        self.writer.queue(MoveTo(self.cursor.x, self.cursor.y))?;
         Ok(())
     }
 
@@ -146,18 +184,21 @@ impl Terminal {
     }
 
     pub fn clear_line(&mut self) -> Result<()> {
-        self.writer.queue(Clear(crossterm::terminal::ClearType::CurrentLine))?;
+        self.writer
+            .queue(Clear(crossterm::terminal::ClearType::CurrentLine))?;
         Ok(())
     }
 
     pub fn clear_from_cursor_down(&mut self) -> Result<()> {
-        self.writer.queue(Clear(crossterm::terminal::ClearType::FromCursorDown))?;
+        self.writer
+            .queue(Clear(crossterm::terminal::ClearType::FromCursorDown))?;
         Ok(())
     }
 
     pub fn clear_screen(&mut self) -> Result<()> {
         self.cursor = Pos::<u16>::default();
-        self.writer.queue(Clear(crossterm::terminal::ClearType::All))?;
+        self.writer
+            .queue(Clear(crossterm::terminal::ClearType::All))?;
         Ok(())
     }
 
@@ -171,4 +212,3 @@ impl Drop for Terminal {
         disable_raw_mode().expect("Failed to disable raw mode");
     }
 }
-

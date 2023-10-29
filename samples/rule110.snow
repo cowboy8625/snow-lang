@@ -1,97 +1,79 @@
 -- create a grid of size
--- create_grid :: Int -> Int -> Array
-create_grid size char =
-  if 0 < (size - 1)
-  then (push (create_grid (size - 1) char) char)
-  else [char]
+createGrid size
+  : Int -> Array<Bool>
+  = if 0 < (size - 1)
+    then (push (createGrid (size - 1)) false)
+    else [false]
 
--- 111   110   101   100   011   010   001   000
---  0     1     1     0     1     1     1     0
--- is_alive :: Str -> Str -> Str -> Bool
-is_alive a b c =
-  if      a == "#"
-    and   b == "#"
-    and   c == "#"
-  then false
-  else if a == "#"
-    and   b == "#"
-    and   c == " "
-  then true
-  else if a == "#"
-    and   b == " "
-    and   c == "#"
-  then true
-  else if a == "#"
-    and   b == " "
-    and   c == " "
-  then false
-  else if a == " "
-    and   b == "#"
-    and   c == "#"
-  then true
-  else if a == " "
-    and   b == "#"
-    and   c == " "
-  then true
-  else if a == " "
-    and   b == " "
-    and   c == "#"
-  then true
-  else false
+isAlive a b c
+  : String -> String -> String -> Bool
+  = if a and b and c        -- 111
+    then false              --  0
+    else if a and b and !c  -- 110
+    then true               --  1
+    else if a and !b and c  -- 101
+    then true               --  1
+    else if a and !b and !c -- 100
+    then false              --  0
+    else if !a and b and c  -- 011
+    then true               --  1
+    else if !a and b and !c -- 010
+    then true               --  1
+    else if !a and !b and c -- 001
+    then true               --  1
+    else false              -- 000
+                            --  0
+idxOf i len
+  : Int -> Int -> Int
+  = (i + len) mod len
 
--- idx_of :: Int -> Int -> Int
-idx_of i len = (i + len) mod len
--- idx_of = (\i -> (\len -> (i + len) mod len))
--- ((i - 1) + len) % len
+nextCell grid x
+  : Array<Bool> -> Int -> Bool
+  = (λlen ->
+    (λa   ->
+    (λb   ->
+    (λc   -> isAlive a b c)
+    (nth grid (idxOf (x + 1) len)))
+    (nth grid          x          ))
+    (nth grid (idxOf (x - 1) len)))
+    (length grid)
 
--- next_cell :: Array -> Int -> Bool
-next_cell grid x =
--- let len = length grid in
--- let a = nth grid (idx_of (x - 1) len) in
--- let b = nth grid x in
--- let c = nth grid (idx_of (x + 1) len) in
--- is_alive a b c
-  (λlen ->
-  (λa   ->
-  (λb   ->
-  (λc   -> is_alive a b c)
-  (nth grid (idx_of (x - 1) len)))
-  (nth grid x))
-  (nth grid (idx_of (x + 1) len)))
-  (length grid)
+displayCell cell
+  : Bool -> String
+  = if cell then "#" else " "
 
--- cell_type :: Array -> Int -> Str
-cell_type grid idx =
-  if (next_cell grid idx)
-  then "#"
-  else " "
+nextGen grid idx
+  : Array<Bool> -> Int -> Array<Bool>
+  = if idx < (length grid)
+    then (push nextGen (idx + 1))
+    else [nextCell grid idx]
 
--- next_gen :: Array -> Int -> Array
-next_gen grid idx =
-  if (idx + 1) < (length grid)
-  then (push (next_gen grid (idx + 1)) (cell_type grid idx))
-  else [cell_type grid idx]
+joinStr sep arr
+  : String -> Array<Bool> -> String
+  = if (length arr) > 0
+    then (sep + (head arr)) + (joinStr sep (tail arr))
+    else ""
 
--- str_join :: Str -> Array -> Str
-str_join sep arr =
-  if (length arr) > 0
-  then (str_join sep (tail arr)) + (sep + (head arr))
-  else ""
+map f arr
+  - : (a -> b) -> Array<a> -> Array<b>
+  = if length arr == 0
+    then []
+    else [f (head arr)] + map f (tail arr)
 
--- display :: Array -> IO
-display grid = head [grid, (print (str_join "" grid) "\n")]
 
--- run :: Array -> Array
-run grid = run (next_gen (display grid) 0)
+display grid
+  : Array<Bool> -> IO
+  = head [grid, (print (joinStr "" (map displayCell grid)) "\n")]
 
--- main = IO
-main =
-  -- let start = create_grid 9 " " in
-  -- let starting_grid = push start "#" in
-  -- let grid = display starting_grid in
-  -- display <| next_gen grid 0
-  (\starting_grid ->
-  (\grid -> run grid)
-  (display starting_grid))
-  (push  (create_grid 90 " ") "#")
--- TODO: Check for function arg length ERROR.
+run count grid
+  : Array<Bool> -> Array<Bool>
+  = run (count + 1) (nextGen (display grid) 0)
+
+-- main
+--   : IO
+--   = (\starting_grid ->
+--     (\grid -> run 0 grid)
+--     (display starting_grid))
+--     (push  (createGrid 9) true)
+
+main = print (map (λx -> x + 1) [1, 2, 3])

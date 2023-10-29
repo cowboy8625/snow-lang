@@ -24,7 +24,8 @@ pub fn repl() -> Result<()> {
 
     terminal.print("Welcome to snow repl")?;
     terminal.new_line()?;
-    terminal.print(PROMPT)?;
+    // terminal.print(PROMPT)?;
+    terminal.prompt(PROMPT, &repl.input, &repl.pos)?;
     terminal.flush()?;
 
     while repl.is_running() {
@@ -34,6 +35,12 @@ pub fn repl() -> Result<()> {
 
         match command {
             Command::InsertChar(c) => repl.insert_char(c),
+            Command::CursorLeft => repl.cursor_left(),
+            Command::CursorRight => repl.cursor_right(),
+            Command::DeleteFromCursorBackward => {
+                repl.delete_from_cursor_backward();
+                terminal.clear_line()?;
+            }
             Command::Backspace => backspace(&mut terminal, &mut repl)?,
             Command::Return => {
                 execute_return_command(&mut terminal, &mut repl, &mut scope)?
@@ -44,7 +51,7 @@ pub fn repl() -> Result<()> {
 
         if !matches!(command, Command::Return) {
             let mut s = scope.clone();
-            match compile(&format!("{}  ", repl.input), &repl, &mut s) {
+            match compile(&repl, &mut s) {
                 Ok(Some(v)) => {
                     let y = terminal.y() + 1;
                     terminal.scroll_up_if_needed(y)?;
@@ -56,7 +63,8 @@ pub fn repl() -> Result<()> {
             }
         }
 
-        terminal.print(&format!("{PROMPT}{}", &repl.input))?;
+        terminal.prompt(PROMPT, &repl.input, &repl.pos)?;
+        // terminal.print(&format!("{PROMPT}{}", &repl.input))?;
         terminal.flush()?;
     }
     Ok(())
@@ -64,15 +72,15 @@ pub fn repl() -> Result<()> {
 
 // Not sure what to return here
 fn compile(
-    input: &str,
     repl: &Repl,
     scope: &mut Scope,
 ) -> std::result::Result<Option<Value>, Vec<String>> {
+    let input = &repl.input;
     let (filename, src) = repl
         .loaded_file
         .clone()
         .unwrap_or(("snowc repl".into(), String::new()));
-    let i = &(src + input);
+    let i = &(src + &repl.compiled_lines + input);
     let ast = match snowc_parse::parse(input) {
         Ok(ast) => ast,
         Err(_) => match snowc_parse::expression(input) {
@@ -103,11 +111,11 @@ fn execute_return_command(
         repl.clear_input();
         return Ok(());
     }
-    repl.input.push_str(" ");
-    match compile(&repl.input, &repl, scope) {
+    match compile(&repl, scope) {
         Ok(Some(v)) => {
             terminal.print(&v.to_string().yellow().to_string())?;
             terminal.new_line()?;
+            repl.successful_compiled_line();
         }
         Err(errors) => {
             terminal.print(&errors.join("\n"))?;
@@ -115,6 +123,7 @@ fn execute_return_command(
         _ => {
             let y = terminal.y();
             terminal.scroll_up_if_needed(y)?;
+            repl.successful_compiled_line();
         }
     }
     repl.clear_input();
@@ -126,20 +135,40 @@ fn execute_builtin_repl_command(
     repl: &mut Repl,
     scope: &mut Scope,
 ) -> Result<bool> {
-    match repl.input.as_str() {
+    match repl.input.clone().trim() {
         i if i.starts_with(":load") => {
             // FIXME: properly handle filename if it doesn't exist
             let filename = &i[6..];
             let src = std::fs::read_to_string(filename).unwrap();
-            let result = compile(&src, &repl, scope);
+            repl.input = src.clone();
+            let result = compile(&repl, scope);
             if result.is_err() {
+                terminal.print(&format!("failed to compile {filename}"))?;
+                terminal.new_line()?;
                 terminal.print(&result.unwrap_err().join("\n"))?;
                 terminal.new_line()?;
                 return Ok(true);
             }
+            repl.loaded_file = Some((filename.to_string(), src));
             terminal.print(&format!("loaded file {}", &i[6..]))?;
             terminal.new_line()?;
-            repl.loaded_file = Some((filename.to_string(), src));
+            Ok(true)
+        }
+        ":scope" => {
+            terminal.print("LOCALS")?;
+            terminal.new_line()?;
+            for (k, v) in scope.local.iter() {
+                terminal.print(&format!("{k}: {v}"))?;
+                terminal.new_line()?;
+            }
+            terminal.print("GLOBALS")?;
+            terminal.new_line()?;
+            for (k, v) in scope.global.iter() {
+                terminal.print(&format!("{k}: {v}"))?;
+                terminal.new_line()?;
+            }
+            terminal.print(&format!("COMPILED LINES: {}", &repl.compiled_lines))?;
+            terminal.new_line()?;
             Ok(true)
         }
         ":exit" | ":quit" => {
@@ -165,6 +194,7 @@ struct Repl {
     input: String,
     running: bool,
     pos: Pos<usize>,
+    compiled_lines: String,
     loaded_file: Option<(String, String)>,
     // history: History,
 }
@@ -175,8 +205,14 @@ impl Repl {
             input: String::new(),
             running: true,
             pos: Pos::default(),
+            compiled_lines: String::new(),
             loaded_file: None,
         }
+    }
+
+    fn successful_compiled_line(&mut self) {
+        self.compiled_lines += &self.input;
+        self.compiled_lines += "\n";
     }
 
     fn insert_char(&mut self, c: char) {
@@ -190,10 +226,33 @@ impl Repl {
     }
 
     fn backspace(&mut self) {
-        if self.pos.x > 0 {
-            self.pos.x -= 1;
-            self.input.remove(self.pos.x);
+        if self.pos.x == 0 {
+            return;
         }
+        self.pos.x -= 1;
+        self.input.remove(self.pos.x);
+    }
+
+    fn delete_from_cursor_backward(&mut self) {
+        if self.pos.x == 0 {
+            return;
+        }
+        self.input = self.input[self.pos.x..].to_string();
+        self.pos.x = 0;
+    }
+
+    fn cursor_right(&mut self) {
+        if self.pos.x == self.input.len() {
+            return;
+        }
+        self.pos.x += 1;
+    }
+
+    fn cursor_left(&mut self) {
+        if self.pos.x == 0 {
+            return;
+        }
+        self.pos.x -= 1;
     }
 
     fn is_running(&self) -> bool {

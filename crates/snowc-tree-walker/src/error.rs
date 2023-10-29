@@ -15,6 +15,10 @@ pub enum RuntimeError {
     InvalidArguments(Span),
     #[error("index out of bounds")]
     IdxOutOfBounds(Span),
+    #[error("invalid binary operation")]
+    InvalidBinaryOp(Span),
+    #[error("empty array")]
+    EmptyArray(Span),
 }
 
 impl RuntimeError {
@@ -39,6 +43,16 @@ impl RuntimeError {
             Self::IdxOutOfBounds(span) => {
                 let label = "index out of bounds";
                 let snippet = snippet_builder(filename, src, label, *span);
+                DisplayList::from(snippet).to_string()
+            }
+            Self::InvalidBinaryOp(span) => {
+                let label = self.to_string();
+                let snippet = snippet_builder(filename, src, &label, *span);
+                DisplayList::from(snippet).to_string()
+            }
+            Self::EmptyArray(span) => {
+                let label = self.to_string();
+                let snippet = snippet_builder(filename, src, &label, *span);
                 DisplayList::from(snippet).to_string()
             }
         }

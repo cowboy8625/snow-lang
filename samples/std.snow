@@ -40,10 +40,15 @@
 -- `<` :> a -> a -> Bool
 -- `<` x y = core::less x y Bool::True Bool::False
 
--- is_digit c
+-- isDigit c
 --   : Char -> Bool
 --   = c >= '0' and c <= '9'
 
+strJoin sep arr
+  : String -> Array<String> -> String
+  = if (length arr) > 0
+    then (sep + (head arr)) + (strJoin sep (tail arr))
+    else ""
 
 max x y
   : Int -> Int -> Int
@@ -59,13 +64,14 @@ clamp low high input
 
 -- main : IO = print (clamp 1 10 5)
 
--- Arrays
-myArray : Array<Int> = [1, 2, 3, 4, 5]
+map f arr
+  -- : (a -> b) -> Array<a> -> Array<b>
+  = if length arr == 0
+    then []
+    else [f (head arr)] + map f (tail arr)
 
--- main : IO = print (myArray) "\n"
+addOne x : Int -> Int = x + 1
 
--- Lambda
-
-main : IO = print ((λx -> 100 + x) 11) "\n"
-
-
+-- main
+--   : IO
+--   = print (map [1,2,3] addOne) "\n"

@@ -89,6 +89,10 @@ fn expr_binary(binary: &Binary, scope: &Scope) -> Result<Value> {
         (Op::Plus, Value::String(lhs, ..), Value::String(rhs, ..)) => {
             Ok(Value::String(format!("{lhs}{rhs}"), *span))
         }
+        (Op::Plus, Value::Array(lhs, ..), Value::Array(rhs, ..)) => Ok(Value::Array(
+            lhs.iter().cloned().chain(rhs.iter().cloned()).collect(),
+            *span,
+        )),
         (Op::Minus, Value::Int(lhs, ..), Value::Int(rhs, ..)) => {
             Ok(Value::Int(lhs - rhs, *span))
         }
@@ -131,7 +135,7 @@ fn expr_binary(binary: &Binary, scope: &Scope) -> Result<Value> {
         (Op::Or, Value::Bool(lhs, ..), Value::Bool(rhs, ..)) => {
             Ok(Value::Bool(lhs || rhs, *span))
         }
-        (op, r, l) => unimplemented!("{l:?} {op:?} {r:?}"),
+        (_, _, _) => Err(RuntimeError::InvalidBinaryOp(*span)),
     }
 }
 
@@ -168,10 +172,10 @@ fn expr_closure_with_args(
     walk_expr(tail, &scope)
 }
 
-fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Value> {
-    let Expr::Atom(Atom::Id(name, _, span)) = name else {
-        let (Some(head), Some(tail)) = (name.get_head(), name.get_tail()) else {
-            let Expr::App(App { name, args, span, .. }) = name else {
+fn expr_app(expr: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Value> {
+    let Expr::Atom(Atom::Id(name, _, span)) = expr else {
+        let (Some(head), Some(tail)) = (expr.get_head(), expr.get_tail()) else {
+            let Expr::App(App { name, args, span, .. }) = expr else {
                 return Err(RuntimeError::InvalidArguments(span));
             };
             return expr_app(name, args, *span, scope);
@@ -231,8 +235,6 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
         // use this function to get the length of an array
         "length" => {
             let Value::Array(array, span) = walk_expr(&args[0], scope)? else {
-                // eprintln!("{:#?}", scope.get("arr"));
-                // return Err(RuntimeError::InvalidArguments(*span));
                 return Ok(Value::Int(0, *span))
             };
             let len = array.len();
@@ -258,9 +260,17 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
             let iter = walk_expr(&args[0], scope)?;
             match iter {
                 Value::String(string, span) => {
+                    if string.is_empty() {
+                        return Ok(Value::String(String::new(), span));
+                    }
                     Ok(Value::String(string[1..].to_string(), span))
                 }
-                Value::Array(array, span) => Ok(Value::Array(array[1..].to_vec(), span)),
+                Value::Array(array, span) => {
+                    if array.is_empty() {
+                        return Ok(Value::Array(vec![], span));
+                    }
+                    Ok(Value::Array(array[1..].to_vec(), span))
+                }
                 _ => Err(RuntimeError::InvalidArguments(*span)),
             }
         }
@@ -268,48 +278,110 @@ fn expr_app(name: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
             let iter = walk_expr(&args[0], scope)?;
             match iter {
                 Value::String(string, span) => {
+                    if string.is_empty() {
+                        return Err(RuntimeError::EmptyArray(span));
+                    }
                     Ok(Value::String(string[0..1].to_string(), span))
                 }
-                Value::Array(array, ..) => Ok(array[0].clone()),
+                Value::Array(array, span) => {
+                    if array.is_empty() {
+                        return Err(RuntimeError::EmptyArray(span));
+                    }
+                    Ok(array[0].clone())
+                }
                 _ => Err(RuntimeError::InvalidArguments(*span)),
             }
         }
         _ => {
-            let Some(mut func) = scope.get(name) else {
-                return Err(RuntimeError::Undefined(name.into(), *span));
+            let Some(mut func) = scope.get(name).cloned() else {
+                return walk_expr(expr, scope);
             };
             let mut scope = scope.clone();
             for arg in args.iter() {
-                let Some(Expr::Atom(Atom::Id(name, pos, ..))) = func.get_head() else {
-                    continue;
-                };
-                let value = walk_expr(&arg.clone(), &scope)?;
-                fn into_expr(v: &Value, pos: TokenPosition) -> Expr {
-                    match v {
-                        Value::Int(i, span) => Expr::Atom(Atom::Int(*i, pos, *span)),
-                        Value::Float(i, span) => {
-                            Expr::Atom(Atom::Float(i.clone(), pos, *span))
-                        }
-                        Value::Bool(i, span) => Expr::Atom(Atom::Bool(*i, pos, *span)),
-                        Value::String(i, span) => {
-                            Expr::Atom(Atom::String(i.clone(), pos, *span))
-                        }
-                        Value::Char(i, span) => Expr::Atom(Atom::Char(*i, pos, *span)),
-                        Value::Array(array, span) => {
-                            let array = array.iter().map(|v| into_expr(v, pos)).collect();
-                            Expr::Array(array, pos, *span)
-                        }
-                        _ => unreachable!("{v}"),
+                match func.get_head() {
+                    Some(Expr::Atom(Atom::Id(name, pos, ..))) => {
+                        let value = match walk_expr(&arg.clone(), &scope) {
+                            Ok(v) => into_expr(&v, *pos),
+                            Err(_) => arg.clone(),
+                        };
+                        scope.insert_local(name.clone(), value);
+                        let Some(t) = func.get_tail() else {
+                            unreachable!()
+                        };
+                        func = t.clone();
+                    }
+                    _ => {
+                        let value = match walk_expr(&func, &scope) {
+                            Ok(v) => into_expr(&v, arg.position()),
+                            Err(_) => arg.clone(),
+                        };
+                        func = value;
                     }
                 }
-                scope.insert_local(name.clone(), into_expr(&value, *pos));
-                let Some(t) = func.get_tail() else {
-                    unreachable!()
-                };
-                func = t;
+                // let Some(Expr::Atom(Atom::Id(name, pos, ..))) = func.get_head() else {
+                //     return walk_expr(expr, &scope);
+                //     // eprintln!("func: {} | type: {}", func, _typeofexpr(func));
+                //     // eprintln!("name: {} | type: {}", name, "id");
+                //     // let Some(add_one) = scope.get(&func.to_string()) else {
+                //     //     continue;
+                //     // };
+                //     // eprintln!("addOne: {} | type: {}", add_one, _typeofexpr(add_one));
+                //     // eprintln!("arg: {} | type: {}", arg, _typeofexpr(arg));
+                //     // let value = match walk_expr(&arg.clone(), &scope) {
+                //     //     Ok(v) => into_expr(&v, arg.position()),
+                //     //     Err(_) => arg.clone(),
+                //     // };
+                //     // eprintln!("value: {} | type: {}", value, _typeofexpr(&value));
+                //     // continue;
+                // };
+                // let value = match walk_expr(&arg.clone(), &scope) {
+                //     Ok(v) => into_expr(&v, *pos),
+                //     Err(_) => arg.clone(),
+                // };
+                // scope.insert_local(name.clone(), value);
+                // let Some(t) = func.get_tail() else {
+                //     unreachable!()
+                // };
+                // func = t;
             }
-            walk_expr(func, &scope)
+
+            walk_expr(&func, &scope)
         }
+    }
+}
+fn _typeofexpr(expr: &Expr) -> String {
+    match expr {
+        Expr::Atom(atom) => match atom {
+            Atom::Id(..) => "id".to_string(),
+            Atom::Int(..) => "int".to_string(),
+            Atom::Float(..) => "float".to_string(),
+            Atom::Bool(..) => "bool".to_string(),
+            Atom::String(..) => "string".to_string(),
+            Atom::Char(..) => "char".to_string(),
+        },
+        Expr::Array(..) => "array".to_string(),
+        Expr::Closure(..) => "closure".to_string(),
+        Expr::Func(..) => "function".to_string(),
+        Expr::Error(..) => "error".to_string(),
+        Expr::App(..) => "app".to_string(),
+        Expr::Unary(..) => "unary".to_string(),
+        Expr::Binary(..) => "binary".to_string(),
+        Expr::IfElse(..) => "if".to_string(),
+        Expr::Enum(..) => "enum".to_string(),
+    }
+}
+fn into_expr(v: &Value, pos: TokenPosition) -> Expr {
+    match v {
+        Value::Int(i, span) => Expr::Atom(Atom::Int(*i, pos, *span)),
+        Value::Float(i, span) => Expr::Atom(Atom::Float(i.clone(), pos, *span)),
+        Value::Bool(i, span) => Expr::Atom(Atom::Bool(*i, pos, *span)),
+        Value::String(i, span) => Expr::Atom(Atom::String(i.clone(), pos, *span)),
+        Value::Char(i, span) => Expr::Atom(Atom::Char(*i, pos, *span)),
+        Value::Array(array, span) => {
+            let array = array.iter().map(|v| into_expr(v, pos)).collect();
+            Expr::Array(array, pos, *span)
+        }
+        _ => unreachable!("{v}"),
     }
 }
 
@@ -412,4 +484,14 @@ pub fn eval_expr_with_scope(
         }
         _ => walk_expr(expr, scope).map(Some),
     }
+}
+
+#[test]
+fn test_walk() {
+    use pretty_assertions::assert_eq;
+    use snowc_parse::parse;
+    let src = include_str!("./../../../samples/other.snow");
+    let ast = parse(src);
+    let result = walk(&ast.unwrap()).unwrap();
+    assert_eq!(result, None);
 }

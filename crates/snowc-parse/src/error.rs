@@ -5,7 +5,7 @@ use annotate_snippets::{
 use snowc_lexer::Span;
 use thiserror::Error;
 
-#[derive(Debug, Error, Clone, Copy)]
+#[derive(Debug, Error, Clone)]
 pub enum Error {
     #[error("missing identifier {0:?}")]
     MissingIdentifier(Span),
@@ -22,7 +22,7 @@ pub enum Error {
     #[error("unexpected end of file {0:?}")]
     UnexpectedEOF(Span),
     #[error("unexpected token {0:?}")]
-    UnexpectedToken(Span),
+    UnexpectedToken(String, String, Span),
     #[error("closure arguments can only be one {0:?}")]
     ClosureArgumentsCanOnlyBeOne(Span),
     #[error("missing ']' to array at {0:?}")]
@@ -50,7 +50,7 @@ impl Error {
             | Self::NotAFunction(s)
             | Self::UnclosedArray(s)
             | Self::UnexpectedEOF(s)
-            | Self::UnexpectedToken(s)
+            | Self::UnexpectedToken(_, _, s)
             | Self::UnexpectedEndOfInput(s)
             | Self::UnclosedParen(s)
             | Self::UnknownOperator(s) => *s,
@@ -66,8 +66,29 @@ impl Error {
             }
             _ => self.span(),
         };
+        if span.idx_end >= src.len() {
+            return format!(
+                "unexpected end of file at {filename} {span:?}, {src:?} {}",
+                self.to_string()
+            );
+        }
         let range = (span.idx_start, span.idx_end);
         let label = &self.to_string();
+        let mut annotations = vec![SourceAnnotation {
+            label,
+            annotation_type: AnnotationType::Error,
+            range,
+        }];
+        let help_label;
+        if let Self::UnexpectedToken(expected, found, span) = self {
+            help_label = format!("expected token {expected} but found {found}");
+            let info = SourceAnnotation {
+                label: &help_label,
+                annotation_type: AnnotationType::Info,
+                range: (span.idx_start, span.idx_end),
+            };
+            annotations.push(info);
+        }
         let snippet = Snippet {
             title: Some(Annotation {
                 label: Some(label),
@@ -80,11 +101,7 @@ impl Error {
                 line_start: span.row_start,
                 origin: Some(filename),
                 fold: true,
-                annotations: vec![SourceAnnotation {
-                    label,
-                    annotation_type: AnnotationType::Error,
-                    range,
-                }],
+                annotations,
             }],
             opt: FormatOptions {
                 color: true,
