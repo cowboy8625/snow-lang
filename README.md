@@ -23,10 +23,8 @@ This will place you in a REPL where you can explore the language interactively. 
 ```sh
 $ git clone http://github.com/cowboy8625/snow-lang.git
 $ cd snow-lang
-$ cargo run -- file_name.snow -d
+$ cargo run -- file_name.snow
 ```
-
-The `-d` flag disables type checking, as this aspect of the language is still a work in progress.
 
 ## Examples
 
