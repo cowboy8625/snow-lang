@@ -5,8 +5,8 @@ use terminal::{Command, Pos, Terminal};
 use anyhow::Result;
 
 const PROMPT: &str = ":> ";
-const _WELCOME: &str = "snow-lang version 0.0.0\r\n";
-const _HELP_MESSAGE: &str = "Help Commands
+const WELCOME: &str = "snow-lang version 0.0.0\r\n";
+const HELP_MESSAGE: &str = "Help Commands
 :help             get this message
 :exit | :quit     kill repl
 :clear            clears screen
@@ -22,7 +22,7 @@ pub fn repl() -> Result<()> {
     let mut terminal = Terminal::new()?;
     let mut scope = Scope::default();
 
-    terminal.print("Welcome to snow repl")?;
+    terminal.print(WELCOME)?;
     terminal.new_line()?;
     // terminal.print(PROMPT)?;
     terminal.prompt(PROMPT, &repl.input, &repl.pos)?;
@@ -137,9 +137,16 @@ fn execute_builtin_repl_command(
 ) -> Result<bool> {
     match repl.input.clone().trim() {
         i if i.starts_with(":load") => {
-            // FIXME: properly handle filename if it doesn't exist
-            let filename = &i[6..];
-            let src = std::fs::read_to_string(filename).unwrap();
+            let Some(filename) = i.get(6..) else {
+                terminal.print("failed to give filename to :load")?;
+                terminal.new_line()?;
+                return Ok(true);
+            };
+            let Ok(src) = std::fs::read_to_string(filename) else {
+                terminal.print(&format!("failed to load {filename}"))?;
+                terminal.new_line()?;
+                return Ok(true);
+            };
             repl.input = src.clone();
             let result = compile(&repl, scope);
             if result.is_err() {
@@ -173,6 +180,10 @@ fn execute_builtin_repl_command(
         }
         ":exit" | ":quit" => {
             repl.quit();
+            Ok(true)
+        }
+        ":help" => {
+            terminal.print(HELP_MESSAGE)?;
             Ok(true)
         }
         ":clear" => {

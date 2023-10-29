@@ -60,7 +60,7 @@ fn handle_compiler_errors(filename: impl Into<String>) -> impl FnOnce(CompilerEr
             }
         }
         CompilerError::NoFileGive => {
-            eprintln!("No file given to compile");
+            println!("");
         }
     }
 }

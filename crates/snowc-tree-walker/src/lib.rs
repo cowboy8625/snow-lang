@@ -145,6 +145,9 @@ fn expr_conditional(
     r#else: &Expr,
     scope: &Scope,
 ) -> Result<Value> {
+    eprintln!("condition: {condition} | {:?}", _typeofexpr(condition));
+    eprintln!("then: {then} | {:?}", _typeofexpr(then));
+    eprintln!("else: {} | {:?}", r#else, _typeofexpr(r#else));
     match walk_expr(condition, scope)? {
         Value::Bool(true, _) => walk_expr(then, scope),
         Value::Bool(false, _) => walk_expr(r#else, scope),
@@ -258,6 +261,7 @@ fn expr_app(expr: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
         }
         "tail" => {
             let iter = walk_expr(&args[0], scope)?;
+            eprintln!("tail: {iter} | {:?}", _typeofvalue(&iter));
             match iter {
                 Value::String(string, span) => {
                     if string.is_empty() {
@@ -318,31 +322,6 @@ fn expr_app(expr: &Expr, args: &[Expr], span: Span, scope: &Scope) -> Result<Val
                         func = value;
                     }
                 }
-                // let Some(Expr::Atom(Atom::Id(name, pos, ..))) = func.get_head() else {
-                //     return walk_expr(expr, &scope);
-                //     // eprintln!("func: {} | type: {}", func, _typeofexpr(func));
-                //     // eprintln!("name: {} | type: {}", name, "id");
-                //     // let Some(add_one) = scope.get(&func.to_string()) else {
-                //     //     continue;
-                //     // };
-                //     // eprintln!("addOne: {} | type: {}", add_one, _typeofexpr(add_one));
-                //     // eprintln!("arg: {} | type: {}", arg, _typeofexpr(arg));
-                //     // let value = match walk_expr(&arg.clone(), &scope) {
-                //     //     Ok(v) => into_expr(&v, arg.position()),
-                //     //     Err(_) => arg.clone(),
-                //     // };
-                //     // eprintln!("value: {} | type: {}", value, _typeofexpr(&value));
-                //     // continue;
-                // };
-                // let value = match walk_expr(&arg.clone(), &scope) {
-                //     Ok(v) => into_expr(&v, *pos),
-                //     Err(_) => arg.clone(),
-                // };
-                // scope.insert_local(name.clone(), value);
-                // let Some(t) = func.get_tail() else {
-                //     unreachable!()
-                // };
-                // func = t;
             }
 
             walk_expr(&func, &scope)
@@ -368,6 +347,17 @@ fn _typeofexpr(expr: &Expr) -> String {
         Expr::Binary(..) => "binary".to_string(),
         Expr::IfElse(..) => "if".to_string(),
         Expr::Enum(..) => "enum".to_string(),
+    }
+}
+fn _typeofvalue(expr: &Value) -> String {
+    match expr {
+        Value::Int(..) => "int".to_string(),
+        Value::Float(..) => "float".to_string(),
+        Value::Bool(..) => "bool".to_string(),
+        Value::String(..) => "string".to_string(),
+        Value::Char(..) => "char".to_string(),
+        Value::Array(..) => "array".to_string(),
+        Value::Func(..) => "function".to_string(),
     }
 }
 fn into_expr(v: &Value, pos: TokenPosition) -> Expr {
