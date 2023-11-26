@@ -1,27 +1,6 @@
--- map_tail_recursive f arr acc
---   -- : (a -> b) -> Array<a> -> Array<b> -> Array<b>
---   = if length arr == 0
---     then reverse acc
---     else map_tail_recursive f (tail arr) (acc + [f (head arr)])
-
--- map f arr
---   -- : (a -> b) -> Array<a> -> Array<b>
---   = map_tail_recursive f arr []
-
 map f arr
   = if (length arr) == 0
     then []
     else [f (head arr)] + (map f (tail arr))
-
-
---main = print (map (λx -> x + 1) [1, 2, 3])
 addOne x = x + 1
--- map f = [f (head [1, 2, 3])]+[(apply (\x -> f (head x)) (tail [1, 2, 3]))]
--- map f =
---   [f (head [1, 2, 3])]
---   +
---   [f (head (tail [1, 2, 3]))]
--- main = print (map (λ -> x + 1)) "\n"
 main = print (map addOne [1, 2]) "\n"
-
--- [(\x->x+1)(head[1])]+[(\x->x+1)(head (tail[1]))]
