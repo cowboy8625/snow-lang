@@ -9,4 +9,3 @@ main : IO = print "Winter is Coming!"
           ^ Ctrl(Ctrl { lexme: "=", pos: Middle, span: (10,0)->(11,0) })
             ^^^^^ Ident(Ident { lexme: "print", pos: Middle, span: (12,0)->(17,0) })
                   ^^^^^^^^^^^^^^^^^^^ Str(Str { lexme: "Winter is Coming!", pos: End, span: (18,0)->(37,0) })
-
