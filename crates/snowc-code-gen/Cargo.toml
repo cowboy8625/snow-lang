@@ -1,0 +1,17 @@
+[package]
+name = "snowc-code-gen"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+snowc-lexer = { path = "../snowc-lexer" }
+snowc-parse = { path = "../snowc-parse" }
+snowc-vm = { path = "../snowc-vm" }
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[lib]
+name = "snowc_code_gen"
+path = "src/lib.rs"

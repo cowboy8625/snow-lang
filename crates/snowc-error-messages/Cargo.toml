@@ -1,0 +1,8 @@
+[package]
+name = "snowc-error-messages"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+annotate-snippets = { version = "0.9.1", features = ["color"] }
+swrt-lexer = { path = "../swrt-lexer" }

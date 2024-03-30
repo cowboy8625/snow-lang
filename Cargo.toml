@@ -6,8 +6,9 @@ edition = "2021"
 [dependencies]
 snowc-parse = { path="./crates/snowc-parse" }
 # snowc-type-checker = { path="./crates/snowc-type-checker" }
-# snowc-byte-code-gen = { path="./crates/snowc-byte-code-gen" }
+snowc-code-gen = { path="./crates/snowc-code-gen" }
 snowc-repl = { path = "./crates/snowc-repl" }
+snowc-vm = { path = "./crates/snowc-vm" }
 snowc-tree-walker = { path = "./crates/snowc-tree-walker" }
 clap = { version = "4.0.29", features = ["cargo"] }
 

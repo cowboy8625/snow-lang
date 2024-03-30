@@ -1,0 +1,19 @@
+[package]
+name = "snowc-vm"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0.29", features = ["cargo"] }
+rustyline = "10.0.0"
+snowc-error-messages = { path = "../snowc-error-messages" }
+swrt-lexer = { path = "../swrt-lexer" }
+
+
+[[bin]]
+name = "swrt"
+path = "src/main.rs"
+
+[lib]
+name = "snowc_vm"
+path = "src/lib.rs"

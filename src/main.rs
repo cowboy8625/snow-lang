@@ -1,6 +1,6 @@
 mod args;
 use snowc::error::Error;
-use snowc::{parse, walk, Expr, Scanner};
+use snowc::{debug_program, gen_code, parse, walk, Expr, Machine, Scanner};
 use snowc_repl::repl;
 #[derive(Debug)]
 enum CompilerError {
@@ -99,25 +99,37 @@ fn main() {
         //     }
         //     Ok(ast)
         // })
+        // .map_or_else(
+        //     handle_compiler_errors(setting.filename.clone().unwrap_or_default()),
+        //     |ast| {
+        //         let msg = format_compiler_message("Running");
+        //         let filename = setting.filename.unwrap_or_default();
+        //         eprintln!("{msg} {filename}");
+        //         let result = walk(&ast);
+        //         match result {
+        //             Ok(_) => {}
+        //             Err(errors) => {
+        //                 let src =
+        //                     get_src(setting.option_compile_string)(filename.clone())
+        //                         .expect("failed to get file source for error report");
+        //                 for err in errors.iter() {
+        //                     let msg = err.report(&filename, &src);
+        //                     eprintln!("{msg}");
+        //                 }
+        //             }
+        //         }
+        //     },
+        // );
         .map_or_else(
             handle_compiler_errors(setting.filename.clone().unwrap_or_default()),
             |ast| {
                 let msg = format_compiler_message("Running");
                 let filename = setting.filename.unwrap_or_default();
                 eprintln!("{msg} {filename}");
-                let result = walk(&ast);
-                match result {
-                    Ok(_) => {}
-                    Err(errors) => {
-                        let src =
-                            get_src(setting.option_compile_string)(filename.clone())
-                                .expect("failed to get file source for error report");
-                        for err in errors.iter() {
-                            let msg = err.report(&filename, &src);
-                            eprintln!("{msg}");
-                        }
-                    }
-                }
+                let program = gen_code(&ast);
+                debug_program(&program);
+                let mut vm = Machine::new(program, false);
+                vm.run();
             },
         );
 }
