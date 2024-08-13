@@ -4,32 +4,15 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-snowc-parse = { path="./crates/snowc-parse" }
-# snowc-type-checker = { path="./crates/snowc-type-checker" }
-snowc-code-gen = { path="./crates/snowc-code-gen" }
-snowc-repl = { path = "./crates/snowc-repl" }
-snowc-vm = { path = "./crates/snowc-vm" }
-snowc-tree-walker = { path = "./crates/snowc-tree-walker" }
+anyhow = "1.0.86"
 clap = { version = "4.0.29", features = ["cargo"] }
+logos = "0.14.1"
+wasmi = "0.36.0"
+wasmtime = { version = "23.0.2", features = ['component-model', 'async', 'default', 'winch', 'debug-builtins'] }
+wasmtime-wasi = "23.0.2"
 
-[workspace]
-members = [
-    "./crates/*",
-]
-
-[ignore]
-default-members = [
-    "crates/snowc-type-checker",
-]
-
-
-[[bin]]
-name = "snowc"
-path = "src/main.rs"
-
-[lib]
-name = "snowc"
-path = "src/lib.rs"
+[dev-dependencies]
+pretty_assertions = "1.4.0"
 
 [profile.release]
 opt-level = 'z'     # Optimize for size.
