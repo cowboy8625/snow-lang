@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.0.29", features = ["cargo"] }
+leb128 = "0.2.5"
 logos = "0.14.1"
 wasmi = "0.36.0"
 wasmtime = { version = "23.0.2", features = ['component-model', 'async', 'default', 'winch', 'debug-builtins'] }
