@@ -466,7 +466,7 @@ fn max x y
     #[test]
     fn test_parser_function() {
         let input = r#"
-max x y
+fn max x y
     : Int -> Int -> Int
     = if x > y then x else y
         "#;
