@@ -9,13 +9,21 @@ mod wasm;
 
 fn main() {
     let input = r#"
-        max x y
-            : Int -> Int -> Int
-            = if x > y then x else y
+fn max x y
+    : Int -> Int -> Int
+    = if x > y then x else y
 
-        enum Option a
-            = Some a
-            | None
+fn min x y
+    : Int -> Int -> Int
+    = if x < y then x else y
+
+enum Option a
+    = Some a
+    | None
+
+enum Result a b
+    = OK a
+    | Error b
     "#;
 
     let lexer = front_end::Token::lexer(input);
@@ -23,6 +31,7 @@ fn main() {
 
     match parser.parse() {
         Ok(ast) => {
+            println!("{:#?}", ast.len());
             for expr in ast {
                 println!("{:#?}", expr);
             }
