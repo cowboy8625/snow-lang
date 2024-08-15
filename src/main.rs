@@ -12,6 +12,7 @@ use wasm::section::{
     export::{Export, ExportEntry, ExportType},
     function::Function,
     header::Header,
+    memory::{Memory, Page},
     start::Start,
     Section,
     _type::{FuncType, Type, ValueType},
@@ -34,6 +35,10 @@ fn main() {
     // Adding func_type_1
     function.add_function();
     module.push(function);
+
+    // Memory
+    let memory = Memory::default().with(Page::WithNoMinimun(1));
+    module.push(memory);
 
     // Exporting add func_type_0
     let exports = Export::default().with(ExportEntry::new("add", ExportType::Func, 0));
