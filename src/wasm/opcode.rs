@@ -2,6 +2,8 @@ use anyhow::Result;
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
+    Drop,
+    Call(u32),
     LocalGet(u32),
     // Numeric instructions
     I32Const(i32),
@@ -38,6 +40,12 @@ pub enum Instruction {
 impl Instruction {
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         match self {
+            Self::Drop => Ok(vec![0x1a]), // 0x1a is the opcode for drop
+            Self::Call(index) => {
+                let mut bytes = vec![0x10]; // 0x10 is the opcode for call
+                leb128::write::unsigned(&mut bytes, *index as u64)?;
+                Ok(bytes)
+            }
             Self::LocalGet(index) => {
                 let mut bytes = vec![0x20]; // 0x20 is the opcode for local.get
                 leb128::write::unsigned(&mut bytes, *index as u64)?;

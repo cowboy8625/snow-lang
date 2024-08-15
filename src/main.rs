@@ -12,6 +12,7 @@ use wasm::section::{
     export::{Export, ExportEntry, ExportType},
     function::Function,
     header::Header,
+    start::Start,
     Section,
     _type::{FuncType, Type, ValueType},
 };
@@ -19,34 +20,55 @@ use wasm::section::{
 fn main() {
     let mut module = Module::default();
     module.push(Header::default());
-    let func_typ = FuncType::default()
+    let func_type_0 = FuncType::default()
         .with_param(ValueType::I32)
         .with_param(ValueType::I32)
         .with_result(ValueType::I32);
-    module.push(Type::default().with(func_typ));
+    let func_type_1 = FuncType::default();
+    module.push(Type::default().with(func_type_0).with(func_type_1));
 
     let mut function = Function::default();
+
+    // Adding func_type_0
+    function.add_function();
+    // Adding func_type_1
     function.add_function();
     module.push(function);
 
+    // Exporting add func_type_0
     let exports = Export::default().with(ExportEntry::new("add", ExportType::Func, 0));
     module.push(exports);
 
-    let function_code_block = Block::default()
+    // Setting start to func_type_1
+    let start = Start::new(1);
+    module.push(start);
+
+    // Function body for func_type_0
+    let function_code_block_0 = Block::default()
         .with(Instruction::LocalGet(0))
         .with(Instruction::LocalGet(1))
         .with(Instruction::I32Add);
-    let code = Code::default().block(function_code_block);
+
+    // Function body for func_type_1
+    let function_code_block_1 = Block::default()
+        .with(Instruction::I32Const(1))
+        .with(Instruction::I32Const(100))
+        .with(Instruction::Call(0))
+        .with(Instruction::Drop);
+
+    let code = Code::default()
+        .block(function_code_block_0)
+        .block(function_code_block_1);
     module.push(code);
 
     let bytes = module.to_bytes().unwrap();
-    // println!(
-    //     "{:#?}",
-    //     bytes
-    //         .iter()
-    //         .map(|b| format!("{:02x}", b))
-    //         .collect::<Vec<String>>()
-    // );
+    println!(
+        "{:#?}",
+        bytes
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<Vec<String>>()
+    );
     std::fs::OpenOptions::new()
         .write(true)
         .create(true)

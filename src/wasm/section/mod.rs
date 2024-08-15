@@ -17,6 +17,7 @@ pub mod code;
 pub mod export;
 pub mod function;
 pub mod header;
+pub mod start;
 use super::opcode::Instruction;
 use _type::Type;
 use anyhow::Result;
@@ -24,6 +25,7 @@ use code::Code;
 use export::Export;
 use function::Function;
 use header::Header as Custom;
+use start::Start;
 
 macro_rules! into_section {
     ($($section:ident),*) => {
@@ -47,7 +49,7 @@ pub enum Section {
     // Memory(Vec<u8>),           // 0x05: Memory section with memory definitions
     // Global(Vec<u8>),           // 0x06: Global section with global variables
     Export(Export), // 0x07: Export section with exported functions, tables, etc.
-    // Start(Vec<u8>),            // 0x08: Start section with the index of the start function
+    Start(Start),   // 0x08: Start section with the index of the start function
     // Element(Vec<u8>),          // 0x09: Element section with function table elements
     Code(Code), // 0x0A: Code section with function bodies
                 // Data(Vec<u8>),             // 0x0B: Data section with initialization data for memory
@@ -60,9 +62,10 @@ impl Section {
             Section::Type(data) => data.to_bytes(),
             Section::Function(data) => data.to_bytes(),
             Section::Export(data) => data.to_bytes(),
+            Section::Start(data) => data.to_bytes(),
             Section::Code(data) => data.to_bytes(),
         }
     }
 }
 
-into_section!(Custom, Type, Function, Export, Code);
+into_section!(Custom, Type, Function, Export, Start, Code);
