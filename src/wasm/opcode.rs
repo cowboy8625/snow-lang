@@ -1,7 +1,8 @@
 use anyhow::Result;
 
 #[derive(Debug, Clone)]
-pub enum WasmInstruction {
+pub enum Instruction {
+    LocalGet(u32),
     // Numeric instructions
     I32Const(i32),
     I64Const(i64),
@@ -34,9 +35,14 @@ pub enum WasmInstruction {
     // more instructions...
 }
 
-impl WasmInstruction {
+impl Instruction {
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         match self {
+            Self::LocalGet(index) => {
+                let mut bytes = vec![0x20]; // 0x20 is the opcode for local.get
+                leb128::write::unsigned(&mut bytes, *index as u64)?;
+                Ok(bytes)
+            }
             // Numeric instructions
             Self::I32Const(value) => {
                 let mut bytes = vec![0x41]; // 0x41 is the opcode for i32.const
@@ -99,6 +105,10 @@ impl WasmInstruction {
             Self::Unreachable => Ok(vec![0x00]), // 0x00 is the opcode for unreachable
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.to_bytes().unwrap_or_default().len()
+    }
 }
 
 #[cfg(test)]
@@ -109,8 +119,8 @@ mod tests {
 
     #[test]
     fn test_to_bytes() -> Result<()> {
-        assert_eq!(WasmInstruction::I32Add.to_bytes()?, vec![0x6A]);
-        assert_eq!(WasmInstruction::I32Const(42).to_bytes()?, vec![0x41, 0x2A]);
+        assert_eq!(Instruction::I32Add.to_bytes()?, vec![0x6A]);
+        assert_eq!(Instruction::I32Const(42).to_bytes()?, vec![0x41, 0x2A]);
         Ok(())
     }
 }

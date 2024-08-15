@@ -1,13 +1,22 @@
-// Id | Section
-// 0  | Custom Section
-// 1  | Type Section
-// 2  | Import Section
-// 3  | Function Section
-// 4  | Table Section
-// 5  | Memory Section
-// 6  | Global Section
-// 7  | Export Section
-// 8  | Start Section
-// 9  | Element Section
-// 10 | Code Section
-// 11 | Data Section
+use super::opcode::Instruction;
+use super::section::Section;
+use anyhow::Result;
+
+#[derive(Debug, Default, Clone)]
+pub struct Module {
+    sections: Vec<Section>,
+}
+
+impl Module {
+    pub fn push(&mut self, section: impl Into<Section>) {
+        self.sections.push(section.into());
+    }
+
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        let mut bytes = Vec::new();
+        for section in &self.sections {
+            bytes.extend(section.to_bytes()?);
+        }
+        Ok(bytes)
+    }
+}

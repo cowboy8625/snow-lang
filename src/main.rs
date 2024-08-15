@@ -4,21 +4,56 @@
 use logos::Logos;
 mod front_end;
 mod wasm;
-use leb128;
+use std::io::Write;
+use wasm::module::Module;
+use wasm::opcode::Instruction;
+use wasm::section::{
+    code::{Block, Code},
+    export::{Export, ExportEntry, ExportType},
+    function::Function,
+    header::Header,
+    Section,
+    _type::{FuncType, Type, ValueType},
+};
 
 fn main() {
-    let mut buf = [0; 1024];
+    let mut module = Module::default();
+    module.push(Header::default());
+    let func_typ = FuncType::default()
+        .with_param(ValueType::I32)
+        .with_param(ValueType::I32)
+        .with_result(ValueType::I32);
+    module.push(Type::default().with(func_typ));
 
-    // Write to anything that implements `std::io::Write`.
-    {
-        let mut writable = &mut buf[..];
-        leb128::write::signed(&mut writable, 321).expect("Should write number");
-    }
-    println!("{:?}", buf);
+    let mut function = Function::default();
+    function.add_function();
+    module.push(function);
 
-    // Read from anything that implements `std::io::Read`.
-    let mut readable = &buf[..];
-    let val = leb128::read::signed(&mut readable).expect("Should read number");
+    let exports = Export::default().with(ExportEntry::new("add", ExportType::Func, 0));
+    module.push(exports);
+
+    let function_code_block = Block::default()
+        .with(Instruction::LocalGet(0))
+        .with(Instruction::LocalGet(1))
+        .with(Instruction::I32Add);
+    let code = Code::default().block(function_code_block);
+    module.push(code);
+
+    let bytes = module.to_bytes().unwrap();
+    // println!(
+    //     "{:#?}",
+    //     bytes
+    //         .iter()
+    //         .map(|b| format!("{:02x}", b))
+    //         .collect::<Vec<String>>()
+    // );
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open("test.wasm")
+        .unwrap()
+        .write_all(&bytes)
+        .unwrap();
 }
 
 // 0x00, 0x61, 0x73, 0x6d, // 00 | WASM magic number (0x00, 0x61, 0x73, 0x6d) - identifies the file as a WASM module
