@@ -18,7 +18,7 @@ use anyhow::Result;
 
 #[derive(Debug, Default, Clone)]
 pub struct Module {
-    custom: Header,
+    header: Header,
     kind: Option<Type>,
     imports: Option<Import>,
     function: Option<Function>,
@@ -27,6 +27,7 @@ pub struct Module {
     start: Option<Start>,
     code: Option<Code>,
     data: Option<Data>,
+    // custom: Option<Custom>,
 }
 
 impl Module {
@@ -164,7 +165,7 @@ impl Module {
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut bytes = Vec::new();
 
-        bytes.extend(self.custom.to_bytes()?);
+        bytes.extend(self.header.to_bytes()?);
 
         if let Some(kind) = &self.kind {
             bytes.extend(kind.to_bytes()?);

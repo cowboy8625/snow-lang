@@ -7,11 +7,9 @@ use logos::Logos;
 // ----------------------------------
 
 #[derive(Logos, Debug, PartialEq, Clone)]
-#[logos(skip r"[ \n\t\f]+")]
+#[logos(skip r"[\f]+")]
 pub enum Token {
     Error,
-    #[token("fn")]
-    Fn,
     #[token("enum")]
     Enum,
     #[token("match")]
@@ -78,8 +76,11 @@ pub enum Token {
     IntLiteral(String),
     #[regex(r#"[a-zA-Z_][a-zA-Z0-9_]*"#, |lex| lex.slice().to_string())]
     Identifier(String),
-    // #[regex(r#"\n[a-zA-Z_][a-zA-Z0-9_]*"#, |lex| lex.slice()[1..].to_string())]
-    // FunctionName(String),
+    #[token("\n")]
+    NewLine,
+    #[regex(r#"[ \t\r]*"#)]
+    Whitespace,
+    FunctionName(String),
 }
 
 // -----------------------
@@ -159,12 +160,34 @@ where
     I: Iterator<Item = Result<Token, ()>>,
 {
     pub fn new(mut tokens: std::iter::Peekable<I>) -> Self {
-        let current = tokens.next().and_then(|res| res.ok());
-        Self { tokens, current }
+        let current = None;
+        let mut parser = Self { tokens, current };
+        parser.next_token();
+        parser
     }
 
     fn next_token(&mut self) {
-        self.current = self.tokens.next().and_then(|res| res.ok());
+        use Token::*;
+        let mut last_token: Option<Token> = None;
+        loop {
+            let Some(token) = self.tokens.next().and_then(|res| res.ok()) else {
+                self.current = None;
+                break;
+            };
+            match (last_token.clone(), token.clone()) {
+                (None | Some(NewLine), Identifier(name)) => {
+                    self.current = Some(FunctionName(name));
+                    break;
+                }
+                (_, Whitespace | NewLine) => {}
+                _ => {
+                    self.current = Some(token.clone());
+                    break;
+                }
+            }
+
+            last_token = Some(token);
+        }
     }
 
     fn expect(&mut self, expected: Token) -> Result<(), String> {
@@ -211,7 +234,7 @@ where
         match self.current.clone() {
             Some(Token::If) => self.parse_if(),
             Some(Token::Enum) => self.parse_enum(),
-            Some(Token::Fn) => self.parse_function(),
+            Some(Token::FunctionName(_)) => self.parse_function(),
             _ => self.parse_binary_op(0),
         }
     }
@@ -259,6 +282,7 @@ where
 
             let mut variant = vec![Expr::Identifier(variant_name)];
             while let Some(Token::Identifier(type_name)) = self.current.clone() {
+                eprintln!("Parsing enum variant: {:?}", type_name);
                 variant.push(Expr::Identifier(type_name));
                 self.next_token();
             }
@@ -278,8 +302,7 @@ where
     }
 
     fn parse_function(&mut self) -> Result<Expr, String> {
-        self.next_token();
-        let Token::Identifier(name) = self.current.clone().unwrap() else {
+        let Token::FunctionName(name) = self.current.clone().unwrap() else {
             unreachable!();
         };
         self.next_token();
@@ -408,11 +431,7 @@ mod tests {
     #[test]
     fn test_lexer() {
         let input = r#"
-fn max x y
-    : Int -> Int -> Int
-    = if x > y then x else y
-
-fn max x y
+max x y
     : Int -> Int -> Int
     = if x > y then x else y
         "#;
@@ -420,45 +439,46 @@ fn max x y
         assert_eq!(
             lexer.collect::<Vec<_>>(),
             vec![
-                Ok(Token::Fn),
+                Ok(Token::NewLine),
                 Ok(Token::Identifier("max".to_string())),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("x".to_string())),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("y".to_string())),
+                Ok(Token::NewLine),
+                Ok(Token::Whitespace),
                 Ok(Token::Colon),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("Int".to_string())),
+                Ok(Token::Whitespace),
                 Ok(Token::Arrow),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("Int".to_string())),
+                Ok(Token::Whitespace),
                 Ok(Token::Arrow),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("Int".to_string())),
+                Ok(Token::NewLine),
+                Ok(Token::Whitespace),
                 Ok(Token::Equals),
+                Ok(Token::Whitespace),
                 Ok(Token::If),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("x".to_string())),
+                Ok(Token::Whitespace),
                 Ok(Token::GreaterThan),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("y".to_string())),
+                Ok(Token::Whitespace),
                 Ok(Token::Then),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("x".to_string())),
+                Ok(Token::Whitespace),
                 Ok(Token::Else),
+                Ok(Token::Whitespace),
                 Ok(Token::Identifier("y".to_string())),
-                // -----
-                Ok(Token::Fn),
-                Ok(Token::Identifier("max".to_string())),
-                Ok(Token::Identifier("x".to_string())),
-                Ok(Token::Identifier("y".to_string())),
-                Ok(Token::Colon),
-                Ok(Token::Identifier("Int".to_string())),
-                Ok(Token::Arrow),
-                Ok(Token::Identifier("Int".to_string())),
-                Ok(Token::Arrow),
-                Ok(Token::Identifier("Int".to_string())),
-                Ok(Token::Equals),
-                Ok(Token::If),
-                Ok(Token::Identifier("x".to_string())),
-                Ok(Token::GreaterThan),
-                Ok(Token::Identifier("y".to_string())),
-                Ok(Token::Then),
-                Ok(Token::Identifier("x".to_string())),
-                Ok(Token::Else),
-                Ok(Token::Identifier("y".to_string())),
+                Ok(Token::NewLine),
+                Ok(Token::Whitespace),
             ]
         );
     }
@@ -466,18 +486,25 @@ fn max x y
     #[test]
     fn test_parser_function() {
         let input = r#"
-fn max x y
+max x y
     : Int -> Int -> Int
     = if x > y then x else y
         "#;
         let lexer = Token::lexer(input);
         let mut parser = Parser::new(lexer.peekable());
-        let ast = parser.parse();
+        let ast = match parser.parse() {
+            Ok(ast) => ast,
+            Err(errors) => {
+                for e in errors {
+                    eprintln!("Error: {}", e);
+                }
+                panic!();
+            }
+        };
 
-        assert!(ast.is_ok());
-        assert_eq!(ast.clone().unwrap().len(), 1);
+        assert_eq!(ast.len(), 1);
         assert_eq!(
-            ast.unwrap()[0],
+            ast[0],
             Expr::Function {
                 name: "max".to_string(),
                 params: vec!["x".to_string(), "y".to_string()],
