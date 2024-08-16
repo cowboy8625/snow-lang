@@ -8,6 +8,10 @@ pub struct Export {
 impl Export {
     const ID: u8 = 0x07;
 
+    pub fn push(&mut self, export: ExportEntry) {
+        self.exports.push(export);
+    }
+
     pub fn with(mut self, export: ExportEntry) -> Self {
         self.exports.push(export);
         self

@@ -9,6 +9,10 @@ pub struct Data {
 impl Data {
     const ID: u8 = 0x0B;
 
+    pub fn push(&mut self, segment: Segment) {
+        self.data.push(segment);
+    }
+
     pub fn with(mut self, segment: Segment) -> Self {
         self.data.push(segment);
         self

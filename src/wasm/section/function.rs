@@ -2,11 +2,16 @@ use anyhow::Result;
 
 #[derive(Debug, Default, Clone)]
 pub struct Function {
+    imported_functions: u64,
     functions: u64,
 }
 
 impl Function {
     const ID: u8 = 0x03;
+
+    pub fn add_imported_function(&mut self) {
+        self.imported_functions += 1;
+    }
 
     pub fn add_function(&mut self) {
         self.functions += 1;
@@ -22,7 +27,9 @@ impl Function {
         // Count
         leb128::write::unsigned(&mut bytes, self.functions)?;
 
-        for function_id in 0..self.functions {
+        let start = self.imported_functions;
+        let end = self.functions + start;
+        for function_id in start..end {
             leb128::write::unsigned(&mut bytes, function_id)?;
         }
         Ok(bytes)

@@ -106,7 +106,9 @@ impl Instruction {
 
             // Memory instructions
             Self::I32Load => Ok(vec![0x28]), // 0x28 is the opcode for i32.load
-            Self::I32Store => Ok(vec![0x36]), // 0x36 is the opcode for i32.store
+            // HACK: 0x02 is the allignment
+            // HACK: 0x00 is the offset
+            Self::I32Store => Ok(vec![0x36, 0x02, 0x00]), // 0x36 is the opcode for i32.store
 
             // Other instructions
             Self::Nop => Ok(vec![0x01]), // 0x01 is the opcode for nop

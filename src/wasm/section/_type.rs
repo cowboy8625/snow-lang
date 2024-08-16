@@ -3,14 +3,22 @@ use anyhow::Result;
 #[derive(Debug, Default, Clone)]
 pub struct Type {
     length: usize,
-    types: Vec<FuncType>,
+    types: Vec<Kind>,
 }
 
 impl Type {
     const ID: u8 = 0x01;
-    pub fn with(mut self, type_: FuncType) -> Self {
-        self.length += type_.to_bytes().unwrap_or_default().len();
-        self.types.push(type_);
+
+    pub fn push(&mut self, type_: impl Into<Kind>) {
+        let kind = type_.into();
+        self.length += kind.to_bytes().unwrap_or_default().len();
+        self.types.push(kind);
+    }
+
+    pub fn with(mut self, type_: impl Into<Kind>) -> Self {
+        let kind = type_.into();
+        self.length += kind.to_bytes().unwrap_or_default().len();
+        self.types.push(kind);
         self
     }
 
@@ -28,13 +36,32 @@ impl Type {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum Kind {
+    Function(FunctionType),
+}
+
+impl Kind {
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        match self {
+            Self::Function(function) => function.to_bytes(),
+        }
+    }
+}
+
+impl From<FunctionType> for Kind {
+    fn from(function: FunctionType) -> Self {
+        Self::Function(function)
+    }
+}
+
 #[derive(Debug, Default, Clone)]
-pub struct FuncType {
+pub struct FunctionType {
     params: Vec<ValueType>,
     results: Vec<ValueType>,
 }
 
-impl FuncType {
+impl FunctionType {
     const ID: u8 = 0x60;
     pub fn with_param(mut self, type_: ValueType) -> Self {
         self.params.push(type_);
@@ -68,7 +95,7 @@ impl FuncType {
 
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut bytes = Vec::new();
-        bytes.push(FuncType::ID);
+        bytes.push(Self::ID);
         bytes.extend(self.params_to_bytes()?);
         bytes.extend(self.results_to_bytes()?);
         Ok(bytes)
@@ -91,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_to_bytes_func_type() {
-        let func_type = FuncType::default()
+        let func_type = FunctionType::default()
             .with_param(ValueType::I32)
             .with_param(ValueType::I32)
             .with_result(ValueType::I32);
@@ -102,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_to_bytes_type() {
-        let func_type = FuncType::default()
+        let func_type = FunctionType::default()
             .with_param(ValueType::I32)
             .with_param(ValueType::I32)
             .with_result(ValueType::I32);

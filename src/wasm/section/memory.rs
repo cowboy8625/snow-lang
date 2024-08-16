@@ -9,6 +9,10 @@ pub struct Memory {
 impl Memory {
     const ID: u8 = 0x05;
 
+    pub fn push(&mut self, page: Page) {
+        self.pages.push(page);
+    }
+
     pub fn with(mut self, page: Page) -> Self {
         self.pages.push(page);
         self

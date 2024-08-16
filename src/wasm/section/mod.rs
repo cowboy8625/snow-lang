@@ -18,6 +18,7 @@ pub mod data;
 pub mod export;
 pub mod function;
 pub mod header;
+pub mod import;
 pub mod memory;
 pub mod start;
 
@@ -30,6 +31,7 @@ use data::Data;
 use export::Export;
 use function::Function;
 use header::Header as Custom;
+use import::Import;
 use memory::Memory;
 use start::Start;
 
@@ -47,9 +49,9 @@ macro_rules! into_section {
 
 #[derive(Debug, Clone)]
 pub enum Section {
-    Custom(Custom), // 0x00: Custom section with name and data
-    Type(Type),     // 0x01: Type section with function signatures
-    // Import(Vec<u8>),           // 0x02: Import section with imported functions, tables, etc.
+    Custom(Custom),     // 0x00: Custom section with name and data
+    Type(Type),         // 0x01: Type section with function signatures
+    Import(Import),     // 0x02: Import section with imported functions, tables, etc.
     Function(Function), // 0x03: Function section with function indices
     // Table(Vec<u8>),            // 0x04: Table section with table definitions
     Memory(Memory), // 0x05: Memory section with memory definitions
@@ -65,6 +67,7 @@ impl Section {
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         match self {
             Section::Custom(data) => data.to_bytes(),
+            Section::Import(data) => data.to_bytes(),
             Section::Type(data) => data.to_bytes(),
             Section::Function(data) => data.to_bytes(),
             Section::Memory(data) => data.to_bytes(),
@@ -76,4 +79,4 @@ impl Section {
     }
 }
 
-into_section!(Custom, Type, Function, Memory, Export, Start, Code, Data);
+into_section!(Custom, Type, Import, Function, Memory, Export, Start, Code, Data);

@@ -10,7 +10,12 @@ pub struct Code {
 impl Code {
     const ID: u8 = 0x0A;
 
-    pub fn block(mut self, block: Block) -> Self {
+    pub fn push(&mut self, block: Block) {
+        self.length += block.len();
+        self.blocks.push(block);
+    }
+
+    pub fn with(mut self, block: Block) -> Self {
         self.length += block.len();
         self.blocks.push(block);
         self
@@ -88,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_code_section() {
-        let code_section = Code::default().block(
+        let code_section = Code::default().with(
             Block::default()
                 .with(Instruction::I32Const(1))
                 .with(Instruction::I32Const(2))
