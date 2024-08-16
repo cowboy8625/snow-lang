@@ -9,6 +9,7 @@ use wasm::module::Module;
 use wasm::opcode::Instruction;
 use wasm::section::{
     code::{Block, Code},
+    data::{Data, Segment},
     export::{Export, ExportEntry, ExportType},
     function::Function,
     header::Header,
@@ -41,7 +42,8 @@ fn main() {
     module.push(memory);
 
     // Exporting add func_type_0
-    let exports = Export::default().with(ExportEntry::new("add", ExportType::Func, 0));
+    let exports =
+        Export::default().with(ExportEntry::new("memory", ExportType::Memory, 0));
     module.push(exports);
 
     // Setting start to func_type_1
@@ -65,6 +67,12 @@ fn main() {
         .block(function_code_block_0)
         .block(function_code_block_1);
     module.push(code);
+
+    let segment = Segment::default()
+        .with_instruction(Instruction::I32Const(8))
+        .with_data("Hello World!\n".as_bytes().to_vec());
+    let data = Data::default().with(segment);
+    module.push(data);
 
     let bytes = module.to_bytes().unwrap();
     println!(

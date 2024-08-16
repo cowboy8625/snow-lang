@@ -14,15 +14,19 @@
 
 pub mod _type;
 pub mod code;
+pub mod data;
 pub mod export;
 pub mod function;
 pub mod header;
 pub mod memory;
 pub mod start;
+
 use super::opcode::Instruction;
+
 use _type::Type;
 use anyhow::Result;
 use code::Code;
+use data::Data;
 use export::Export;
 use function::Function;
 use header::Header as Custom;
@@ -54,7 +58,7 @@ pub enum Section {
     Start(Start),   // 0x08: Start section with the index of the start function
     // Element(Vec<u8>),          // 0x09: Element section with function table elements
     Code(Code), // 0x0A: Code section with function bodies
-                // Data(Vec<u8>),             // 0x0B: Data section with initialization data for memory
+    Data(Data), // 0x0B: Data section with initialization data for memory
 }
 
 impl Section {
@@ -67,8 +71,9 @@ impl Section {
             Section::Export(data) => data.to_bytes(),
             Section::Start(data) => data.to_bytes(),
             Section::Code(data) => data.to_bytes(),
+            Section::Data(data) => data.to_bytes(),
         }
     }
 }
 
-into_section!(Custom, Type, Function, Memory, Export, Start, Code);
+into_section!(Custom, Type, Function, Memory, Export, Start, Code, Data);
