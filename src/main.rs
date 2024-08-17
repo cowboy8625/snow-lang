@@ -1,6 +1,18 @@
 #![allow(dead_code)]
 #![allow(warnings)]
 
+// mod wasm_runtime;
+// fn main() -> anyhow::Result<()> {
+//     let Some(filename) = std::env::args().nth(1) else {
+//         println!("Usage: {} <filename>", std::env::args().next().unwrap());
+//         return Ok(());
+//     };
+//     let bytes = std::fs::read_to_string(&filename)?;
+//
+//     wasm_runtime::run(&bytes.into_bytes())?;
+//
+//     Ok(())
+// }
 // use anyhow::Result;
 // use logos::Logos;
 // mod front_end;
@@ -82,8 +94,9 @@
 // }
 
 mod front_end;
-// mod ir;
-// mod ir_emitter;
+mod ir;
+mod wasm;
+use ir::ExprVisitor;
 use logos::Logos;
 
 fn main() {
@@ -92,17 +105,17 @@ max x y
     : Int -> Int -> Int
     = if x > y then x else y
 
-min x y
-    : Int -> Int -> Int
-    = if x < y then x else y
+-- min x y
+--     : Int -> Int -> Int
+--     = if x < y then x else y
 
-enum Option a
-    = Some a
-    | None
+-- enum Option a
+--     = Some a
+--     | None
 
-enum Result a b
-    = OK a
-    | Error b
+-- enum Result a b
+--     = OK a
+--     | Error b
     "#;
 
     let lexer = front_end::Token::lexer(input);
@@ -111,12 +124,11 @@ enum Result a b
     match parser.parse() {
         Ok(ast) => {
             println!("{:#?}", ast.len());
-            for expr in ast {
-                println!("{:#?}", expr);
-            }
-            // let mut emitter = ir_emitter::IrEmitter::new();
-            // let ir = emitter.visit(&ast);
-            // println!("{:#?}", ir);
+            let mut emitter = ir::Emitter::new();
+            let ir_module = emitter.visit(&ast);
+            println!("{:#?}", ir_module.functions);
+            let wasm_module = wasm::Emitter::new();
+            println!("{:#?}", wasm_module);
         }
         Err(errors) => {
             for e in errors {
@@ -125,3 +137,4 @@ enum Result a b
         }
     }
 }
+

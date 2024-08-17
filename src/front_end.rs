@@ -80,6 +80,8 @@ pub enum Token {
     NewLine,
     #[regex(r#"[ \t\r]*"#)]
     Whitespace,
+    #[regex(r#"--.*\n"#, |lex| lex.slice().to_string())]
+    Comment(String),
     FunctionName(String),
 }
 
@@ -179,7 +181,7 @@ where
                     self.current = Some(FunctionName(name));
                     break;
                 }
-                (_, Whitespace | NewLine) => {}
+                (_, Whitespace | NewLine | Comment(_)) => {}
                 _ => {
                     self.current = Some(token.clone());
                     break;
