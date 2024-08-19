@@ -16,17 +16,17 @@ use super::{
 
 use anyhow::Result;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Module {
-    header: Header,
-    kind: Option<Type>,
-    imports: Option<Import>,
-    function: Option<Function>,
-    memory: Option<Memory>,
-    export: Option<Export>,
-    start: Option<Start>,
-    code: Option<Code>,
-    data: Option<Data>,
+    pub header: Header,
+    pub kind: Option<Type>,
+    pub imports: Option<Import>,
+    pub function: Option<Function>,
+    pub memory: Option<Memory>,
+    pub export: Option<Export>,
+    pub start: Option<Start>,
+    pub code: Option<Code>,
+    pub data: Option<Data>,
     // custom: Option<Custom>,
 }
 

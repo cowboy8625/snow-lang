@@ -13,9 +13,11 @@
 //
 //     Ok(())
 // }
+
 // use anyhow::Result;
 // use logos::Logos;
 // mod front_end;
+// mod ir;
 // mod wasm;
 // mod wasm_runtime;
 // use std::io::Write;
@@ -30,7 +32,7 @@
 //     import::{Import, ImportEntry, ImportType},
 //     memory::{Memory, Page},
 //     start::Start,
-//     Section,
+//     DataType, Section,
 //     _type::{FunctionType, Type, ValueType},
 // };
 //
@@ -46,8 +48,8 @@
 //         "core",
 //         "write",
 //         FunctionType::default()
-//             .with_param(ValueType::I32)
-//             .with_result(ValueType::I32),
+//             .with_param(ValueType::Data(DataType::I32))
+//             .with_result(DataType::I32),
 //     );
 //
 //     let block = Block::default()
@@ -101,8 +103,10 @@ use logos::Logos;
 
 fn main() {
     let input = r#"
+main := 0
+
 max x y
-    : Int -> Int -> Int
+    : Int->Int->Int
     = if x > y then x else y
 
 -- min x y
@@ -118,17 +122,34 @@ max x y
 --     | Error b
     "#;
 
+    use std::io::Write;
     let lexer = front_end::Token::lexer(input);
     let mut parser = front_end::Parser::new(lexer.peekable());
 
     match parser.parse() {
         Ok(ast) => {
-            println!("{:#?}", ast.len());
             let mut emitter = ir::Emitter::new();
             let ir_module = emitter.visit(&ast);
-            println!("{:#?}", ir_module.functions);
-            let wasm_module = wasm::Emitter::new();
+            let wasm_emitter = wasm::Emitter::new(ir_module);
+            let wasm_module = wasm_emitter.emit();
             println!("{:#?}", wasm_module);
+
+            let bytes = wasm_module.to_bytes().unwrap();
+            println!(
+                "{:#?}",
+                bytes
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<Vec<String>>()
+            );
+
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open("test.wasm")
+                .unwrap()
+                .write_all(&bytes)
+                .unwrap();
         }
         Err(errors) => {
             for e in errors {
@@ -137,4 +158,3 @@ max x y
         }
     }
 }
-

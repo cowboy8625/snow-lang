@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Memory {
     length: usize,
     pages: Vec<Page>,
@@ -37,7 +37,7 @@ impl Memory {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Page {
     WithMinAndMax(u32, u32),
     WithNoMinimun(u32),

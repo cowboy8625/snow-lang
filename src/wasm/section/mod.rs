@@ -47,20 +47,31 @@ macro_rules! into_section {
     };
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(u8)]
+pub enum DataType {
+    I32 = 0x7F,
+    I64 = 0x7E,
+    F32 = 0x7D,
+    F64 = 0x7C,
+    VOID = 0x40,
+}
+
+#[rustfmt::skip]
 #[derive(Debug, Clone)]
 pub enum Section {
     Custom(Custom),     // 0x00: Custom section with name and data
     Type(Type),         // 0x01: Type section with function signatures
     Import(Import),     // 0x02: Import section with imported functions, tables, etc.
     Function(Function), // 0x03: Function section with function indices
-    // Table(Vec<u8>),            // 0x04: Table section with table definitions
-    Memory(Memory), // 0x05: Memory section with memory definitions
-    // Global(Vec<u8>),           // 0x06: Global section with global variables
-    Export(Export), // 0x07: Export section with exported functions, tables, etc.
-    Start(Start),   // 0x08: Start section with the index of the start function
-    // Element(Vec<u8>),          // 0x09: Element section with function table elements
-    Code(Code), // 0x0A: Code section with function bodies
-    Data(Data), // 0x0B: Data section with initialization data for memory
+    // Table(Vec<u8>),  // 0x04: Table section with table definitions
+    Memory(Memory),     // 0x05: Memory section with memory definitions
+    // Global(Vec<u8>), // 0x06: Global section with global variables
+    Export(Export),     // 0x07: Export section with exported functions, tables, etc.
+    Start(Start),       // 0x08: Start section with the index of the start function
+    // Element(Vec<u8>),// 0x09: Element section with function table elements
+    Code(Code),         // 0x0A: Code section with function bodies
+    Data(Data),         // 0x0B: Data section with initialization data for memory
 }
 
 impl Section {

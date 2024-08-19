@@ -3,7 +3,7 @@ use anyhow::Result;
 /// Import Section Only holds names of functions, tables, memories, and globals
 /// If there is a Function import that needs to be inserted into the `[Type]` `[Section]` before
 /// any module level function are define.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Import {
     imports: Vec<ImportEntry>,
 }
@@ -41,7 +41,7 @@ impl Import {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ImportEntry {
     module: String,
     name: String,
@@ -73,7 +73,7 @@ impl ImportEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
 pub enum ImportType {
     Func = 0x00,

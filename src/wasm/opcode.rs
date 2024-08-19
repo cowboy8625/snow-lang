@@ -1,26 +1,52 @@
+use super::section::DataType;
 use anyhow::Result;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
+    /// 0x1a is the opcode to pop the value from the stack
     Drop,
+    /// 0x10 is the opcode to call a function
     Call(u32),
-    LocalGet(u32),
     // Numeric instructions
+    /// 0x41 is the opcode for i32.const
     I32Const(i32),
+    /// 0x42 is the opcode for i64.const
     I64Const(i64),
     F32Const(f32),
     F64Const(f64),
 
+    // Local
+    LocalGet(u32),
+    // LocalSet(u32),
+    // LocalTee(u32),
+    // GlobalGet(u32),
+    // GlobalSet(u32),
+
     // Arithmetic instructions
+    /// 0x6a is the opcode for i32.add
     I32Add,
+    /// 0x6b is the opcode for i32.sub
     I32Sub,
+    /// 0x6c is the opcode for i32.mul
     I32Mul,
+    /// 0x6d is the opcode for i32.div_s
     I32DivS,
+    /// 0x6e is the opcode for i32.div_u
     I32DivU,
+    /// 0x6f is the opcode for i32.rem_s
     I32RemS,
+    /// 0x70 is the opcode for i32.rem_u
     I32RemU,
+    /// 0x6a is the opcode for i32.gt_s
+    I32Gt,
 
     // Control instructions
+    /// 0x04 is the opcode for if followed by the `[DataType]`
+    If(DataType),
+    /// 0x05 is the opcode for else
+    Else,
+    /// 0x0b is the opcode for end
+    End,
     Br(u32),
     BrIf(u32),
     BrTable(Vec<u32>, u32),
@@ -81,8 +107,12 @@ impl Instruction {
             Self::I32DivU => Ok(vec![0x6e]),
             Self::I32RemS => Ok(vec![0x6f]),
             Self::I32RemU => Ok(vec![0x70]),
+            Self::I32Gt => Ok(vec![0x6a]),
 
             // Control instructions
+            Self::If(data_type) => Ok(vec![0x04]),
+            Self::Else => Ok(vec![0x05]),
+            Self::End => Ok(vec![0x0b]),
             Self::Br(label_idx) => {
                 let mut bytes = vec![0x0c]; // 0x0c is the opcode for br
                 leb128::write::unsigned(&mut bytes, *label_idx as u64)?;

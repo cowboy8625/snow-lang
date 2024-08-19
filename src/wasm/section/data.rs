@@ -1,7 +1,7 @@
 use super::Instruction;
 use anyhow::Result;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Data {
     data: Vec<Segment>,
 }
@@ -37,7 +37,7 @@ impl Data {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Segment {
     offset: u32,
     instructions: Vec<Instruction>,

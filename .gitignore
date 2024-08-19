@@ -1,7 +1,6 @@
 .history
 /target
 /*/target
-*.lock
 *.txt
 *.svg
 *.png

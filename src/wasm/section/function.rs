@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Function {
     imported_functions: u64,
     functions: u64,
@@ -11,6 +11,11 @@ impl Function {
 
     pub fn add_imported_function(&mut self) {
         self.imported_functions += 1;
+    }
+
+    pub fn with_function(mut self) -> Self {
+        self.functions += 1;
+        self
     }
 
     pub fn add_function(&mut self) {

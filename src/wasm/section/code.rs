@@ -1,7 +1,7 @@
 use super::Instruction;
 use anyhow::Result;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Code {
     length: usize,
     blocks: Vec<Block>,
@@ -36,12 +36,15 @@ impl Code {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Block {
     instructions: Vec<Instruction>,
 }
 
 impl Block {
+    pub fn new(instructions: Vec<Instruction>) -> Self {
+        Self { instructions }
+    }
     fn len(&self) -> usize {
         let mut length = 0;
         for instruction in &self.instructions {

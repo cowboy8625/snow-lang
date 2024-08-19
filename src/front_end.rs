@@ -155,6 +155,7 @@ where
 {
     tokens: std::iter::Peekable<I>,
     current: Option<Token>,
+    last_token: Option<Token>,
 }
 
 impl<I> Parser<I>
@@ -163,32 +164,37 @@ where
 {
     pub fn new(mut tokens: std::iter::Peekable<I>) -> Self {
         let current = None;
-        let mut parser = Self { tokens, current };
+        let mut parser = Self {
+            tokens,
+            current,
+            last_token: None,
+        };
         parser.next_token();
         parser
     }
 
     fn next_token(&mut self) {
         use Token::*;
-        let mut last_token: Option<Token> = None;
         loop {
             let Some(token) = self.tokens.next().and_then(|res| res.ok()) else {
                 self.current = None;
                 break;
             };
-            match (last_token.clone(), token.clone()) {
+            match (self.last_token.clone(), token.clone()) {
                 (None | Some(NewLine), Identifier(name)) => {
+                    self.last_token = Some(token);
                     self.current = Some(FunctionName(name));
                     break;
                 }
                 (_, Whitespace | NewLine | Comment(_)) => {}
                 _ => {
                     self.current = Some(token.clone());
+                    self.last_token = Some(token);
                     break;
                 }
             }
 
-            last_token = Some(token);
+            self.last_token = Some(token);
         }
     }
 
@@ -429,6 +435,40 @@ mod tests {
     use super::*;
     use crate::front_end::Token;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_lexer_with_spacing() {
+        let input = r#"Int->Int->Int"#;
+        let lexer = Token::lexer(input);
+        let tokens = lexer.collect::<Vec<_>>();
+        assert_eq!(
+            tokens,
+            vec![
+                Ok(Token::Identifier("Int".to_string(),),),
+                Ok(Token::Arrow),
+                Ok(Token::Identifier("Int".to_string(),),),
+                Ok(Token::Arrow),
+                Ok(Token::Identifier("Int".to_string(),),)
+            ]
+        );
+        let input = r#"Int -> Int -> Int"#;
+        let lexer = Token::lexer(input);
+        let tokens = lexer.collect::<Vec<_>>();
+        assert_eq!(
+            tokens,
+            vec![
+                Ok(Token::Identifier("Int".to_string(),),),
+                Ok(Token::Whitespace),
+                Ok(Token::Arrow),
+                Ok(Token::Whitespace),
+                Ok(Token::Identifier("Int".to_string(),),),
+                Ok(Token::Whitespace),
+                Ok(Token::Arrow),
+                Ok(Token::Whitespace),
+                Ok(Token::Identifier("Int".to_string(),),)
+            ]
+        );
+    }
 
     #[test]
     fn test_lexer() {

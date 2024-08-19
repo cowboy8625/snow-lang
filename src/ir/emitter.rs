@@ -105,7 +105,7 @@ impl ExprVisitor for Emitter {
                 .zip(signature[0..params.len()].iter())
                 .map(|(name, ty)| (name.to_string(), ty.into()))
                 .collect(),
-            return_type: (&signature[params.len()]).into(),
+            return_type: signature.last().map(|ty| ty.into()),
             body: block,
         };
 
@@ -165,7 +165,7 @@ mod tests {
     fn test_emit_ir_function() {
         let input = r#"
 max x y
-    : Int ->Int -> Int
+    : Int -> Int -> Int
     = if x > y then x else y
             "#;
         let lexer = Token::lexer(input);
@@ -183,7 +183,7 @@ max x y
             module.functions[0].params,
             vec![("x".to_string(), Type::Int), ("y".to_string(), Type::Int)]
         );
-        assert_eq!(module.functions[0].return_type, Type::Int);
+        assert_eq!(module.functions[0].return_type, Some(Type::Int));
         assert_eq!(
             module.functions[0].body,
             Block {
@@ -210,22 +210,22 @@ max x y
         );
     }
 
-//     #[test]
-//     fn test_emit_ir_enum() {
-//         let input = r#"
-//             enum Option a
-//                 = Some a
-//                 | None
-//             "#;
-//         let lexer = Token::lexer(input);
-//         let mut parser = Parser::new(lexer.peekable());
-//         let ast = parser.parse().unwrap();
+    //     #[test]
+    //     fn test_emit_ir_enum() {
+    //         let input = r#"
+    //             enum Option a
+    //                 = Some a
+    //                 | None
+    //             "#;
+    //         let lexer = Token::lexer(input);
+    //         let mut parser = Parser::new(lexer.peekable());
+    //         let ast = parser.parse().unwrap();
 
-//         let mut emitter = Emitter::new();
-//         let module = emitter.visit(&ast);
+    //         let mut emitter = Emitter::new();
+    //         let module = emitter.visit(&ast);
 
-//         eprintln!("{:#?}", emitter);
-//         eprintln!("{:#?}", module);
-//         assert_eq!(module.enums.len(), 1);
-//     }
+    //         eprintln!("{:#?}", emitter);
+    //         eprintln!("{:#?}", module);
+    //         assert_eq!(module.enums.len(), 1);
+    //     }
 }

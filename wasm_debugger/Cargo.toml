@@ -1,0 +1,9 @@
+[package]
+name = "wasm_debugger"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+iced = { version = "0.12.1", features = ["highlighter", "tokio", "debug"] }
+rfd = "0.14.1"
+tokio = { version = "1.39.3", features = ["fs"] }

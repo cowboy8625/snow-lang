@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Start {
     length: u32,
     index: u32,

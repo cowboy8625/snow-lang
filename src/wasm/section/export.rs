@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Export {
     exports: Vec<ExportEntry>,
 }
@@ -42,7 +42,7 @@ impl Export {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExportEntry {
     name: String,
     export_type: ExportType,
@@ -73,7 +73,7 @@ impl ExportEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
 pub enum ExportType {
     Func = 0x00,

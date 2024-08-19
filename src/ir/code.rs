@@ -13,7 +13,7 @@ pub struct Module {
 pub struct Function {
     pub name: String,
     pub params: Vec<(String, Type)>,
-    pub return_type: Type,
+    pub return_type: Option<Type>,
     pub body: Block,
 }
 

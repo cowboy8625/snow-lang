@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Header {
     pub magic_number: [u8; 4],
     pub version: [u8; 4],

@@ -1,6 +1,7 @@
+use super::DataType;
 use anyhow::Result;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Type {
     length: usize,
     types: Vec<Kind>,
@@ -36,7 +37,7 @@ impl Type {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Kind {
     Function(FunctionType),
 }
@@ -55,10 +56,11 @@ impl From<FunctionType> for Kind {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct FunctionType {
     params: Vec<ValueType>,
-    results: Vec<ValueType>,
+    /// The last value that is on the stack
+    results: Vec<DataType>,
 }
 
 impl FunctionType {
@@ -68,7 +70,7 @@ impl FunctionType {
         self
     }
 
-    pub fn with_result(mut self, type_: ValueType) -> Self {
+    pub fn with_result(mut self, type_: DataType) -> Self {
         self.results.push(type_);
         self
     }
@@ -78,7 +80,7 @@ impl FunctionType {
         let count = self.params.len();
         leb128::write::unsigned(&mut bytes, count as u64)?;
         for param in &self.params {
-            bytes.push(*param as u8);
+            bytes.push(param.to_byte());
         }
         Ok(bytes)
     }
@@ -102,13 +104,20 @@ impl FunctionType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq)]
 #[repr(u8)]
 pub enum ValueType {
-    I32 = 0x7F,
-    I64 = 0x7E,
-    F32 = 0x7D,
-    F64 = 0x7C,
+    WithName(String, DataType),
+    Data(DataType),
+}
+
+impl ValueType {
+    pub fn to_byte(&self) -> u8 {
+        match self {
+            Self::WithName(_, data) => *data as u8,
+            Self::Data(data) => *data as u8,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -119,9 +128,9 @@ mod tests {
     #[test]
     fn test_to_bytes_func_type() {
         let func_type = FunctionType::default()
-            .with_param(ValueType::I32)
-            .with_param(ValueType::I32)
-            .with_result(ValueType::I32);
+            .with_param(ValueType::Data(DataType::I32))
+            .with_param(ValueType::Data(DataType::I32))
+            .with_result(DataType::I32);
 
         let bytes = func_type.to_bytes().unwrap();
         assert_eq!(bytes, vec![0x60, 0x02, 0x7F, 0x7F, 0x01, 0x7F]);
@@ -130,9 +139,9 @@ mod tests {
     #[test]
     fn test_to_bytes_type() {
         let func_type = FunctionType::default()
-            .with_param(ValueType::I32)
-            .with_param(ValueType::I32)
-            .with_result(ValueType::I32);
+            .with_param(ValueType::Data(DataType::I32))
+            .with_param(ValueType::Data(DataType::I32))
+            .with_result(DataType::I32);
 
         let r#type = Type::default().with(func_type);
 
