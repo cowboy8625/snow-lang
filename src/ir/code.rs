@@ -107,4 +107,5 @@ pub enum Value {
     Char(char),
     /// References a variable by name
     Variable(String),
+    String(String),
 }

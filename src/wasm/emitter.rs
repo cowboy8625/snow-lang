@@ -36,20 +36,29 @@ impl Emitter {
         params: &[(String, ir::Type)],
     ) -> Vec<Instruction> {
         let mut instructions = Vec::new();
-        match *value {
-            ir::Value::Int(value) => instructions.push(Instruction::I32Const(value)),
+        match value {
+            ir::Value::Int(value) => instructions.push(Instruction::I32Const(*value)),
             ir::Value::Char(value) => {
-                instructions.push(Instruction::I32Const(value as i32))
+                instructions.push(Instruction::I32Const(*value as i32))
             }
             ir::Value::Bool(value) => {
-                instructions.push(Instruction::I32Const(value as i32))
+                instructions.push(Instruction::I32Const(*value as i32))
             }
-            ir::Value::Variable(ref name) => {
-                let Some(index) = params.iter().position(|(param, _)| param == name)
-                else {
+            ir::Value::Variable(name) => {
+                let variable_name = params
+                    .iter()
+                    .position(|(param, _)| param == name)
+                    .map(|index| index as u32)
+                    .or(self.module.get_function_id(name));
+                let Some(index) = variable_name else {
                     panic!("Variable not found: {}", name);
                 };
-                instructions.push(Instruction::LocalGet(index as u32))
+                instructions.push(Instruction::LocalGet(index))
+            }
+            ir::Value::String(string) => {
+                let ptr = self.module.add_string(string);
+                instructions.push(Instruction::I32Const(ptr as i32));
+                instructions.push(Instruction::I32Const(string.len() as i32));
             }
         }
         instructions
@@ -122,11 +131,6 @@ impl Emitter {
                 body,
             } = func;
 
-            if name == "main" {
-                // TODO: Keep track of the index to set the start function
-                self.module.set_start(1);
-            }
-
             let mut func_type = FunctionType::default();
             for (pname, ty) in params.iter() {
                 let value_type = ValueType::WithName(pname.to_string(), get_type(ty));
@@ -137,16 +141,31 @@ impl Emitter {
                 func_type = func_type.with_result(get_type(&return_type));
             }
 
-            let block = Block::new(self.compile_block(&body, &params));
+            let mut block_instructions = self.compile_block(&body, &params);
+            block_instructions.push(Instruction::Drop);
+            let block = Block::new(block_instructions);
 
-            self.module.add_function(func_type, block);
+            self.module.add_function(name, func_type, block);
         }
     }
 
     pub fn emit(mut self) -> Module {
-        self.module.add_memory(Page::WithNoMinimun(1));
+        // self.module.add_memory(Page::WithNoMinimun(1));
+        self.module.import(
+            "core",
+            "write",
+            FunctionType::default()
+                .with_param(ValueType::Data(DataType::I32))
+                .with_param(ValueType::Data(DataType::I32))
+                .with_result(DataType::I32),
+        );
 
         self.compile_function_in_module();
+
+        let Some(main_id) = self.module.get_main_function_id() else {
+            panic!("No main function found");
+        };
+        self.module.set_start(main_id);
 
         self.module
     }
@@ -185,7 +204,7 @@ max x y
         );
         assert_eq!(
             wasm_module.function,
-            Some(Function::default().with_function())
+            Some(Function::default().with_function("max"))
         );
         assert_eq!(
             wasm_module.code,

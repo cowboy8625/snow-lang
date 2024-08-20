@@ -18,6 +18,18 @@ impl Data {
         self
     }
 
+    pub fn push_data(&mut self, data: Vec<u8>) -> u32 {
+        match self.data.last_mut() {
+            Some(segment) => segment.push_data(data),
+            None => {
+                let mut segment = Segment::default();
+                segment.data.extend(data);
+                self.data.push(segment);
+                0
+            }
+        }
+    }
+
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut bytes = Vec::new();
         bytes.push(Data::ID);
@@ -58,6 +70,12 @@ impl Segment {
     pub fn with_data(mut self, data: Vec<u8>) -> Self {
         self.data.extend(data);
         self
+    }
+
+    pub fn push_data(&mut self, data: Vec<u8>) -> u32 {
+        let offset = self.data.len() as u32;
+        self.data.extend(data);
+        offset
     }
 
     pub fn to_bytes(&self) -> Result<Vec<u8>> {

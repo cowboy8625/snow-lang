@@ -31,6 +31,16 @@ pub struct Module {
 }
 
 impl Module {
+    pub fn get_main_function_id(&self) -> Option<u32> {
+        self.get_function_id("main")
+    }
+
+    pub fn get_function_id(&self, name: &str) -> Option<u32> {
+        self.function
+            .as_ref()
+            .and_then(|function| function.get_id(name))
+    }
+
     pub fn export(&mut self, entry: ExportEntry) {
         match self.export.as_mut() {
             Some(export) => export.push(entry),
@@ -61,6 +71,18 @@ impl Module {
         }
     }
 
+    pub fn add_string(&mut self, string: &str) -> u32 {
+        match self.data.as_mut() {
+            Some(data) => data.push_data(string.as_bytes().to_vec()),
+            None => {
+                let mut data = Data::default();
+                data.push_data(string.as_bytes().to_vec());
+                self.data = Some(data);
+                0
+            }
+        }
+    }
+
     pub fn add_memory(&mut self, page: Page) {
         match self.memory.as_mut() {
             Some(memory) => memory.push(page),
@@ -85,12 +107,17 @@ impl Module {
         }
     }
 
-    pub fn add_function(&mut self, definition: impl Into<Kind>, block: Block) {
+    pub fn add_function(
+        &mut self,
+        name: impl Into<String>,
+        definition: impl Into<Kind>,
+        block: Block,
+    ) {
         match self.function.as_mut() {
-            Some(function) => function.add_function(),
+            Some(function) => function.add_function(name),
             None => {
                 let mut function = Function::default();
-                function.add_function();
+                function.add_function(name);
                 self.function = Some(function);
             }
         }
@@ -112,12 +139,12 @@ impl Module {
         }
     }
 
-    pub fn add_imported_function(&mut self) {
+    pub fn add_imported_function(&mut self, name: impl Into<String>) {
         match self.function.as_mut() {
-            Some(function) => function.add_imported_function(),
+            Some(function) => function.add_imported_function(name),
             None => {
                 let mut function = Function::default();
-                function.add_imported_function();
+                function.add_imported_function(name);
                 self.function = Some(function);
             }
         }
@@ -129,10 +156,11 @@ impl Module {
         name: impl Into<String>,
         kind: impl Into<Kind>,
     ) {
+        let name = name.into();
         let kind = kind.into();
         let entry_type = match kind {
             Kind::Function(_) => {
-                self.add_imported_function();
+                self.add_imported_function(name.clone());
                 ImportType::Func
             }
         };

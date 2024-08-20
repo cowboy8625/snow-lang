@@ -82,6 +82,8 @@ pub enum Token {
     Whitespace,
     #[regex(r#"--.*\n"#, |lex| lex.slice().to_string())]
     Comment(String),
+    #[regex(r#""[^"]*""#, |lex| lex.slice().to_string())]
+    StringLiteral(String),
     FunctionName(String),
 }
 
@@ -125,6 +127,7 @@ pub enum Atom {
     Int(i32),
     Char(char),
     Bool(bool),
+    String(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -382,6 +385,10 @@ where
             Some(Token::IntLiteral(number)) => {
                 self.next_token();
                 Ok(Expr::Atom(Atom::Int(number.parse::<i32>().unwrap())))
+            }
+            Some(Token::StringLiteral(string)) => {
+                self.next_token();
+                Ok(Expr::Atom(Atom::String(string)))
             }
             _ => Err(format!(
                 "Unexpected token in primary expression {:?}",

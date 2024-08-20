@@ -15,22 +15,25 @@ pub fn run(wasm_bytes: &[u8]) -> Result<()> {
     linker.func_wrap(
         "core",
         "write",
-        |mut ctx: Caller<'_, WasiCtx>, iovs_ptr: i32| {
+        |mut ctx: Caller<'_, WasiCtx>, ptr: i32, len: i32| {
             let Some(exported_memory) = ctx.get_export("memory") else {
                 return 1;
             };
 
             let Some(memory) = exported_memory.into_memory() else {
+                println!("Memory export not found");
                 return 1;
             };
 
-            let offset_ptr = iovs_ptr as usize;
-            let mut ptr_str_buf = [0u8; 4];
-            memory.read(&ctx, offset_ptr, &mut ptr_str_buf).unwrap();
-            let mut ptr_len_buf = [0u8; 4];
-            memory.read(&ctx, offset_ptr + 4, &mut ptr_len_buf).unwrap();
-            let len = u32::from_le_bytes(ptr_len_buf) as usize;
-            let ptr = u32::from_le_bytes(ptr_str_buf) as usize;
+            // let offset_ptr = iovs_ptr as usize;
+            // let mut ptr_str_buf = [0u8; 4];
+            // memory.read(&ctx, offset_ptr, &mut ptr_str_buf).unwrap();
+            // let mut ptr_len_buf = [0u8; 4];
+            // memory.read(&ctx, offset_ptr + 4, &mut ptr_len_buf).unwrap();
+            // let len = u32::from_le_bytes(ptr_len_buf) as usize;
+            // let ptr = u32::from_le_bytes(ptr_str_buf) as usize;
+            let len = len as usize;
+            let ptr = ptr as usize;
             let mut string = vec![0u8; len];
             memory.read(&ctx, ptr, &mut string).unwrap();
 
@@ -42,5 +45,6 @@ pub fn run(wasm_bytes: &[u8]) -> Result<()> {
     )?;
 
     linker.instantiate(&mut store, &module)?;
+    // linker.get(&mut store, "main")?.call(&mut store, ())?;
     Ok(())
 }

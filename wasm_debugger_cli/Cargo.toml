@@ -1,0 +1,11 @@
+[package]
+name = "wasm_debugger_cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+clap = { version = "4.5.16", features = ["cargo", "derive"] }
+crossterm = "0.28.1"
+leb128 = "0.2.5"
+ratatui = { version = "0.28.0", features = ["all-widgets", "macros"] }

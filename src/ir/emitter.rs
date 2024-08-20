@@ -33,6 +33,7 @@ impl ExprVisitor for Emitter {
             Atom::Int(value) => Value::Int(*value),
             Atom::Char(value) => Value::Char(*value),
             Atom::Bool(value) => Value::Bool(*value),
+            Atom::String(value) => Value::String(value.clone()),
         };
 
         self.instructions.push(Instruction::Push(value));
@@ -70,7 +71,6 @@ impl ExprVisitor for Emitter {
         self.visit_expr(condition);
         let condition_block = self.get_block();
 
-        eprintln!("then branch: {:?}", then_branch);
         self.visit_expr(then_branch);
         let then_branch_block = self.get_block();
 

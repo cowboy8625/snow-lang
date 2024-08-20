@@ -15,11 +15,25 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 pub fn main() -> iced::Result {
+    let mut flags = Flags::default();
+
+    if std::env::args().len() > 1 {
+        flags.filename = Some(std::env::args().nth(1).unwrap().into());
+    }
+
+    println!("Opening: {:?}", flags.filename);
+
     Editor::run(Settings {
+        flags,
         fonts: vec![include_bytes!("../fonts/icons.ttf").as_slice().into()],
         default_font: Font::MONOSPACE,
         ..Settings::default()
     })
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Flags {
+    filename: Option<PathBuf>,
 }
 
 struct Editor {
@@ -46,19 +60,22 @@ impl Application for Editor {
     type Message = Message;
     type Theme = Theme;
     type Executor = executor::Default;
-    type Flags = ();
+    type Flags = Flags;
 
-    fn new(_flags: Self::Flags) -> (Self, Command<Message>) {
+    fn new(flags: Self::Flags) -> (Self, Command<Message>) {
+        let is_loading = flags.filename.is_none();
         (
             Self {
-                file: None,
+                file: flags.filename.clone(),
                 content: Module::default(),
                 theme: highlighter::Theme::SolarizedDark,
-                is_loading: false,
+                is_loading,
                 is_dirty: false,
             },
-            // Command::perform(load_file(default_file()), Message::FileOpened),
-            Command::none(),
+            match flags.filename {
+                Some(path) => Command::perform(load_file(path), Message::FileOpened),
+                None => Command::none(),
+            },
         )
     }
 
@@ -124,7 +141,6 @@ impl Application for Editor {
         let status = row![
             text(if let Some(path) = &self.file {
                 let path = path.display().to_string();
-
                 if path.len() > 60 {
                     format!("...{}", &path[path.len() - 40..])
                 } else {
